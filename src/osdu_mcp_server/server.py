@@ -1,9 +1,17 @@
 """MCP server instance for OSDU platform integration."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from mcp.server.fastmcp import FastMCP
 
 from .prompts import guide_record_lifecycle, guide_search_patterns, list_mcp_assets
 from .resources import get_workflow_resources
+from .shared.app_context import (
+    AppContext,
+    create_app_context,
+    set_app_context,
+)
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -48,8 +56,29 @@ from .tools.storage import (
     storage_query_records_by_kind,
 )
 
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    """Construct shared config and auth once per server process.
+
+    Args:
+        server: FastMCP server instance
+
+    Yields:
+        Application context shared by all tool invocations
+    """
+    context = create_app_context()
+    set_app_context(context)
+
+    try:
+        yield context
+    finally:
+        set_app_context(None)
+        context.close()
+
+
 # Create FastMCP server instance
-mcp = FastMCP("OSDU MCP Server")
+mcp = FastMCP("OSDU MCP Server", lifespan=app_lifespan)
 
 # Register MCP resources
 for resource in get_workflow_resources():
