@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.legal_client import LegalClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -36,13 +34,9 @@ async def legaltag_search(
             "partition": "opendes"
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = LegalClient(config, auth)
-
-    try:
+    async with LegalClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Build query list
         query_list = []
@@ -81,6 +75,3 @@ async def legaltag_search(
         )
 
         return result
-
-    finally:
-        await client.close()

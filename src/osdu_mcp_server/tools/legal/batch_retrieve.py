@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.legal_client import LegalClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -32,13 +30,9 @@ async def legaltag_batch_retrieve(names: list[str]) -> dict:
     if len(names) > 25:
         raise OSMCPError("Maximum 25 legal tags can be retrieved at once")
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = LegalClient(config, auth)
-
-    try:
+    async with LegalClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Batch retrieve legal tags
         response = await client.batch_retrieve_legal_tags(names)
@@ -69,6 +63,3 @@ async def legaltag_batch_retrieve(names: list[str]) -> dict:
         )
 
         return result
-
-    finally:
-        await client.close()

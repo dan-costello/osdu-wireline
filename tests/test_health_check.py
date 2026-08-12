@@ -1,153 +1,100 @@
 """Tests for the health check tool."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import os
+import time
+from urllib.parse import urljoin
 
+import jwt
 import pytest
+from aioresponses import aioresponses
 
+from osdu_mcp_server.shared.service_urls import OSMCPService, get_service_info_endpoint
 from osdu_mcp_server.tools.health_check import health_check
+
+SERVER_URL = "https://test.osdu.com"
+
+
+def _info_url(service: OSMCPService) -> str:
+    """Full URL of a service's info endpoint."""
+    return urljoin(SERVER_URL, get_service_info_endpoint(service))
+
+
+def _mock_all_services(mocked: aioresponses, payload=None, skip=None):
+    """Register a healthy info response for every OSDU service."""
+    for service in OSMCPService:
+        if skip is not None and service is skip:
+            continue
+        mocked.get(_info_url(service), payload=payload or {"version": "1.0.0"})
 
 
 @pytest.mark.asyncio
-async def test_health_check_success():
-    """Test successful health check with mocked dependencies."""
-    with (
-        patch("osdu_mcp_server.tools.health_check.ConfigManager") as mock_config,
-        patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
-        patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
-    ):
-        # Setup mocks
-        mock_config_instance = MagicMock()
-        mock_config_instance.get_required.side_effect = lambda section, key: {
-            ("server", "url"): "https://test-osdu.com",
-            ("server", "data_partition"): "test-partition",
-        }[(section, key)]
-        mock_config.return_value = mock_config_instance
+async def test_health_check_success(osdu_env):
+    """Test successful health check reports connectivity and services."""
+    with aioresponses() as mocked:
+        _mock_all_services(mocked)
 
-        mock_auth_instance = AsyncMock()
-        mock_auth_instance.validate_token.return_value = True
-        mock_auth.return_value = mock_auth_instance
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.return_value = {"version": "1.0.0"}
-        mock_client.return_value = mock_client_instance
-
-        # Execute test
         result = await health_check()
 
-        # Verify results
         assert result["connectivity"] == "success"
-        assert result["server_url"] == "https://test-osdu.com"
-        assert result["data_partition"] == "test-partition"
+        assert result["server_url"] == SERVER_URL
+        assert result["data_partition"] == "opendes"
         assert result["authentication"]["status"] == "valid"
         assert "services" in result
         assert "timestamp" in result
 
 
 @pytest.mark.asyncio
-async def test_health_check_auth_failure():
-    """Test health check with authentication failure."""
-    with (
-        patch("osdu_mcp_server.tools.health_check.ConfigManager") as mock_config,
-        patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
-        patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
-    ):
-        # Setup mocks
-        mock_config_instance = MagicMock()
-        mock_config_instance.get_required.return_value = "test-value"
-        mock_config.return_value = mock_config_instance
+async def test_health_check_auth_failure(monkeypatch):
+    """Test health check reports invalid authentication for a bad token."""
+    expired_token = jwt.encode(
+        {"sub": "test-user", "exp": int(time.time()) - 3600},
+        "test-secret",
+        algorithm="HS256",
+    )
+    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_URL", SERVER_URL)
+    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_DATA_PARTITION", "opendes")
+    monkeypatch.setitem(os.environ, "OSDU_MCP_USER_TOKEN", expired_token)
 
-        mock_auth_instance = AsyncMock()
-        mock_auth_instance.validate_token.return_value = False
-        mock_auth.return_value = mock_auth_instance
+    with aioresponses() as mocked:
+        _mock_all_services(mocked)
 
-        mock_client.return_value = AsyncMock()
+        result = await health_check(include_services=False)
 
-        # Execute test
-        result = await health_check()
-
-        # Verify authentication status
         assert result["authentication"]["status"] == "invalid"
 
 
 @pytest.mark.asyncio
-async def test_health_check_service_unhealthy():
-    """Test health check with one unhealthy service."""
-    with (
-        patch("osdu_mcp_server.tools.health_check.ConfigManager") as mock_config,
-        patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
-        patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
-    ):
-        # Setup mocks
-        mock_config_instance = MagicMock()
-        mock_config_instance.get_required.return_value = "test-value"
-        mock_config.return_value = mock_config_instance
+async def test_health_check_service_unhealthy(osdu_env):
+    """Test health check flags a service that returns an error."""
+    with aioresponses() as mocked:
+        _mock_all_services(mocked, skip=OSMCPService.STORAGE)
+        mocked.get(
+            _info_url(OSMCPService.STORAGE), status=503, body="Service unavailable"
+        )
 
-        mock_auth.return_value = AsyncMock()
-
-        mock_client_instance = AsyncMock()
-        # Storage service fails
-        mock_client_instance.get.side_effect = [
-            Exception("Service unavailable"),  # storage fails
-            {"version": "1.0.0"},  # search succeeds
-            {"version": "1.0.0"},  # legal succeeds
-        ]
-        mock_client.return_value = mock_client_instance
-
-        # Execute test
         result = await health_check()
 
-        # Verify results - health check includes error message for unhealthy services
-        assert result["services"]["storage"] == "unhealthy: Service unavailable"
+        assert result["services"]["storage"].startswith("unhealthy")
         assert result["services"]["search"] == "healthy"
         assert result["services"]["legal"] == "healthy"
 
 
 @pytest.mark.asyncio
-async def test_health_check_without_services():
+async def test_health_check_without_services(osdu_env):
     """Test health check without checking services."""
-    with (
-        patch("osdu_mcp_server.tools.health_check.ConfigManager") as mock_config,
-        patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
-        patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
-    ):
-        # Setup mocks
-        mock_config_instance = MagicMock()
-        mock_config_instance.get_required.return_value = "test-value"
-        mock_config.return_value = mock_config_instance
+    result = await health_check(include_services=False)
 
-        mock_auth.return_value = AsyncMock()
-        mock_client.return_value = AsyncMock()
-
-        # Execute test
-        result = await health_check(include_services=False)
-
-        # Verify services not included
-        assert "services" not in result
-        assert result["connectivity"] == "success"
+    assert "services" not in result
+    assert result["connectivity"] == "success"
 
 
 @pytest.mark.asyncio
-async def test_health_check_with_version_info():
+async def test_health_check_with_version_info(osdu_env):
     """Test health check with version information."""
-    with (
-        patch("osdu_mcp_server.tools.health_check.ConfigManager") as mock_config,
-        patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
-        patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
-    ):
-        # Setup mocks
-        mock_config_instance = MagicMock()
-        mock_config_instance.get_required.return_value = "test-value"
-        mock_config.return_value = mock_config_instance
+    with aioresponses() as mocked:
+        _mock_all_services(mocked)
 
-        mock_auth.return_value = AsyncMock()
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.return_value = {"version": "1.0.0"}
-        mock_client.return_value = mock_client_instance
-
-        # Execute test
         result = await health_check(include_version_info=True)
 
-        # Verify version info included
         assert "services" in result
         assert "version_info" in result["services"]

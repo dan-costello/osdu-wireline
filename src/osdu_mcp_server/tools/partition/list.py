@@ -5,9 +5,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.partition_client import PartitionClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 from ...shared.utils import get_trace_id
 
@@ -59,45 +57,41 @@ async def partition_list(
     )
 
     try:
-        # Initialize dependencies
-        config = ConfigManager()
-        auth_handler = AuthHandler(config)
-        client = PartitionClient(config, auth_handler)
+        async with PartitionClient() as client:
+            # Get partitions
+            partitions = await client.list_partitions()
 
-        # Get partitions
-        partitions = await client.list_partitions()
-
-        # Build response
-        response = {
-            "success": True,
-            "partitions": partitions,
-        }
-
-        if include_count:
-            response["count"] = len(partitions)
-
-        if detailed:
-            response["metadata"] = {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "trace_id": trace_id,
-                "server_url": config.get("server", "url"),
+            # Build response
+            response = {
+                "success": True,
+                "partitions": partitions,
             }
 
-        # Log successful response
-        logger.info(
-            json.dumps(
-                {
+            if include_count:
+                response["count"] = len(partitions)
+
+            if detailed:
+                response["metadata"] = {
                     "timestamp": datetime.now(UTC).isoformat(),
                     "trace_id": trace_id,
-                    "level": "INFO",
-                    "tool": "partition_list",
-                    "action": "partition_list_success",
-                    "partition_count": len(partitions),
+                    "server_url": client.server_url,
                 }
-            )
-        )
 
-        return response
+            # Log successful response
+            logger.info(
+                json.dumps(
+                    {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "trace_id": trace_id,
+                        "level": "INFO",
+                        "tool": "partition_list",
+                        "action": "partition_list_success",
+                        "partition_count": len(partitions),
+                    }
+                )
+            )
+
+            return response
 
     except OSMCPError as e:
         # Log error
@@ -120,8 +114,3 @@ async def partition_list(
             "partitions": [],
             "error": str(e),
         }
-
-    finally:
-        # Clean up resources
-        if "client" in locals():
-            await client.close()

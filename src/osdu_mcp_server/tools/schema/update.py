@@ -4,9 +4,7 @@ import logging
 import os
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.schema_client import SchemaClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -64,13 +62,9 @@ async def schema_update(
             status_code=403,
         )
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SchemaClient(config, auth)
-
-    try:
+    async with SchemaClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Get the existing schema first to verify its current status and scope
         try:
@@ -169,6 +163,3 @@ async def schema_update(
         )
 
         return result
-
-    finally:
-        await client.close()

@@ -1,8 +1,6 @@
 """Tool for querying records by kind."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -34,11 +32,7 @@ async def storage_query_records_by_kind(
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Query records by kind
         response = await client.query_records_by_kind(kind, limit, cursor)
 
@@ -48,7 +42,7 @@ async def storage_query_records_by_kind(
             "cursor": response.get("cursor"),
             "results": response.get("results", []),
             "count": len(response.get("results", [])),
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
 
         logger.info(
@@ -63,6 +57,3 @@ async def storage_query_records_by_kind(
         )
 
         return result
-
-    finally:
-        await client.close()

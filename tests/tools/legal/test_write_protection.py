@@ -51,36 +51,30 @@ async def test_legaltag_update_write_disabled():
 
 
 @pytest.mark.asyncio
-async def test_legaltag_delete_disabled():
+async def test_legaltag_delete_disabled(osdu_env):
     """Test that legaltag_delete fails when delete is disabled."""
     with patch.dict(os.environ, {}, clear=False):
         # Remove the env var if it exists
         os.environ.pop("OSDU_MCP_ENABLE_DELETE_MODE", None)
 
-        with patch("osdu_mcp_server.tools.legal.delete.ConfigManager"):
-            with patch("osdu_mcp_server.tools.legal.delete.AuthHandler"):
-                with pytest.raises(McpError) as exc_info:
-                    await legaltag_delete(name="Test-Tag", confirm=True)
+        with pytest.raises(McpError) as exc_info:
+            await legaltag_delete(name="Test-Tag", confirm=True)
 
-                assert exc_info.value.error.code == 403
-                assert "Delete operations are disabled" in exc_info.value.error.message
-                assert (
-                    "OSDU_MCP_ENABLE_DELETE_MODE=true" in exc_info.value.error.message
-                )
+        assert exc_info.value.error.code == 403
+        assert "Delete operations are disabled" in exc_info.value.error.message
+        assert "OSDU_MCP_ENABLE_DELETE_MODE=true" in exc_info.value.error.message
 
 
 @pytest.mark.asyncio
-async def test_legaltag_delete_no_confirmation():
+async def test_legaltag_delete_no_confirmation(osdu_env):
     """Test that legaltag_delete fails without confirmation."""
     with patch.dict(os.environ, {"OSDU_MCP_ENABLE_DELETE_MODE": "true"}, clear=False):
-        with patch("osdu_mcp_server.tools.legal.delete.ConfigManager"):
-            with patch("osdu_mcp_server.tools.legal.delete.AuthHandler"):
-                with pytest.raises(McpError) as exc_info:
-                    await legaltag_delete(name="Test-Tag", confirm=False)
+        with pytest.raises(McpError) as exc_info:
+            await legaltag_delete(name="Test-Tag", confirm=False)
 
-                assert exc_info.value.error.code == 400
-                assert "Deletion not confirmed" in exc_info.value.error.message
-                assert (
-                    "WARNING: This will invalidate all associated data"
-                    in exc_info.value.error.message
-                )
+        assert exc_info.value.error.code == 400
+        assert "Deletion not confirmed" in exc_info.value.error.message
+        assert (
+            "WARNING: This will invalidate all associated data"
+            in exc_info.value.error.message
+        )
