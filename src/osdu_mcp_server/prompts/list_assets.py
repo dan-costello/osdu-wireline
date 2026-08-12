@@ -5,14 +5,15 @@ Provides dynamic listing of all available prompts, tools, and resources
 with usage examples and quick start guidance.
 """
 
-from typing import List, Dict, Any
+from typing import Any
+
 from ..shared.assets_generator import AssetsGenerator
 
 # Define Message type for development/testing
-Message = Dict[str, Any]
+Message = dict[str, Any]
 
 
-async def list_mcp_assets() -> List[Message]:
+async def list_mcp_assets() -> list[Message]:
     """
     List MCP Assets prompt for comprehensive server capability overview.
 

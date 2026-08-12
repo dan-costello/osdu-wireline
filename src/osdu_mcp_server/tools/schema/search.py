@@ -1,7 +1,6 @@
 """Tool for advanced schema discovery with rich filtering and text search."""
 
 import fnmatch
-from typing import Dict, List, Union
 
 from ...shared.auth_handler import AuthHandler
 from ...shared.clients.schema_client import SchemaClient
@@ -17,7 +16,7 @@ logger = get_logger(__name__)
 async def schema_search(
     # Text search parameters
     text: str | None = None,
-    search_in: list[str] = None,
+    search_in: list[str] | None = None,
     # Version filtering
     version_pattern: str | None = None,
     # Rich filtering
@@ -98,8 +97,8 @@ async def schema_search(
     filter = filter or {}
 
     # Analyze what can be server-side filtered
-    server_filters: Dict[str, List[str]] = {}
-    client_filters: Dict[str, Union[str, List[str]]] = {}
+    server_filters: dict[str, list[str]] = {}
+    client_filters: dict[str, str | list[str]] = {}
 
     try:
         # Get current partition

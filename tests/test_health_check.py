@@ -15,7 +15,6 @@ async def test_health_check_success():
         patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
         patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
     ):
-
         # Setup mocks
         mock_config_instance = MagicMock()
         mock_config_instance.get_required.side_effect = lambda section, key: {
@@ -52,7 +51,6 @@ async def test_health_check_auth_failure():
         patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
         patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
     ):
-
         # Setup mocks
         mock_config_instance = MagicMock()
         mock_config_instance.get_required.return_value = "test-value"
@@ -79,7 +77,6 @@ async def test_health_check_service_unhealthy():
         patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
         patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
     ):
-
         # Setup mocks
         mock_config_instance = MagicMock()
         mock_config_instance.get_required.return_value = "test-value"
@@ -113,7 +110,6 @@ async def test_health_check_without_services():
         patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
         patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
     ):
-
         # Setup mocks
         mock_config_instance = MagicMock()
         mock_config_instance.get_required.return_value = "test-value"
@@ -138,7 +134,6 @@ async def test_health_check_with_version_info():
         patch("osdu_mcp_server.tools.health_check.AuthHandler") as mock_auth,
         patch("osdu_mcp_server.tools.health_check.OsduClient") as mock_client,
     ):
-
         # Setup mocks
         mock_config_instance = MagicMock()
         mock_config_instance.get_required.return_value = "test-value"

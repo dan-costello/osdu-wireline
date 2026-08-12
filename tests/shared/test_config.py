@@ -110,7 +110,6 @@ auth:
         patch("pathlib.Path.exists", return_value=True),
         patch.dict(os.environ, {"OSDU_MCP_SERVER_TIMEOUT": "30"}, clear=True),
     ):
-
         config = ConfigManager()
         all_config = config.get_all_config()
 
@@ -131,6 +130,5 @@ server:
         patch("pathlib.Path.exists", return_value=True),
         patch.dict(os.environ, {}, clear=True),
     ):
-
         config = ConfigManager(config_file=custom_path)
         assert config.get("server", "url") == "https://custom-osdu.com"

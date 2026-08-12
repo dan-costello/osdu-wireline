@@ -1,7 +1,7 @@
 """Tests for storage query records by kind operation."""
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -34,7 +34,7 @@ async def test_storage_query_records_by_kind_success():
         ) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",
-                int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp()),
+                int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
             )
             mock_instance = MagicMock()
             mock_instance.get_token.return_value = mock_token
@@ -75,7 +75,7 @@ async def test_storage_query_records_by_kind_with_cursor():
         ) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",
-                int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp()),
+                int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
             )
             mock_instance = MagicMock()
             mock_instance.get_token.return_value = mock_token

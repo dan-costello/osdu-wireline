@@ -6,6 +6,7 @@ not the data consumer (AI model). Focus on contract compliance and data structur
 """
 
 import pytest
+
 from osdu_mcp_server.prompts.list_assets import list_mcp_assets
 
 

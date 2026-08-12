@@ -29,6 +29,7 @@ dependencies = [
     "boto3>=1.40.50",
     "google-auth>=2.41.1",
     "PyJWT>=2.10.1",
+    "ruff>=0.14.0",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +39,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "black>=25.9.0",
-    "ruff>=0.14.0",
+    "ruff>=0.16.2",
     "mypy>=1.18.2",
     "freezegun>=1.5.5",
     "flake8>=7.3.0",
@@ -57,16 +58,10 @@ osdu_mcp_server = [
     "resources/**/*.json",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py312']
-
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-
-[tool.ruff.lint]
-select = [
+lint.select = [
     "E",    # pycodestyle errors
     "F",    # pyflakes
     "I",    # isort
@@ -75,7 +70,7 @@ select = [
     "B",    # flake8-bugbear
     "SIM",  # flake8-simplify
 ]
-ignore = [
+lint.ignore = [
     "E501",  # line too long
     "B008",  # do not perform function calls in argument defaults
     "B904",  # allow raise without from in except
@@ -83,14 +78,6 @@ ignore = [
     "B011",  # allow assert False in tests
 ]
 
-[tool.mypy]
-python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-
-[[tool.mypy.overrides]]
-module = "mcp.*"
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -117,5 +104,3 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
-[tool.flake8]
-ignore = ["E127"]

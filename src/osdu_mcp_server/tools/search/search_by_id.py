@@ -1,15 +1,15 @@
 """Find specific records by ID."""
 
-from typing import Dict, Any
+from typing import Any
 
+from ...shared.auth_handler import AuthHandler
 from ...shared.clients import SearchClient
 from ...shared.config_manager import ConfigManager
-from ...shared.auth_handler import AuthHandler
 from ...shared.exceptions import handle_osdu_exceptions
 
 
 @handle_osdu_exceptions
-async def search_by_id(id: str, limit: int = 10) -> Dict[str, Any]:
+async def search_by_id(id: str, limit: int = 10) -> dict[str, Any]:
     """Find specific records by ID.
 
     Args:

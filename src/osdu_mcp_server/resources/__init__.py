@@ -1,7 +1,7 @@
 """MCP Resources for OSDU workflow templates and examples."""
 
 from pathlib import Path
-from typing import List
+
 from mcp.server.fastmcp.resources import FileResource
 from pydantic import AnyUrl
 
@@ -9,7 +9,7 @@ from pydantic import AnyUrl
 RESOURCES_DIR = Path(__file__).parent
 
 
-def get_workflow_resources() -> List[FileResource]:
+def get_workflow_resources() -> list[FileResource]:
     """Get all MCP resources for OSDU workflow templates."""
     resources = []
 

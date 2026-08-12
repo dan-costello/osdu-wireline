@@ -1,17 +1,18 @@
 """Search patterns guidance prompt."""
 
-from typing import List, Dict, Any
+from typing import Any
+
 from ..shared.exceptions import handle_osdu_exceptions
 from ..shared.logging_manager import get_logger
 
 # Define Message type for development/testing
-Message = Dict[str, Any]
+Message = dict[str, Any]
 
 logger = get_logger(__name__)
 
 
 @handle_osdu_exceptions
-async def guide_search_patterns() -> List[Message]:
+async def guide_search_patterns() -> list[Message]:
     """Provide search pattern guidance for OSDU operations.
 
     Returns:

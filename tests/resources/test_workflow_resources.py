@@ -1,8 +1,8 @@
 """Tests for workflow resource registration and accessibility."""
 
-import pytest
-from pathlib import Path
 import json
+
+import pytest
 
 from src.osdu_mcp_server.resources import get_workflow_resources
 
@@ -46,9 +46,9 @@ class TestWorkflowResources:
         ]
 
         for template_name in expected_templates:
-            assert (
-                template_name in resource_names
-            ), f"Expected template {template_name} not found in resources"
+            assert template_name in resource_names, (
+                f"Expected template {template_name} not found in resources"
+            )
 
     def test_expected_reference_resources_exist(self):
         """Test that expected reference resources are registered."""
@@ -61,9 +61,9 @@ class TestWorkflowResources:
         ]
 
         for reference_name in expected_references:
-            assert (
-                reference_name in resource_names
-            ), f"Expected reference {reference_name} not found in resources"
+            assert reference_name in resource_names, (
+                f"Expected reference {reference_name} not found in resources"
+            )
 
     def test_resource_files_exist_and_valid_json(self):
         """Test that resource files exist and contain valid JSON."""
@@ -77,7 +77,7 @@ class TestWorkflowResources:
             assert path.exists(), f"Resource file does not exist: {path}"
 
             # Verify file contains valid JSON
-            with open(path, "r") as f:
+            with open(path) as f:
                 try:
                     json.load(f)
                 except json.JSONDecodeError as e:
@@ -93,7 +93,7 @@ class TestWorkflowResources:
         assert legal_template is not None, "Legal tag template not found"
 
         # Load and validate structure
-        with open(legal_template.path, "r") as f:
+        with open(legal_template.path) as f:
             data = json.load(f)
 
         # Check for key sections
@@ -123,7 +123,7 @@ class TestWorkflowResources:
         assert record_template is not None, "Record template not found"
 
         # Load and validate structure
-        with open(record_template.path, "r") as f:
+        with open(record_template.path) as f:
             data = json.load(f)
 
         # Check for key sections
@@ -159,7 +159,7 @@ class TestWorkflowResources:
         assert acl_examples is not None, "ACL examples not found"
 
         # Load and validate structure
-        with open(acl_examples.path, "r") as f:
+        with open(acl_examples.path) as f:
             data = json.load(f)
 
         # Check for key sections
@@ -187,7 +187,7 @@ class TestWorkflowResources:
         assert search_patterns is not None, "Search patterns not found"
 
         # Load and validate structure
-        with open(search_patterns.path, "r") as f:
+        with open(search_patterns.path) as f:
             data = json.load(f)
 
         # Check for key sections

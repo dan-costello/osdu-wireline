@@ -145,7 +145,6 @@ async def test_record_validation():
             with patch(
                 "osdu_mcp_server.tools.storage.create_update_records.AuthHandler"
             ):
-
                 # Test missing required field
                 invalid_record = {
                     "kind": "test:test:test:1.0.0",

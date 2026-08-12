@@ -37,7 +37,6 @@ async def test_schema_search_basic():
         patch("osdu_mcp_server.tools.schema.search.AuthHandler"),
         patch("osdu_mcp_server.tools.schema.search.SchemaClient") as mock_client_class,
     ):
-
         # Setup the mock client
         mock_client = AsyncMock()
         mock_client.search_schemas.return_value = mock_response
@@ -105,7 +104,6 @@ async def test_schema_search_with_text():
         patch("osdu_mcp_server.tools.schema.search.AuthHandler"),
         patch("osdu_mcp_server.tools.schema.search.SchemaClient") as mock_client_class,
     ):
-
         # Setup the mock client
         mock_client = AsyncMock()
         mock_client.search_schemas.return_value = mock_list_response

@@ -1,23 +1,27 @@
 """Find all records of specific type."""
 
-from typing import Dict, Any
+from typing import Any
 
+from ...shared.auth_handler import AuthHandler
 from ...shared.clients import SearchClient
 from ...shared.config_manager import ConfigManager
-from ...shared.auth_handler import AuthHandler
 from ...shared.exceptions import handle_osdu_exceptions
 
 
 @handle_osdu_exceptions
 async def search_by_kind(
-    kind: str, limit: int = 100, offset: int = 0
-) -> Dict[str, Any]:
+    kind: str,
+    limit: int = 100,
+    offset: int = 0,
+    returnedFields: list[str] | None = None,
+) -> dict[str, Any]:
     """Find all records of specific type.
 
     Args:
         kind: Kind pattern (supports wildcards)
         limit: Maximum results (default: 100, max: 1000)
         offset: Pagination offset (default: 0)
+        returnedFields: Optional list of fields to return from the search API
 
     Returns:
         Dictionary containing search results with the following structure:
@@ -52,7 +56,12 @@ async def search_by_kind(
     client = SearchClient(config, auth)
 
     try:
-        result = await client.search_by_kind(kind=kind, limit=limit, offset=offset)
+        result = await client.search_by_kind(
+            kind=kind,
+            limit=limit,
+            offset=offset,
+            returnedFields=returnedFields,
+        )
         return result
     finally:
         await client.close()

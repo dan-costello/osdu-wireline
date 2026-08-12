@@ -148,14 +148,12 @@ async def schema_update(
         }
 
         # Include API response details if available
-        if isinstance(response, dict) and response:
-            # Add any useful fields from the API response
-            if "schemaInfo" in response:
-                schema_info = response["schemaInfo"]
-                if "dateCreated" in schema_info:
-                    result["dateCreated"] = schema_info["dateCreated"]
-                if "createdBy" in schema_info:
-                    result["createdBy"] = schema_info["createdBy"]
+        if isinstance(response, dict) and "schemaInfo" in response:
+            schema_info = response["schemaInfo"]
+            if "dateCreated" in schema_info:
+                result["dateCreated"] = schema_info["dateCreated"]
+            if "createdBy" in schema_info:
+                result["createdBy"] = schema_info["createdBy"]
 
         logger.info(
             "Updated schema successfully",

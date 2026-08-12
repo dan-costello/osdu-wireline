@@ -1,17 +1,21 @@
 """Execute search queries using Elasticsearch syntax."""
 
-from typing import Dict, Any
+from typing import Any
 
+from ...shared.auth_handler import AuthHandler
 from ...shared.clients import SearchClient
 from ...shared.config_manager import ConfigManager
-from ...shared.auth_handler import AuthHandler
 from ...shared.exceptions import handle_osdu_exceptions
 
 
 @handle_osdu_exceptions
 async def search_query(
-    query: str, kind: str = "*:*:*:*", limit: int = 50, offset: int = 0
-) -> Dict[str, Any]:
+    query: str,
+    kind: str = "*:*:*:*",
+    limit: int = 50,
+    offset: int = 0,
+    returnedFields: list[str] | None = None,
+) -> dict[str, Any]:
     """Execute search queries using Elasticsearch syntax.
 
     Args:
@@ -19,6 +23,7 @@ async def search_query(
         kind: Kind pattern to search (default: "*:*:*:*")
         limit: Maximum results (default: 50, max: 1000)
         offset: Pagination offset (default: 0)
+        returnedFields: Optional list of fields to return from the search API
 
     Returns:
         Dictionary containing search results with the following structure:
@@ -54,7 +59,11 @@ async def search_query(
 
     try:
         result = await client.search_query(
-            query=query, kind=kind, limit=limit, offset=offset
+            query=query,
+            kind=kind,
+            limit=limit,
+            offset=offset,
+            returnedFields=returnedFields,
         )
         return result
     finally:

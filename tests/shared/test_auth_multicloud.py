@@ -7,11 +7,9 @@ This test suite covers:
 - Multi-cloud mode detection priority
 """
 
-import asyncio
 import os
 import time
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
@@ -335,8 +333,6 @@ async def test_aws_credentials_not_found_error():
         os.environ, {"AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE"}, clear=True
     ):
         with patch("boto3.Session") as mock_session:
-            from botocore.exceptions import NoCredentialsError
-
             mock_session_instance = MagicMock()
             mock_session_instance.get_credentials.return_value = None
             mock_session.return_value = mock_session_instance

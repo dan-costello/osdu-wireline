@@ -2,6 +2,8 @@
 
 from mcp.server.fastmcp import FastMCP
 
+from .prompts import guide_record_lifecycle, guide_search_patterns, list_mcp_assets
+from .resources import get_workflow_resources
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -31,9 +33,9 @@ from .tools.schema import (
     schema_update,
 )
 from .tools.search import (
-    search_query,
     search_by_id,
     search_by_kind,
+    search_query,
 )
 from .tools.storage import (
     storage_create_update_records,
@@ -45,8 +47,6 @@ from .tools.storage import (
     storage_purge_record,
     storage_query_records_by_kind,
 )
-from .prompts import list_mcp_assets, guide_search_patterns, guide_record_lifecycle
-from .resources import get_workflow_resources
 
 # Create FastMCP server instance
 mcp = FastMCP("OSDU MCP Server")

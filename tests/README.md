@@ -215,12 +215,11 @@ async def test_client_retries_on_temporary_failure():
         # First two attempts fail, third succeeds
         mocked.get("https://osdu.com/api/test", status=500)
         mocked.get("https://osdu.com/api/test", status=500)
-        mocked.get("https://osdu.com/api/test", 
-                  payload={"result": "success"})
-        
+        mocked.get("https://osdu.com/api/test", payload={"result": "success"})
+
         client = OsduClient(config, auth)
         result = await client.get("/api/test")
-        
+
         assert result["result"] == "success"
         assert len(mocked.requests) == 3  # Verify retry behavior
 ```
