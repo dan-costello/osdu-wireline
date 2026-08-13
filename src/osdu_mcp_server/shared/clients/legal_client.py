@@ -207,8 +207,7 @@ class LegalClient(OsduClient):
         Returns:
             Updated legal tag
         """
-        full_name = self.ensure_full_tag_name(name)
-        body = {"name": full_name}
+        body: dict[str, Any] = {"name": self.ensure_full_tag_name(name)}
 
         if description is not None:
             body["description"] = description

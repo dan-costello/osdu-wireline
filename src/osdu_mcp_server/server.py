@@ -133,5 +133,3 @@ mcp.tool()(storage_query_records_by_kind)
 mcp.tool()(storage_fetch_records)
 mcp.tool()(storage_delete_record)
 mcp.tool()(storage_purge_record)
-
-# This module can be imported by the main entry point
