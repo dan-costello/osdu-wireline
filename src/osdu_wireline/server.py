@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
-from .prompts import guide_record_lifecycle, guide_search_patterns, list_mcp_assets
+from .prompts import guide_record_lifecycle, guide_search_patterns
 from .resources import get_workflow_resources
 from .shared.app_context import (
     AppContext,
@@ -77,15 +77,28 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         context.close()
 
 
+SERVER_INSTRUCTIONS = """\
+OSDU Wireline bridges AI assistants to OSDU platform services: partitions, entitlements,
+legal tags, schemas, search, and storage.
+
+Start with `health_check` to confirm connectivity and authentication before other operations.
+
+Write operations (create, update) and delete operations (delete, purge) are disabled by
+default and must be enabled separately via the OSDU_MCP_ENABLE_WRITE_MODE and
+OSDU_MCP_ENABLE_DELETE_MODE environment variables. Calls to protected tools fail with a
+permission error until the matching gate is enabled.
+
+Read the `reference://quick-start-workflows.md` resource for common workflows and operational
+tips."""
+
 # Create FastMCP server instance
-mcp = FastMCP("OSDU Wireline", lifespan=app_lifespan)
+mcp = FastMCP("OSDU Wireline", instructions=SERVER_INSTRUCTIONS, lifespan=app_lifespan)
 
 # Register MCP resources
 for resource in get_workflow_resources():
     mcp.add_resource(resource)
 
 # Register prompts
-mcp.prompt()(list_mcp_assets)
 mcp.prompt()(guide_search_patterns)
 mcp.prompt()(guide_record_lifecycle)
 

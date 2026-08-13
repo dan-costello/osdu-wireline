@@ -60,6 +60,27 @@ def get_workflow_resources() -> list[FileResource]:
                 )
             )
 
+    # Documentation resources
+    doc_files = [
+        (
+            "quick-start-workflows.md",
+            "Quick start workflows and operational tips for OSDU operations",
+        ),
+    ]
+
+    for filename, description in doc_files:
+        file_path = RESOURCES_DIR / "references" / filename
+        if file_path.exists():
+            resources.append(
+                FileResource(
+                    uri=AnyUrl(f"reference://{filename}"),
+                    name=f"Reference: {filename}",
+                    description=description,
+                    mime_type="text/markdown",
+                    path=file_path,
+                )
+            )
+
     return resources
 
 

@@ -855,6 +855,6 @@ After mastering this basic workflow, consider exploring:
 - **Cross-Service Workflows**: Complex multi-service integrations
 - **Production Patterns**: Scaling and optimizing for production use
 
-Use the `guide_search_patterns` prompt for advanced search techniques, and `list_mcp_assets` for a complete overview of all available OSDU Wireline capabilities."""
+Use the `guide_search_patterns` prompt for advanced search techniques, and read the `reference://quick-start-workflows.md` resource for common workflows and operational tips."""
 
     return [{"role": "user", "content": content}]
