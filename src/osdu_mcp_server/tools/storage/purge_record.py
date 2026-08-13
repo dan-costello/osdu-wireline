@@ -39,15 +39,6 @@ async def storage_purge_record(id: str, confirm: bool) -> dict:
         await client.purge_record(id, confirm)
 
         # Build response - purge endpoint may return 204 No Content
-        result = {
-            "success": True,
-            "purged": True,
-            "id": id,
-            "delete_enabled": True,
-            "warning": "Record has been permanently deleted and cannot be recovered",
-            "partition": config.get("server", "data_partition"),
-        }
-
         logger.error(
             f"Successfully purged record {id} permanently",
             extra={
@@ -58,7 +49,14 @@ async def storage_purge_record(id: str, confirm: bool) -> dict:
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "purged": True,
+            "id": id,
+            "delete_enabled": True,
+            "warning": "Record has been permanently deleted and cannot be recovered",
+            "partition": config.get("server", "data_partition"),
+        }
 
     finally:
         await client.close()

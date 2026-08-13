@@ -321,11 +321,11 @@ class AuthHandler:
         """
         if self.mode == AuthenticationMode.USER_TOKEN:
             return self._get_user_token()
-        elif self.mode == AuthenticationMode.AZURE:
+        if self.mode == AuthenticationMode.AZURE:
             return await self._get_azure_token()
-        elif self.mode == AuthenticationMode.AWS:
+        if self.mode == AuthenticationMode.AWS:
             return await self._get_aws_token()
-        elif self.mode == AuthenticationMode.GCP:
+        if self.mode == AuthenticationMode.GCP:
             return await self._get_gcp_token()
 
         raise OSMCPAuthError(f"Unsupported authentication mode: {self.mode}")
@@ -436,18 +436,18 @@ class AuthHandler:
                 raise OSMCPAuthError(
                     "Authentication failed. Please run 'az login' before using OSDU MCP Server"
                 )
-            elif "expired" in error_message or "refresh token" in error_message:
+            if "expired" in error_message or "refresh token" in error_message:
                 raise OSMCPAuthError(
                     "Azure authentication token expired. Please run 'az login' to refresh"
                 )
-            elif (
+            if (
                 "invalid_scope" in error_message
                 or "scope format is invalid" in error_message
             ):
                 raise OSMCPAuthError(
                     "Invalid Azure client ID. Please verify your AZURE_CLIENT_ID is correct"
                 )
-            elif (
+            if (
                 "no accounts were found" in error_message
                 or "environment variables are not fully configured" in error_message
             ):
@@ -456,27 +456,24 @@ class AuthHandler:
                         "Service Principal authentication failed. Please check your AZURE_CLIENT_ID, "
                         "AZURE_TENANT_ID, and AZURE_CLIENT_SECRET environment variables"
                     )
-                else:
-                    raise OSMCPAuthError(
-                        "No Azure credentials found. Please set up Service Principal credentials "
-                        "or run 'az login' for CLI authentication"
-                    )
-            else:
-                # Generic authentication error
                 raise OSMCPAuthError(
-                    "Authentication failed. Please check your Azure credentials"
+                    "No Azure credentials found. Please set up Service Principal credentials "
+                    "or run 'az login' for CLI authentication"
                 )
+            # Generic authentication error
+            raise OSMCPAuthError(
+                "Authentication failed. Please check your Azure credentials"
+            )
         except Exception as e:
             # Handle non-authentication errors (network issues, etc.)
             if "connection" in str(e).lower() or "timeout" in str(e).lower():
                 raise OSMCPAuthError(
                     "Failed to connect to Azure authentication service. Please check your network connection"
                 )
-            else:
-                # Unexpected error - provide minimal details to user
-                raise OSMCPAuthError(
-                    "Authentication configuration error. Please check your environment setup"
-                )
+            # Unexpected error - provide minimal details to user
+            raise OSMCPAuthError(
+                "Authentication configuration error. Please check your environment setup"
+            )
 
     async def _get_aws_token(self) -> str:
         """Get AWS token for OSDU authentication.
@@ -571,18 +568,17 @@ class AuthHandler:
                     "GCP credentials file not found. "
                     "Check GOOGLE_APPLICATION_CREDENTIALS path"
                 )
-            elif "invalid" in error_msg or "malformed" in error_msg:
+            if "invalid" in error_msg or "malformed" in error_msg:
                 raise OSMCPAuthError(
                     "GCP credentials invalid. "
                     "Run 'gcloud auth application-default login' to re-authenticate"
                 )
-            elif "expired" in error_msg:
+            if "expired" in error_msg:
                 raise OSMCPAuthError(
                     "GCP refresh token expired. "
                     "Run 'gcloud auth application-default login' to re-authenticate"
                 )
-            else:
-                raise OSMCPAuthError(f"GCP token refresh failed: {e}")
+            raise OSMCPAuthError(f"GCP token refresh failed: {e}")
 
         except Exception as e:
             raise OSMCPAuthError(f"Unexpected GCP authentication error: {e}")

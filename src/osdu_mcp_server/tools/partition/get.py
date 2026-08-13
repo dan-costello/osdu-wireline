@@ -123,14 +123,6 @@ async def partition_get(
                 )
             )
 
-        response = {
-            "success": True,
-            "exists": True,
-            "partition_id": partition_id,
-            "properties": processed_properties,
-            "sensitive_properties_count": sensitive_count,
-        }
-
         # Log successful response
         logger.info(
             json.dumps(
@@ -147,7 +139,13 @@ async def partition_get(
             )
         )
 
-        return response
+        return {
+            "success": True,
+            "exists": True,
+            "partition_id": partition_id,
+            "properties": processed_properties,
+            "sensitive_properties_count": sensitive_count,
+        }
 
     except OSMCPError as e:
         # Log error

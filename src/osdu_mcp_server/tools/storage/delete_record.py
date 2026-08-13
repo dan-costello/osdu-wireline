@@ -37,20 +37,18 @@ async def storage_delete_record(id: str) -> dict:
         await client.delete_record(id)
 
         # Build response - delete endpoint may return 204 No Content
-        result = {
+        logger.warning(
+            f"Successfully deleted record {id}",
+            extra={"record_id": id, "operation": "delete_record", "destructive": True},
+        )
+
+        return {
             "success": True,
             "deleted": True,
             "id": id,
             "delete_enabled": True,
             "partition": config.get("server", "data_partition"),
         }
-
-        logger.warning(
-            f"Successfully deleted record {id}",
-            extra={"record_id": id, "operation": "delete_record", "destructive": True},
-        )
-
-        return result
 
     finally:
         await client.close()

@@ -80,15 +80,6 @@ async def schema_list(
         total_count = response.get("totalCount", len(schemas))
 
         # Build response
-        result = {
-            "success": True,
-            "schemas": schemas,
-            "count": len(schemas),
-            "totalCount": total_count,
-            "offset": offset,
-            "partition": partition,
-        }
-
         logger.info(
             "Retrieved schemas successfully",
             extra={
@@ -106,7 +97,14 @@ async def schema_list(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "schemas": schemas,
+            "count": len(schemas),
+            "totalCount": total_count,
+            "offset": offset,
+            "partition": partition,
+        }
 
     finally:
         await client.close()

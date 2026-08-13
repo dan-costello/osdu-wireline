@@ -46,7 +46,6 @@ async def search_by_id(id: str, limit: int = 10) -> dict[str, Any]:
     client = SearchClient(config, auth)
 
     try:
-        result = await client.search_by_id(record_id=id, limit=limit)
-        return result
+        return await client.search_by_id(record_id=id, limit=limit)
     finally:
         await client.close()

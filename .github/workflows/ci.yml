@@ -49,12 +49,12 @@ jobs:
         uv run black --check src/ tests/ --diff --color
         echo "::endgroup::"
       
-    - name: Lint with flake8
-      id: flake8
+    - name: Lint with ruff
+      id: ruff
       continue-on-error: true
       run: |
-        echo "::group::Flake8 Linting"
-        uv run flake8 src/ --count --statistics --show-source --color always
+        echo "::group::Ruff Linting"
+        uv run ruff check src/ tests/ --output-format=github
         echo "::endgroup::"
       
     - name: Type check with mypy
@@ -95,11 +95,11 @@ jobs:
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [[ "${{ steps.flake8.outcome }}" == "failure" ]]; then
-          echo "❌ **Flake8 linting failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Check the logs above for specific linting errors" >> $GITHUB_STEP_SUMMARY
+        if [[ "${{ steps.ruff.outcome }}" == "failure" ]]; then
+          echo "❌ **Ruff linting failed**" >> $GITHUB_STEP_SUMMARY
+          echo "   Run \`ruff check src/ tests/ --fix\` locally to fix linting errors" >> $GITHUB_STEP_SUMMARY
         else
-          echo "✅ Flake8 linting passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Ruff linting passed" >> $GITHUB_STEP_SUMMARY
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
         
@@ -121,7 +121,7 @@ jobs:
         
         # Overall status
         if [[ "${{ steps.black.outcome }}" == "failure" ]] || \
-           [[ "${{ steps.flake8.outcome }}" == "failure" ]] || \
+           [[ "${{ steps.ruff.outcome }}" == "failure" ]] || \
            [[ "${{ steps.mypy.outcome }}" == "failure" ]] || \
            [[ "${{ steps.pytest.outcome }}" == "failure" ]]; then
           echo "### ⚠️ Quality checks failed - see details above" >> $GITHUB_STEP_SUMMARY

@@ -58,13 +58,12 @@ async def search_query(
     client = SearchClient(config, auth)
 
     try:
-        result = await client.search_query(
+        return await client.search_query(
             query=query,
             kind=kind,
             limit=limit,
             offset=offset,
             returnedFields=returnedFields,
         )
-        return result
     finally:
         await client.close()

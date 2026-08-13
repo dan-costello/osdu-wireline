@@ -45,15 +45,6 @@ async def legaltag_delete(name: str, confirm: bool) -> dict:
         await client.delete_legal_tag(name)
 
         # Build response
-        result = {
-            "success": True,
-            "deleted": True,
-            "name": client.ensure_full_tag_name(name),
-            "delete_enabled": True,
-            "partition": partition,
-            "warning": "Associated data is now invalid",
-        }
-
         logger.warning(
             "Legal tag deleted - associated data is now invalid",
             extra={
@@ -66,7 +57,14 @@ async def legaltag_delete(name: str, confirm: bool) -> dict:
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "deleted": True,
+            "name": client.ensure_full_tag_name(name),
+            "delete_enabled": True,
+            "partition": partition,
+            "warning": "Associated data is now invalid",
+        }
 
     finally:
         await client.close()

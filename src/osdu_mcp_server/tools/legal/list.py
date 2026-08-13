@@ -52,13 +52,6 @@ async def legaltag_list(valid_only: bool | None = True) -> dict:
                 tag["simplifiedName"] = client.simplify_tag_name(tag["name"])
 
         # Build response
-        result = {
-            "success": True,
-            "legalTags": legal_tags,
-            "count": len(legal_tags),
-            "partition": partition,
-        }
-
         logger.info(
             "Retrieved legal tags successfully",
             extra={
@@ -68,7 +61,12 @@ async def legaltag_list(valid_only: bool | None = True) -> dict:
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "legalTags": legal_tags,
+            "count": len(legal_tags),
+            "partition": partition,
+        }
 
     finally:
         await client.close()

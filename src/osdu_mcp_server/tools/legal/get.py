@@ -47,20 +47,18 @@ async def legaltag_get(name: str) -> dict:
         full_name = tag.get("name", name)
 
         # Build response
-        result = {
+        logger.info(
+            "Retrieved legal tag successfully",
+            extra={"name": name, "full_name": full_name, "partition": partition},
+        )
+
+        return {
             "success": True,
             "legalTag": tag,
             "fullName": full_name,
             "simplifiedName": client.simplify_tag_name(full_name),
             "partition": partition,
         }
-
-        logger.info(
-            "Retrieved legal tag successfully",
-            extra={"name": name, "full_name": full_name, "partition": partition},
-        )
-
-        return result
 
     finally:
         await client.close()

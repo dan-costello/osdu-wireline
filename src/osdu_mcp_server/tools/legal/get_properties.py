@@ -55,12 +55,9 @@ async def legaltag_get_properties() -> dict:
         # Get properties
         response = await client.get_legal_tag_properties()
 
-        # Build response
-        result = {"success": True, "properties": response}
-
         logger.info("Retrieved legal tag properties successfully")
 
-        return result
+        return {"success": True, "properties": response}
 
     finally:
         await client.close()

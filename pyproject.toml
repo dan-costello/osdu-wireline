@@ -42,7 +42,6 @@ dev = [
     "ruff>=0.16.2",
     "mypy>=1.18.2",
     "freezegun>=1.5.5",
-    "flake8>=7.3.0",
     "aioresponses>=0.7.8",
 ]
 
@@ -69,6 +68,7 @@ lint.select = [
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
     "SIM",  # flake8-simplify
+    "RET",  # flake8-return
 ]
 lint.ignore = [
     "E501",  # line too long

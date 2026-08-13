@@ -216,17 +216,6 @@ async def schema_search(
         paginated_schemas = filtered_schemas[start_idx:end_idx]
 
         # Build response
-        result = {
-            "success": True,
-            "schemas": paginated_schemas,
-            "count": len(paginated_schemas),
-            "totalCount": total_count,  # Note: This is approximate due to client filtering
-            "offset": offset,
-            "partition": partition,
-            "filteredCount": len(filtered_schemas),  # Additional info for transparency
-            "query": text if text else None,  # Include search query for reference
-        }
-
         logger.info(
             "Schema search completed successfully",
             extra={
@@ -237,7 +226,16 @@ async def schema_search(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "schemas": paginated_schemas,
+            "count": len(paginated_schemas),
+            "totalCount": total_count,  # Note: This is approximate due to client filtering
+            "offset": offset,
+            "partition": partition,
+            "filteredCount": len(filtered_schemas),  # Additional info for transparency
+            "query": text if text else None,  # Include search query for reference
+        }
 
     finally:
         await client.close()
@@ -373,7 +371,7 @@ def _search_in_object(obj: dict, text: str) -> bool:
             return True
 
         # Recursively check nested objects
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             if _search_in_object(value, text):
                 return True
 
@@ -426,15 +424,12 @@ def _sort_schemas(schemas: list[dict], sort_by: str, sort_order: str) -> list[di
                     value = None
                     break
             return value
-        else:
-            # For direct fields
-            return schema.get(sort_fields)
+        # For direct fields
+        return schema.get(sort_fields)
 
     # Sort with None values last
-    sorted_schemas = sorted(
+    return sorted(
         schemas,
         key=lambda s: (_get_sort_key(s) is None, _get_sort_key(s)),
         reverse=(sort_order.upper() == "DESC"),
     )
-
-    return sorted_schemas

@@ -56,12 +56,11 @@ async def search_by_kind(
     client = SearchClient(config, auth)
 
     try:
-        result = await client.search_by_kind(
+        return await client.search_by_kind(
             kind=kind,
             limit=limit,
             offset=offset,
             returnedFields=returnedFields,
         )
-        return result
     finally:
         await client.close()

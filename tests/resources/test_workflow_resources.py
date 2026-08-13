@@ -46,9 +46,9 @@ class TestWorkflowResources:
         ]
 
         for template_name in expected_templates:
-            assert template_name in resource_names, (
-                f"Expected template {template_name} not found in resources"
-            )
+            assert (
+                template_name in resource_names
+            ), f"Expected template {template_name} not found in resources"
 
     def test_expected_reference_resources_exist(self):
         """Test that expected reference resources are registered."""
@@ -61,9 +61,9 @@ class TestWorkflowResources:
         ]
 
         for reference_name in expected_references:
-            assert reference_name in resource_names, (
-                f"Expected reference {reference_name} not found in resources"
-            )
+            assert (
+                reference_name in resource_names
+            ), f"Expected reference {reference_name} not found in resources"
 
     def test_resource_files_exist_and_valid_json(self):
         """Test that resource files exist and contain valid JSON."""

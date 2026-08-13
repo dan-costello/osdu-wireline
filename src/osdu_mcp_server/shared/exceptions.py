@@ -117,6 +117,5 @@ def handle_osdu_exceptions(
     if func is None:
         # Called with parameters: @handle_osdu_exceptions(default_message="...")
         return decorator
-    else:
-        # Called without parameters: @handle_osdu_exceptions
-        return decorator(func)
+    # Called without parameters: @handle_osdu_exceptions
+    return decorator(func)

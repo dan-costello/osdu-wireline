@@ -120,9 +120,7 @@ class TestLoggingManager(unittest.TestCase):
         mock_config_instance.get.side_effect = lambda section, key, default=None: (
             True
             if section == "logging" and key == "enabled"
-            else "INFO"
-            if section == "logging" and key == "level"
-            else default
+            else "INFO" if section == "logging" and key == "level" else default
         )
         mock_config.return_value = mock_config_instance
 
@@ -142,9 +140,7 @@ class TestLoggingManager(unittest.TestCase):
             mock_config_instance.get.side_effect = lambda section, key, default=None: (
                 True
                 if section == "logging" and key == "enabled"
-                else "DEBUG"
-                if section == "logging" and key == "level"
-                else default
+                else "DEBUG" if section == "logging" and key == "level" else default
             )
             mock_config.return_value = mock_config_instance
 
