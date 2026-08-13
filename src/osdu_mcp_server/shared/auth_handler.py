@@ -165,7 +165,7 @@ class AuthHandler:
             "  GCP (Automatic):\n"
             "    gcloud auth application-default login\n"
             "    OR export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json\n\n"
-            "  See: https://github.com/danielscholl-osdu/osdu-mcp-server#authentication"
+            "  See: https://github.com/dan-costello/osdu-mcp-server#authentication"
         )
 
     def _initialize_credential(self) -> None:

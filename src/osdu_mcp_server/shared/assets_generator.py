@@ -220,4 +220,4 @@ export OSDU_MCP_LOGGING_LEVEL="INFO"
 
 **🚀 Ready to explore OSDU data? Start with `health_check` to verify your connection!**
 
-For more information, see the [OSDU MCP Server documentation](https://github.com/danielscholl-osdu/osdu-mcp-server)."""
+For more information, see the [OSDU MCP Server documentation](https://github.com/dan-costello/osdu-mcp-server)."""
