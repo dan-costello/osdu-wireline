@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from mcp.server.fastmcp.resources import FileResource
-from pydantic import AnyUrl
 
 # Get the resources directory path
 RESOURCES_DIR = Path(__file__).parent
@@ -27,7 +26,7 @@ def get_workflow_resources() -> list[FileResource]:
         if file_path.exists():
             resources.append(
                 FileResource(
-                    uri=AnyUrl(f"template://{filename}"),
+                    uri=f"template://{filename}",
                     name=f"Template: {filename}",
                     description=description,
                     mime_type="application/json",
@@ -52,7 +51,7 @@ def get_workflow_resources() -> list[FileResource]:
         if file_path.exists():
             resources.append(
                 FileResource(
-                    uri=AnyUrl(f"reference://{filename}"),
+                    uri=f"reference://{filename}",
                     name=f"Reference: {filename}",
                     description=description,
                     mime_type="application/json",
@@ -73,7 +72,7 @@ def get_workflow_resources() -> list[FileResource]:
         if file_path.exists():
             resources.append(
                 FileResource(
-                    uri=AnyUrl(f"reference://{filename}"),
+                    uri=f"reference://{filename}",
                     name=f"Reference: {filename}",
                     description=description,
                     mime_type="text/markdown",

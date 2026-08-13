@@ -18,7 +18,7 @@ async def schema_create(
     major_version: int,
     minor_version: int,
     patch_version: int,
-    schema: dict[str, Any],
+    schema_definition: dict[str, Any],
     status: str = "DEVELOPMENT",
     description: str | None = None,
 ) -> dict[str, Any]:
@@ -35,7 +35,7 @@ async def schema_create(
         major_version: Major version number
         minor_version: Minor version number
         patch_version: Patch version number
-        schema: JSON Schema definition
+        schema_definition: JSON Schema definition
         status: Schema status (default: DEVELOPMENT)
         description: Schema description
 
@@ -99,21 +99,24 @@ async def schema_create(
         )
 
         # Ensure schema has the minimum required elements
-        if "$schema" not in schema:
-            schema["$schema"] = "http://json-schema.org/draft-07/schema#"
+        if "$schema" not in schema_definition:
+            schema_definition["$schema"] = "http://json-schema.org/draft-07/schema#"
 
-        if "type" not in schema:
-            schema["type"] = "object"
+        if "type" not in schema_definition:
+            schema_definition["type"] = "object"
 
-        if "properties" not in schema and schema["type"] == "object":
-            schema["properties"] = {}
+        if (
+            "properties" not in schema_definition
+            and schema_definition["type"] == "object"
+        ):
+            schema_definition["properties"] = {}
 
         # Set title and description if provided and not already in schema
-        if description and "description" not in schema:
-            schema["description"] = description
+        if description and "description" not in schema_definition:
+            schema_definition["description"] = description
 
-        if description and "title" not in schema:
-            schema["title"] = (
+        if description and "title" not in schema_definition:
+            schema_definition["title"] = (
                 description.split(".")[0] if "." in description else description
             )
 
@@ -125,7 +128,7 @@ async def schema_create(
             major_version=major_version,
             minor_version=minor_version,
             patch_version=patch_version,
-            schema=schema,
+            schema=schema_definition,
             status=status,
             description=description,
         )

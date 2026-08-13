@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* `schema_create` and `schema_update` could not be called over MCP at all. Their `schema`
+  parameter collided with a `BaseModel` attribute name, and FastMCP's workaround for that
+  collision is broken in mcp 1.17.0: it renamed the field to `field_schema` but lost the alias
+  meant to map it back, so `schema` failed validation while `field_schema` passed validation and
+  then hit `unexpected keyword argument`. The parameter is now **`schema_definition`** on both
+  tools. **Breaking** for any caller passing `schema`, though no caller could have been working.
+  Tests missed this because they invoke the tools as Python functions, bypassing MCP argument
+  marshalling.
 * `schema_create` and `schema_update` sent an empty request body to the Schema service, so
   neither tool could ever have created or updated a schema. `SchemaClient` was the only service
   client that did not move a `json=` keyword into the request body, and the base client then

@@ -47,7 +47,7 @@ async def test_schema_create_write_protection():
                     major_version=1,
                     minor_version=0,
                     patch_version=0,
-                    schema={"type": "object"},
+                    schema_definition={"type": "object"},
                 )
 
             assert "Schema write operations are disabled" in str(excinfo.value)
@@ -83,7 +83,7 @@ async def test_schema_update_write_protection():
                 Exception, match="Schema write operations are disabled"
             ) as excinfo:
                 await schema_update(
-                    id="test:test:test:1.0.0", schema={"type": "object"}
+                    id="test:test:test:1.0.0", schema_definition={"type": "object"}
                 )
 
             assert "Schema write operations are disabled" in str(excinfo.value)
@@ -130,7 +130,7 @@ async def test_schema_create_write_enabled(sent_json):
                     major_version=1,
                     minor_version=0,
                     patch_version=0,
-                    schema={"type": "object"},
+                    schema_definition={"type": "object"},
                 )
 
                 # The request must carry the schema; an earlier bug sent an
@@ -208,7 +208,7 @@ async def test_schema_update_write_enabled(sent_json):
 
                 result = await schema_update(
                     id="test:test:test:1.0.0",
-                    schema={
+                    schema_definition={
                         "type": "object",
                         "properties": {"name": {"type": "string"}},
                     },

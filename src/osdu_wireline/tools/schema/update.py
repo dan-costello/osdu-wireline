@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @handle_osdu_exceptions
 async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
-    id: str, schema: dict[str, Any], status: str | None = None
+    id: str, schema_definition: dict[str, Any], status: str | None = None
 ) -> dict[str, Any]:
     """Update an existing schema in DEVELOPMENT status.
 
@@ -23,7 +23,7 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
 
     Args:
         id: Schema ID to update (format: authority:source:entityType:majorVersion.minorVersion.patchVersion)
-        schema: New schema definition
+        schema_definition: New schema definition
         status: New schema status (can transition from DEVELOPMENT to PUBLISHED)
 
     Returns:
@@ -115,7 +115,9 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
                 raise
 
         # Update schema
-        response = await client.update_schema(id=id, schema=schema, status=status)
+        response = await client.update_schema(
+            id=id, schema=schema_definition, status=status
+        )
 
         # Determine final status
         final_status = status
