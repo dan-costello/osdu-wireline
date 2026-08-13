@@ -1,4 +1,4 @@
-"""Authentication handler for OSDU MCP Server.
+"""Authentication handler for OSDU Wireline.
 
 This module implements authentication support for multiple cloud providers
 with mode-based selection following OSDU CLI patterns.
@@ -165,7 +165,7 @@ class AuthHandler:
             "  GCP (Automatic):\n"
             "    gcloud auth application-default login\n"
             "    OR export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json\n\n"
-            "  See: https://github.com/dan-costello/osdu-mcp-server#authentication"
+            "  See: https://github.com/dan-costello/osdu-wireline#authentication"
         )
 
     def _initialize_credential(self) -> None:
@@ -446,7 +446,7 @@ class AuthHandler:
 
             if "az login" in error_message or "azurecli" in error_message:
                 raise OSMCPAuthError(
-                    "Authentication failed. Please run 'az login' before using OSDU MCP Server"
+                    "Authentication failed. Please run 'az login' before using OSDU Wireline"
                 )
             if "expired" in error_message or "refresh token" in error_message:
                 raise OSMCPAuthError(

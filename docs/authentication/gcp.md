@@ -8,7 +8,7 @@
 **Example:**
 ```bash
 gcloud auth application-default login
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition"
 ```
@@ -21,7 +21,7 @@ claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp
 
 **Example:**
 ```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json"
@@ -41,7 +41,7 @@ All GCP methods request `cloud-platform` plus the identity scopes `openid` and `
 
 **Example:**
 ```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "OSDU_MCP_AUTH_SCOPE=https://www.googleapis.com/auth/cloud-platform,openid,https://www.googleapis.com/auth/userinfo.email"

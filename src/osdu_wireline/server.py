@@ -78,7 +78,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 
 # Create FastMCP server instance
-mcp = FastMCP("OSDU MCP Server", lifespan=app_lifespan)
+mcp = FastMCP("OSDU Wireline", lifespan=app_lifespan)
 
 # Register MCP resources
 for resource in get_workflow_resources():

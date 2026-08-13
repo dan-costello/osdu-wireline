@@ -1,8 +1,10 @@
 # VS Code
 
 > **Note:** `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are always required.
-> The remaining environment variables depend on your cloud provider — the examples below use
-> Azure. See the auth guide for your provider:
+> The remaining environment variables depend on your cloud provider — the example below uses
+> Azure.  
+> 
+> See the auth guide for your provider:  
 > [Azure](../authentication/azure.md) · [AWS](../authentication/aws.md) ·
 > [GCP](../authentication/gcp.md) · [Manual OAuth token](../authentication/manual_oauth.md)
 
@@ -13,13 +15,13 @@ To directly download and install this package from github without setting up a l
 ```json
 {
   "mcpServers": {
-    "osdu-mcp-server": {
+    "osdu-wireline": {
       "type": "stdio",
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/dan-costello/osdu-mcp-server@main",
-        "osdu-mcp-server"
+        "git+https://github.com/dan-costello/osdu-wireline@main",
+        "osdu-wireline"
       ],
       "env": {
         "OSDU_MCP_SERVER_URL": "https://your-osdu.com",
@@ -38,10 +40,10 @@ If you are developing locally and want to test your changes, you can also use th
 ```json
 {
   "mcpServers": {
-    "osdu-mcp-server": {
+    "osdu-wireline": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "osdu-mcp-server"],
+      "args": ["run", "osdu-wireline"],
       "env": {
         "OSDU_MCP_SERVER_URL": "https://your-osdu.com",
         "OSDU_MCP_SERVER_DATA_PARTITION": "your-partition",

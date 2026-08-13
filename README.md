@@ -1,6 +1,6 @@
-# OSDU MCP Server
+# OSDU Wireline
 
-[![CI](https://github.com/dan-costello/osdu-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/dan-costello/osdu-mcp-server/actions/workflows/ci.yml)
+[![CI](https://github.com/dan-costello/osdu-wireline/actions/workflows/ci.yml/badge.svg)](https://github.com/dan-costello/osdu-wireline/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%20|%203.13%20|%203.14-blue)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with ty](https://img.shields.io/badge/type%20checked-ty-261230.svg)](https://github.com/astral-sh/ty)
@@ -8,6 +8,8 @@
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-green)](https://modelcontextprotocol.io)
 
 A Model Context Protocol (MCP) server that provides AI assistants with access to OSDU platform capabilities.
+
+> *An independent project. Not affiliated with, endorsed by, or an official product of The Open Group or the OSDU Forum. OSDU is a trademark of The Open Group.*
 
 ## TOC
 
@@ -29,7 +31,7 @@ A Model Context Protocol (MCP) server that provides AI assistants with access to
 
 This server enables AI assistants to interact with OSDU platform services including search, data management, and schema operations through the MCP protocol.  
 
-Forked from [OSDU MCP Server](https://github.com/danielscholl-osdu/osdu-mcp-server) to help me learn more about MCP and OSDU in general.
+Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) to help me learn more about MCP and OSDU in general.
 
 ## Configuration
 

@@ -5,14 +5,14 @@ from unittest.mock import patch
 
 import pytest
 
-from osdu_mcp_server.shared.app_context import (
+from osdu_wireline.shared.app_context import (
     AppContext,
     create_app_context,
     get_app_context,
     reset_app_context,
     set_app_context,
 )
-from osdu_mcp_server.shared.auth_handler import AuthenticationMode
+from osdu_wireline.shared.auth_handler import AuthenticationMode
 
 # USER_TOKEN mode has the highest priority and needs no cloud SDK calls
 TEST_ENV = {
@@ -104,7 +104,7 @@ def test_close_releases_auth():
 @pytest.mark.asyncio
 async def test_lifespan_installs_and_clears_context():
     """The server lifespan shares one context for the duration of the run."""
-    from osdu_mcp_server.server import app_lifespan, mcp
+    from osdu_wireline.server import app_lifespan, mcp
 
     with patch.dict(os.environ, TEST_ENV):
         async with app_lifespan(mcp) as context:

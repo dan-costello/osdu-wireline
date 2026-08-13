@@ -15,9 +15,9 @@ import jwt
 import pytest
 from azure.core.credentials import AccessToken
 
-from osdu_mcp_server.shared.auth_handler import AuthenticationMode, AuthHandler
-from osdu_mcp_server.shared.config_manager import ConfigManager
-from osdu_mcp_server.shared.exceptions import OSMCPAuthError
+from osdu_wireline.shared.auth_handler import AuthenticationMode, AuthHandler
+from osdu_wireline.shared.config_manager import ConfigManager
+from osdu_wireline.shared.exceptions import OSMCPAuthError
 
 
 def create_test_jwt(exp: float | None = None) -> str:
@@ -224,7 +224,7 @@ async def test_azure_scope_unaffected_by_gcp_scope_handling():
         clear=True,
     ):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_cred:
             mock_cred_instance = MagicMock()
             mock_cred_instance.get_token.return_value = AccessToken(
@@ -480,7 +480,7 @@ async def test_close_all_credential_types():
     # Test with Azure mode
     with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-id"}, clear=True):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_cred:
             mock_cred_instance = MagicMock()
             mock_cred.return_value = mock_cred_instance

@@ -1,4 +1,4 @@
-"""Logging configuration for OSDU MCP Server.
+"""Logging configuration for OSDU Wireline.
 
 This module implements structured logging with a JSON format according to ADR-016.
 Logging can be enabled/disabled via environment variable.

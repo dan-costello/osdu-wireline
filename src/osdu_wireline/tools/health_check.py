@@ -1,4 +1,4 @@
-"""Health check tool for OSDU MCP Server.
+"""Health check tool for OSDU Wireline.
 
 This module implements the health check tool as defined in ADR-007.
 """

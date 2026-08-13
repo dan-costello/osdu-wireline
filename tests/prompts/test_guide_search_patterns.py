@@ -2,7 +2,7 @@
 
 import pytest
 
-from osdu_mcp_server.prompts import guide_search_patterns
+from osdu_wireline.prompts import guide_search_patterns
 
 
 @pytest.mark.asyncio

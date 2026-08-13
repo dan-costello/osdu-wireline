@@ -1,4 +1,4 @@
-"""Main entry point for OSDU MCP Server."""
+"""Main entry point for OSDU Wireline."""
 
 from .server import mcp
 from .shared.logging_manager import configure_logging

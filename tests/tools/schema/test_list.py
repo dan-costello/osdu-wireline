@@ -9,7 +9,7 @@ import pytest
 from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
-from osdu_mcp_server.tools.schema.list import schema_list
+from osdu_wireline.tools.schema.list import schema_list
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ async def test_schema_list_success():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -118,7 +118,7 @@ async def test_schema_list_with_filters():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -164,7 +164,7 @@ async def test_schema_list_empty():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token

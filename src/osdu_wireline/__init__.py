@@ -1,4 +1,4 @@
-"""OSDU MCP Server - MCP server for OSDU platform integration."""
+"""OSDU Wireline - MCP server for OSDU platform integration."""
 
 from .prompts import list_mcp_assets
 

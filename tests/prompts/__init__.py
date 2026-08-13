@@ -1,1 +1,1 @@
-"""Tests for OSDU MCP Server prompts."""
+"""Tests for OSDU Wireline prompts."""

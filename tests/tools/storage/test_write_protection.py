@@ -10,11 +10,11 @@ from unittest.mock import patch
 import pytest
 from aioresponses import aioresponses
 
-from osdu_mcp_server.tools.storage.create_update_records import (
+from osdu_wireline.tools.storage.create_update_records import (
     storage_create_update_records,
 )
-from osdu_mcp_server.tools.storage.delete_record import storage_delete_record
-from osdu_mcp_server.tools.storage.purge_record import storage_purge_record
+from osdu_wireline.tools.storage.delete_record import storage_delete_record
+from osdu_wireline.tools.storage.purge_record import storage_purge_record
 
 VALID_RECORD = {
     "kind": "test:test:test:1.0.0",

@@ -103,7 +103,7 @@ Look at group formats to determine your data domain (e.g., `data.default.viewers
 
 **📋 Resource**: Read `acl-format-examples.json` for comprehensive domain detection guidance
 ```
-ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.json")
+ReadMcpResourceTool(server="osdu-wireline", uri="file://acl-format-examples.json")
 ```
 
 ---
@@ -172,7 +172,7 @@ ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.js
 
    **📋 Template Resource**: Read `legal-tag-template.json` for working structure
    ```
-   ReadMcpResourceTool(server="osdu-mcp-server", uri="file://legal-tag-template.json")
+   ReadMcpResourceTool(server="osdu-wireline", uri="file://legal-tag-template.json")
    ```
 
    **MCP Tool**: `legaltag_create`
@@ -182,7 +182,7 @@ ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.js
      description="Test legal tag for record lifecycle workflow",
      country_of_origin=["US"],
      contract_id="TEST-CONTRACT-001",
-     originator="OSDU-MCP-Server",
+     originator="OSDU-Wireline",
      security_classification="Public",
      personal_data="No Personal Data",
      export_classification="EAR99",
@@ -297,10 +297,10 @@ Option B: I want to explore and choose a different schema type
 **📋 Template Resources**: Read these templates first to avoid format errors:
 ```
 # Get ACL format for your environment
-ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.json")
+ReadMcpResourceTool(server="osdu-wireline", uri="file://acl-format-examples.json")
 
 # Get complete record template
-ReadMcpResourceTool(server="osdu-mcp-server", uri="file://processing-parameter-record.json")
+ReadMcpResourceTool(server="osdu-wireline", uri="file://processing-parameter-record.json")
 ```
 
 **MCP Tool**: `storage_create_update_records`
@@ -323,7 +323,7 @@ storage_create_update_records(
       "Name": "QA Test Case - Record Lifecycle",
       "ID": "qatest-lifecycle-20241219",
       "Code": "QA-LIFECYCLE",
-      "Source": "osdu-mcp-server-workflow-test"
+      "Source": "osdu-wireline-workflow-test"
     }
   }]
 )
@@ -861,6 +861,6 @@ After mastering this basic workflow, consider exploring:
 - **Cross-Service Workflows**: Complex multi-service integrations
 - **Production Patterns**: Scaling and optimizing for production use
 
-Use the `guide_search_patterns` prompt for advanced search techniques, and `list_mcp_assets` for a complete overview of all available OSDU MCP Server capabilities."""
+Use the `guide_search_patterns` prompt for advanced search techniques, and `list_mcp_assets` for a complete overview of all available OSDU Wireline capabilities."""
 
     return [{"role": "user", "content": content}]

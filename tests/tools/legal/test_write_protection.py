@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from mcp.shared.exceptions import McpError
 
-from osdu_mcp_server.tools.legal import (
+from osdu_wireline.tools.legal import (
     legaltag_create,
     legaltag_delete,
     legaltag_update,

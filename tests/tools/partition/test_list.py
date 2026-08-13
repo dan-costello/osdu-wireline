@@ -3,7 +3,7 @@
 import pytest
 from aioresponses import aioresponses
 
-from osdu_mcp_server.tools.partition.list import partition_list
+from osdu_wireline.tools.partition.list import partition_list
 
 PARTITIONS_URL = "https://test.osdu.com/api/partition/v1/partitions"
 

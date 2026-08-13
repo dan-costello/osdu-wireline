@@ -10,7 +10,7 @@
 **Example:**
 ```bash
 aws sso login --profile dev-profile
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AWS_PROFILE=dev-profile"
@@ -26,7 +26,7 @@ claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp
 
 **Example:**
 ```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE" \

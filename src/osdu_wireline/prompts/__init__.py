@@ -1,5 +1,5 @@
 """
-OSDU MCP Server Prompts.
+OSDU Wireline Prompts.
 
 This package contains MCP prompts that provide guided interaction capabilities
 for discovering and understanding server capabilities.

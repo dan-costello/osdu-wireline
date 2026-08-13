@@ -29,13 +29,13 @@ class AssetsGenerator:
 
     def _generate_header(self) -> str:
         """Generate header section."""
-        return "# 🚀 OSDU MCP Server Assets"
+        return "# 🚀 OSDU Wireline Assets"
 
     def _generate_server_overview(self) -> str:
         """Generate server overview section."""
         return """## 📊 Server Overview
 
-**OSDU MCP Server** provides AI assistants with secure access to OSDU platform capabilities through the Model Context Protocol.
+**OSDU Wireline** provides AI assistants with secure access to OSDU platform capabilities through the Model Context Protocol.
 
 - **Purpose**: Bridge AI assistants to OSDU platform operations
 - **Protocol**: Model Context Protocol (MCP) v1.0+
@@ -220,4 +220,4 @@ export OSDU_MCP_LOGGING_LEVEL="INFO"
 
 **🚀 Ready to explore OSDU data? Start with `health_check` to verify your connection!**
 
-For more information, see the [OSDU MCP Server documentation](https://github.com/dan-costello/osdu-mcp-server)."""
+For more information, see the [OSDU Wireline documentation](https://github.com/dan-costello/osdu-wireline)."""

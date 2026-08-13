@@ -56,7 +56,7 @@
     "description": "Search using multiple criteria",
     "mcp_tool": "search_query",
     "pattern": "data.Name:(\"name\") AND data.Source:(\"source\")",
-    "example": "search_query(query='data.Name:(\"MCP Lifecycle Test Parameter\") AND data.Source:(\"osdu-mcp-server-workflow-demo\")')",
+    "example": "search_query(query='data.Name:(\"MCP Lifecycle Test Parameter\") AND data.Source:(\"osdu-wireline-workflow-demo\")')",
     "usage": "Combine multiple fields with AND/OR operators"
   },
   

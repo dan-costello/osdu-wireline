@@ -92,7 +92,7 @@ def _from_request() -> AppContext | None:
     Returns:
         Context from the active request, or None if unavailable
     """
-    server_mod = sys.modules.get("osdu_mcp_server.server")
+    server_mod = sys.modules.get("osdu_wireline.server")
     if server_mod is None:
         return None
 

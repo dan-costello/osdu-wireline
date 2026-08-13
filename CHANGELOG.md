@@ -5,11 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- 
-AI Context: This changelog helps AI assistants understand the project's evolution.
-Each entry includes not just what changed, but WHY it changed and what patterns emerged.
-Key architectural decisions are linked to their ADRs.
--->
+## 0.1.0
+
+### Changed
+
+* Renamed the project to **OSDU Wireline** (distribution `osdu-wireline`, import package
+  `osdu_wireline`, MCP server key `osdu-wireline`). The previous name was unavailable on PyPI,
+  where `osdu-mcp-server` belongs to the upstream project.
+* Reset the version to `0.1.0`. Versions up to 0.9.0 belong to upstream and were never released
+  from this fork.
+* Restructured the README into per-client configuration guides under `docs/mcp-usage/` and
+  per-provider authentication guides under `docs/authentication/`.
+
+The `OSDU_MCP_*` environment variables are unchanged.
+
+---
+
+## Upstream history (danielscholl/osdu-mcp-server)
+
+Everything below documents the upstream project this repository was forked from. Commit and
+issue links resolve against upstream, not this fork.
 
 ## [0.9.0](https://github.com/danielscholl-osdu/osdu-mcp-server/compare/v0.8.0...v0.9.0) (2026-07-27)
 

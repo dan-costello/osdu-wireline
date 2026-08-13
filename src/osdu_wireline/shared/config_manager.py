@@ -1,4 +1,4 @@
-"""Configuration management for OSDU MCP Server.
+"""Configuration management for OSDU Wireline.
 
 This module implements environment-first configuration with YAML fallback
 as defined in ADR-003.

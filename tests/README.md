@@ -1,6 +1,6 @@
-# OSDU MCP Server Test Plan
+# OSDU Wireline Test Plan
 
-This document outlines the test strategy, architecture, and comprehensive test coverage for the OSDU MCP Server project.
+This document outlines the test strategy, architecture, and comprehensive test coverage for the OSDU Wireline project.
 
 ## Test Philosophy
 
@@ -17,7 +17,7 @@ We adopt a **behavior-driven testing approach** that focuses on testing what cod
 
 ```mermaid
 graph TD
-    A[OSDU MCP Server Tests] --> B[Unit Tests]
+    A[OSDU Wireline Tests] --> B[Unit Tests]
     A --> C[Integration Tests]
     
     B --> D[Shared Infrastructure]
@@ -170,7 +170,7 @@ graph TD
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=osdu_mcp_server --cov-report=html
+uv run pytest --cov=osdu_wireline --cov-report=html
 
 # Run specific test file
 uv run pytest tests/shared/test_auth.py

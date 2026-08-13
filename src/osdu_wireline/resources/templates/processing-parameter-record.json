@@ -26,7 +26,7 @@
       "ID": "mcp-lifecycle-test-YYYYMMDD-HHMMSS",
       "Code": "MCP-LIFECYCLE",
       "Description": "Test processing parameter created via MCP lifecycle workflow demonstration",
-      "Source": "osdu-mcp-server-workflow-demo"
+      "Source": "osdu-wireline-workflow-demo"
     }
   },
   

@@ -8,7 +8,7 @@ import pytest
 from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
-from osdu_mcp_server.tools.storage.query_records_by_kind import (
+from osdu_wireline.tools.storage.query_records_by_kind import (
     storage_query_records_by_kind,
 )
 
@@ -30,7 +30,7 @@ async def test_storage_query_records_by_kind_success():
         },
     ):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",
@@ -71,7 +71,7 @@ async def test_storage_query_records_by_kind_with_cursor():
         },
     ):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",

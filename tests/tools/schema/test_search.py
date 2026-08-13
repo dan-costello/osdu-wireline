@@ -5,7 +5,7 @@ import re
 import pytest
 from aioresponses import aioresponses
 
-from osdu_mcp_server.tools.schema.search import schema_search
+from osdu_wireline.tools.schema.search import schema_search
 
 SCHEMA_LIST_URL = re.compile(r"^https://test\.osdu\.com/api/schema-service/v1/schema\?")
 SCHEMA_GET_URL = (

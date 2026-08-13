@@ -9,9 +9,9 @@ import pytest
 from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
-from osdu_mcp_server.tools.storage.get_record import storage_get_record
-from osdu_mcp_server.tools.storage.get_record_version import storage_get_record_version
-from osdu_mcp_server.tools.storage.list_record_versions import (
+from osdu_wireline.tools.storage.get_record import storage_get_record
+from osdu_wireline.tools.storage.get_record_version import storage_get_record_version
+from osdu_wireline.tools.storage.list_record_versions import (
     storage_list_record_versions,
 )
 
@@ -45,7 +45,7 @@ async def test_storage_get_record_success():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -90,7 +90,7 @@ async def test_storage_get_record_with_attributes():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -138,7 +138,7 @@ async def test_storage_get_record_version_success():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -179,7 +179,7 @@ async def test_storage_list_record_versions_success():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token

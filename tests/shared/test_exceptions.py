@@ -3,7 +3,7 @@
 import pytest
 from mcp import McpError
 
-from osdu_mcp_server.shared.exceptions import (
+from osdu_wireline.shared.exceptions import (
     OSMCPAPIError,
     OSMCPAuthError,
     OSMCPConfigError,

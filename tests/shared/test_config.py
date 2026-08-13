@@ -6,8 +6,8 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from osdu_mcp_server.shared.config_manager import ConfigManager
-from osdu_mcp_server.shared.exceptions import OSMCPConfigError
+from osdu_wireline.shared.config_manager import ConfigManager
+from osdu_wireline.shared.exceptions import OSMCPConfigError
 
 
 def test_config_manager_env_priority():

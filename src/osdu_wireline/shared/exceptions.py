@@ -1,4 +1,4 @@
-"""Error handling architecture for OSDU MCP Server.
+"""Error handling architecture for OSDU Wireline.
 
 This module implements the exception hierarchy as defined in ADR-004.
 """

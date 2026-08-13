@@ -5,7 +5,7 @@ import logging
 import unittest
 from unittest.mock import MagicMock, patch
 
-from osdu_mcp_server.shared.logging_manager import (
+from osdu_wireline.shared.logging_manager import (
     JSONFormatter,
     LoggingManager,
     configure_logging,
@@ -30,7 +30,7 @@ class TestLoggingManager(unittest.TestCase):
         self.test_logger.handlers = self.test_handlers
         self.test_logger.setLevel(self.test_level)
 
-    @patch("osdu_mcp_server.shared.logging_manager.ConfigManager")
+    @patch("osdu_wireline.shared.logging_manager.ConfigManager")
     def test_logging_disabled(self, mock_config):
         """Test that logging is disabled by default."""
         # Mock config to return logging disabled
@@ -48,10 +48,8 @@ class TestLoggingManager(unittest.TestCase):
     def test_logging_enabled(self):
         """Test that logging is configured when enabled."""
         # Patch config for this test
-        with patch(
-            "osdu_mcp_server.shared.logging_manager.ConfigManager"
-        ) as mock_config:
-            with patch("osdu_mcp_server.shared.logging_manager.sys.modules", {}):
+        with patch("osdu_wireline.shared.logging_manager.ConfigManager") as mock_config:
+            with patch("osdu_wireline.shared.logging_manager.sys.modules", {}):
                 # Mock config to return logging enabled
                 mock_config_instance = MagicMock()
                 mock_config_instance.get.side_effect = (
@@ -112,7 +110,7 @@ class TestLoggingManager(unittest.TestCase):
         assert "timestamp" in log_json
         assert "trace_id" in log_json
 
-    @patch("osdu_mcp_server.shared.logging_manager.ConfigManager")
+    @patch("osdu_wireline.shared.logging_manager.ConfigManager")
     def test_get_logger(self, mock_config):
         """Test get_logger returns configured logger."""
         # Mock config to return logging enabled
@@ -134,9 +132,7 @@ class TestLoggingManager(unittest.TestCase):
 
     def test_configure_global(self):
         """Test the global configure_logging function."""
-        with patch(
-            "osdu_mcp_server.shared.logging_manager.ConfigManager"
-        ) as mock_config:
+        with patch("osdu_wireline.shared.logging_manager.ConfigManager") as mock_config:
             # Mock config to return logging enabled
             mock_config_instance = MagicMock()
             mock_config_instance.get.side_effect = lambda section, key, default=None: (

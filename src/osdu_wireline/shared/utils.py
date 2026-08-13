@@ -1,4 +1,4 @@
-"""Utility functions for OSDU MCP Server."""
+"""Utility functions for OSDU Wireline."""
 
 import uuid
 from datetime import UTC, datetime

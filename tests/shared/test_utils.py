@@ -4,7 +4,7 @@ from datetime import datetime
 
 from freezegun import freeze_time
 
-from osdu_mcp_server.shared.utils import get_timestamp
+from osdu_wireline.shared.utils import get_timestamp
 
 
 @freeze_time("2025-01-15 10:30:00")

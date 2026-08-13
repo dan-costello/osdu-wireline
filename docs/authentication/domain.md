@@ -22,7 +22,7 @@ Applies to all cloud providers.
 
 **Important**: The data domain is the internal OSDU data system domain used in ACL group emails, not the FQDN from your server URL.
 
-If not set, the server will attempt to extract the domain from your server URL. For more guidance, use the MCP resource: `ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.json")`.
+If not set, the server will attempt to extract the domain from your server URL. For more guidance, use the MCP resource: `ReadMcpResourceTool(server="osdu-wireline", uri="file://acl-format-examples.json")`.
 
 ---
 

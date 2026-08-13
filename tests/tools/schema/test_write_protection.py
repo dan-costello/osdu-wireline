@@ -8,8 +8,8 @@ import pytest
 from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
-from osdu_mcp_server.tools.schema.create import schema_create
-from osdu_mcp_server.tools.schema.update import schema_update
+from osdu_wireline.tools.schema.create import schema_create
+from osdu_wireline.tools.schema.update import schema_update
 
 
 @pytest.mark.asyncio
@@ -31,7 +31,7 @@ async def test_schema_create_write_protection():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -73,7 +73,7 @@ async def test_schema_update_write_protection():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -111,7 +111,7 @@ async def test_schema_create_write_enabled():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -176,7 +176,7 @@ async def test_schema_update_write_enabled():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token

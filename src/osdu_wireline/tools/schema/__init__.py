@@ -1,4 +1,4 @@
-"""Schema service tools for OSDU MCP Server."""
+"""Schema service tools for OSDU Wireline."""
 
 from .create import schema_create
 from .get import schema_get

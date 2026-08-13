@@ -8,8 +8,8 @@ import jwt
 import pytest
 from aioresponses import aioresponses
 
-from osdu_mcp_server.shared.service_urls import OSMCPService, get_service_info_endpoint
-from osdu_mcp_server.tools.health_check import health_check
+from osdu_wireline.shared.service_urls import OSMCPService, get_service_info_endpoint
+from osdu_wireline.tools.health_check import health_check
 
 SERVER_URL = "https://test.osdu.com"
 

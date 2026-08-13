@@ -11,7 +11,7 @@
 **Example:**
 ```bash
 az login
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-osdu-app-id" \
@@ -29,7 +29,7 @@ claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp
 
 **Example:**
 ```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
+claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-service-principal-id" \
