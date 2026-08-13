@@ -411,7 +411,7 @@ class AuthHandler:
         """
         try:
             # Check if we have a cached token that's still valid
-            if self._is_azure_token_valid():
+            if self._is_azure_token_valid() and self._azure_cached_token:
                 return self._azure_cached_token.token
 
             # Get client ID from standard Azure environment variable
@@ -426,6 +426,10 @@ class AuthHandler:
             scope = custom_scope or f"{client_id}/.default"
 
             # Get new token
+            if not self._azure_credential:
+                raise OSMCPAuthError(
+                    "Azure credential not initialized. Check AZURE_CLIENT_ID and AZURE_TENANT_ID"
+                )
             self._azure_cached_token = self._azure_credential.get_token(scope)
             logger.info("Azure token obtained successfully")
             return self._azure_cached_token.token

@@ -67,7 +67,7 @@ async def health_check(
 
 async def _check_services(
     client: OsduClient, include_versions: bool = False
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Check individual OSDU service health.
 
     Args:
