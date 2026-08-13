@@ -2,9 +2,7 @@
 
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients import SearchClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 
@@ -51,16 +49,10 @@ async def search_by_kind(
     if limit > 1000:
         limit = 1000
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SearchClient(config, auth)
-
-    try:
+    async with SearchClient() as client:
         return await client.search_by_kind(
             kind=kind,
             limit=limit,
             offset=offset,
             returnedFields=returnedFields,
         )
-    finally:
-        await client.close()

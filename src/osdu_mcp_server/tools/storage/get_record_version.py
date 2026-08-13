@@ -1,8 +1,6 @@
 """Tool for getting a specific version of a record."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -38,11 +36,7 @@ async def storage_get_record_version(
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Get the specific record version
         record = await client.get_record_version(id, version, attributes)
 
@@ -60,8 +54,5 @@ async def storage_get_record_version(
         return {
             "success": True,
             "record": record,
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
-
-    finally:
-        await client.close()

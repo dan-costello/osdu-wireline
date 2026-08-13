@@ -5,33 +5,79 @@ and retry logic as defined in ADR-005.
 """
 
 import asyncio
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 from urllib.parse import urljoin
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout
 
+from .app_context import get_app_context
 from .auth_handler import AuthHandler
 from .config_manager import ConfigManager
 from .exceptions import OSMCPAPIError, OSMCPConnectionError
 
 
 class OsduClient:
-    """Async HTTP client for OSDU APIs with connection pooling and retries."""
+    """Async HTTP client for OSDU APIs with connection pooling and retries.
 
-    def __init__(self, config: ConfigManager, auth_handler: AuthHandler):
+    Use as an async context manager so the HTTP session is closed
+    automatically:
+
+        async with OsduClient() as client:
+            data = await client.get("/api/path")
+    """
+
+    def __init__(
+        self,
+        config: ConfigManager | None = None,
+        auth_handler: AuthHandler | None = None,
+    ):
         """Initialize OSDU client.
 
         Args:
-            config: Configuration manager instance
-            auth_handler: Authentication handler instance
+            config: Configuration manager instance, defaults to the shared one
+            auth_handler: Authentication handler, defaults to the shared one
         """
+        if config is None or auth_handler is None:
+            context = get_app_context()
+            config = config if config is not None else context.config
+            auth_handler = auth_handler if auth_handler is not None else context.auth
+
         self.config = config
         self.auth_handler = auth_handler
         self._session: ClientSession | None = None
         self._base_url = config.get_required("server", "url")
         self._data_partition = config.get_required("server", "data_partition")
         self._timeout = config.get("server", "timeout", 30)
+
+    @property
+    def data_partition(self) -> str:
+        """Data partition this client targets."""
+        return self._data_partition
+
+    @property
+    def server_url(self) -> str:
+        """Base OSDU server URL."""
+        return self._base_url
+
+    async def __aenter__(self) -> Self:
+        """Open the HTTP session.
+
+        Returns:
+            This client instance
+        """
+        await self._ensure_session()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Close the HTTP session."""
+        await self.close()
 
     async def _ensure_session(self) -> ClientSession:
         """Ensure HTTP session is created.

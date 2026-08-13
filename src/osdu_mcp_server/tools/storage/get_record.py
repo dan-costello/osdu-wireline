@@ -1,8 +1,6 @@
 """Tool for getting a record by ID."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -35,11 +33,7 @@ async def storage_get_record(id: str, attributes: list[str] | None = None) -> di
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Get the record
         record = await client.get_record(id, attributes)
 
@@ -56,8 +50,5 @@ async def storage_get_record(id: str, attributes: list[str] | None = None) -> di
         return {
             "success": True,
             "record": record,
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
-
-    finally:
-        await client.close()

@@ -15,12 +15,16 @@ logger = logging.getLogger(__name__)
 class PartitionClient(OsduClient):
     """Client for OSDU Partition Service operations."""
 
-    def __init__(self, config: ConfigManager, auth_handler: AuthHandler):
+    def __init__(
+        self,
+        config: ConfigManager | None = None,
+        auth_handler: AuthHandler | None = None,
+    ):
         """Initialize partition client.
 
         Args:
-            config: Configuration manager instance
-            auth_handler: Authentication handler instance
+            config: Configuration manager instance, defaults to the shared one
+            auth_handler: Authentication handler, defaults to the shared one
         """
         super().__init__(config, auth_handler)
         self._base_path = get_service_base_url(OSMCPService.PARTITION)

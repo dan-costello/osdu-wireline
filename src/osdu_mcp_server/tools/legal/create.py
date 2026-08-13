@@ -4,9 +4,7 @@ import logging
 import os
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.legal_client import LegalClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -53,13 +51,9 @@ async def legaltag_create(
             status_code=403,
         )
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = LegalClient(config, auth)
-
-    try:
+    async with LegalClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Build properties
         properties = {
@@ -105,6 +99,3 @@ async def legaltag_create(
             "write_enabled": True,
             "partition": partition,
         }
-
-    finally:
-        await client.close()

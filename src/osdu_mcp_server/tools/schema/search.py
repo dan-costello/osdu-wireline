@@ -2,9 +2,7 @@
 
 import fnmatch
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.schema_client import SchemaClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -85,10 +83,6 @@ async def schema_search(
             limit=200
         )
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SchemaClient(config, auth)
-
     # Default search fields if not provided
     if search_in is None:
         search_in = ["title", "description", "properties"]
@@ -100,9 +94,9 @@ async def schema_search(
     server_filters: dict[str, list[str]] = {}
     client_filters: dict[str, str | list[str]] = {}
 
-    try:
+    async with SchemaClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Process server-side filtering
         # These are filters that can be directly passed to the API
@@ -236,9 +230,6 @@ async def schema_search(
             "filteredCount": len(filtered_schemas),  # Additional info for transparency
             "query": text if text else None,  # Include search query for reference
         }
-
-    finally:
-        await client.close()
 
 
 def _matches_client_filters(

@@ -2,9 +2,7 @@
 
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients import SearchClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 
@@ -41,11 +39,5 @@ async def search_by_id(id: str, limit: int = 10) -> dict[str, Any]:
     if not id:
         raise ValueError("ID parameter is required")
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SearchClient(config, auth)
-
-    try:
+    async with SearchClient() as client:
         return await client.search_by_id(record_id=id, limit=limit)
-    finally:
-        await client.close()

@@ -5,8 +5,7 @@ This module implements the health check tool as defined in ADR-007.
 
 from typing import Any
 
-from ..shared.auth_handler import AuthHandler
-from ..shared.config_manager import ConfigManager
+from ..shared.app_context import get_app_context
 from ..shared.exceptions import handle_osdu_exceptions
 from ..shared.osdu_client import OsduClient
 from ..shared.service_urls import OSMCPService, get_service_info_endpoint
@@ -29,43 +28,41 @@ async def health_check(
     Returns:
         Health status of OSDU connection and services
     """
-    # Initialize components
-    config = ConfigManager()
-    auth_handler = AuthHandler(config)
-    client = OsduClient(config, auth_handler)
+    # The auth handler is shared for the life of the server, so it is only
+    # borrowed here - closing it would clear the token cache for every
+    # subsequent tool call.
+    auth_handler = get_app_context().auth
 
-    result = {
-        "connectivity": "pending",
-        "server_url": config.get_required("server", "url"),
-        "data_partition": config.get_required("server", "data_partition"),
-        "timestamp": get_timestamp(),
-    }
+    async with OsduClient() as client:
+        result = {
+            "connectivity": "pending",
+            "server_url": client.server_url,
+            "data_partition": client.data_partition,
+            "timestamp": get_timestamp(),
+        }
 
-    try:
-        # Check authentication if requested
-        if include_auth:
-            auth_valid = await auth_handler.validate_token()
-            result["authentication"] = {"status": "valid" if auth_valid else "invalid"}
+        try:
+            # Check authentication if requested
+            if include_auth:
+                auth_valid = await auth_handler.validate_token()
+                result["authentication"] = {
+                    "status": "valid" if auth_valid else "invalid"
+                }
 
-        # Check services if requested
-        if include_services:
-            services_status = await _check_services(client, include_version_info)
-            result["services"] = services_status
+            # Check services if requested
+            if include_services:
+                services_status = await _check_services(client, include_version_info)
+                result["services"] = services_status
 
-        # If we get here, connectivity is successful
-        result["connectivity"] = "success"
+            # If we get here, connectivity is successful
+            result["connectivity"] = "success"
 
-    except Exception as e:
-        result["connectivity"] = "failed"
-        result["error"] = str(e)
-        raise
+        except Exception as e:
+            result["connectivity"] = "failed"
+            result["error"] = str(e)
+            raise
 
-    finally:
-        # Clean up resources
-        await client.close()
-        auth_handler.close()
-
-    return result
+        return result
 
 
 async def _check_services(

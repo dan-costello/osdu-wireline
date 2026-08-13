@@ -1,8 +1,6 @@
 """Tool for fetching multiple records at once."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -38,11 +36,7 @@ async def storage_fetch_records(
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Fetch multiple records
         response = await client.fetch_records(records, attributes)
 
@@ -52,7 +46,7 @@ async def storage_fetch_records(
             "records": response.get("records", []),
             "count": len(response.get("records", [])),
             "invalidRecords": response.get("invalidRecords", []),
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
 
         # Include retry records if present
@@ -71,6 +65,3 @@ async def storage_fetch_records(
         )
 
         return result
-
-    finally:
-        await client.close()

@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.entitlements_client import EntitlementsClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -29,13 +27,9 @@ async def entitlements_mine() -> dict:
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = EntitlementsClient(config, auth)
-
-    try:
+    async with EntitlementsClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Get user's groups
         response = await client.get_my_groups()
@@ -55,6 +49,3 @@ async def entitlements_mine() -> dict:
             "count": len(groups),
             "partition": partition,
         }
-
-    finally:
-        await client.close()

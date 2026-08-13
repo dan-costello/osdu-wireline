@@ -5,9 +5,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.partition_client import PartitionClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 from ...shared.utils import get_trace_id
 
@@ -64,88 +62,80 @@ async def partition_get(
     )
 
     try:
-        # Initialize dependencies
-        config = ConfigManager()
-        auth_handler = AuthHandler(config)
-        client = PartitionClient(config, auth_handler)
+        async with PartitionClient() as client:
+            # Get partition properties
+            properties = await client.get_partition(partition_id)
 
-        # Get partition properties
-        properties = await client.get_partition(partition_id)
+            # Process properties based on sensitivity settings
+            processed_properties = {}
+            sensitive_count = 0
+            sensitive_accessed = []
 
-        # Process properties based on sensitivity settings
-        processed_properties = {}
-        sensitive_count = 0
-        sensitive_accessed = []
+            for key, prop in properties.items():
+                is_sensitive = prop.get("sensitive", False)
 
-        for key, prop in properties.items():
-            is_sensitive = prop.get("sensitive", False)
+                if is_sensitive:
+                    sensitive_count += 1
 
-            if is_sensitive:
-                sensitive_count += 1
+                    if not include_sensitive:
+                        # Skip sensitive properties entirely
+                        continue
 
-                if not include_sensitive:
-                    # Skip sensitive properties entirely
-                    continue
-
-                if redact_sensitive_values:
-                    # Include property but redact value
-                    processed_properties[key] = {
-                        "sensitive": True,
-                        "value": "<REDACTED>",
-                    }
+                    if redact_sensitive_values:
+                        # Include property but redact value
+                        processed_properties[key] = {
+                            "sensitive": True,
+                            "value": "<REDACTED>",
+                        }
+                    else:
+                        # Include full property (for authorized operations)
+                        processed_properties[key] = prop
+                        sensitive_accessed.append(key)
                 else:
-                    # Include full property (for authorized operations)
+                    # Non-sensitive property, include as-is
                     processed_properties[key] = prop
-                    sensitive_accessed.append(key)
-            else:
-                # Non-sensitive property, include as-is
-                processed_properties[key] = prop
 
-        # Log sensitive data access if any
-        if sensitive_accessed:
-            logger.warning(
+            # Log sensitive data access if any
+            if sensitive_accessed:
+                logger.warning(
+                    json.dumps(
+                        {
+                            "timestamp": datetime.now(UTC).isoformat(),
+                            "trace_id": trace_id,
+                            "level": "WARN",
+                            "tool": "partition_get",
+                            "action": "sensitive_data_access",
+                            "partition_id": partition_id,
+                            "properties_accessed": sensitive_accessed,
+                            "user": "unknown",
+                            "result": "provided",
+                        }
+                    )
+                )
+
+            # Log successful response
+            logger.info(
                 json.dumps(
                     {
                         "timestamp": datetime.now(UTC).isoformat(),
                         "trace_id": trace_id,
-                        "level": "WARN",
+                        "level": "INFO",
                         "tool": "partition_get",
-                        "action": "sensitive_data_access",
+                        "action": "partition_get_success",
                         "partition_id": partition_id,
-                        "properties_accessed": sensitive_accessed,
-                        "user": (
-                            await auth_handler.get_user_info()
-                            if hasattr(auth_handler, "get_user_info")
-                            else "unknown"
-                        ),
-                        "result": "provided",
+                        "property_count": len(processed_properties),
+                        "sensitive_count": sensitive_count,
                     }
                 )
             )
 
-        # Log successful response
-        logger.info(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "INFO",
-                    "tool": "partition_get",
-                    "action": "partition_get_success",
-                    "partition_id": partition_id,
-                    "property_count": len(processed_properties),
-                    "sensitive_count": sensitive_count,
-                }
-            )
-        )
-
-        return {
-            "success": True,
-            "exists": True,
-            "partition_id": partition_id,
-            "properties": processed_properties,
-            "sensitive_properties_count": sensitive_count,
-        }
+            return {
+                "success": True,
+                "exists": True,
+                "partition_id": partition_id,
+                "properties": processed_properties,
+                "sensitive_properties_count": sensitive_count,
+            }
 
     except OSMCPError as e:
         # Log error
@@ -174,8 +164,3 @@ async def partition_get(
             "properties": {},
             "error": str(e),
         }
-
-    finally:
-        # Clean up resources
-        if "client" in locals():
-            await client.close()

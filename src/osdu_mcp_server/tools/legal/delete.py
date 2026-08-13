@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.legal_client import LegalClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -33,13 +31,9 @@ async def legaltag_delete(name: str, confirm: bool) -> dict:
             status_code=400,
         )
 
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = LegalClient(config, auth)
-
-    try:
+    async with LegalClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Delete legal tag
         await client.delete_legal_tag(name)
@@ -65,6 +59,3 @@ async def legaltag_delete(name: str, confirm: bool) -> dict:
             "partition": partition,
             "warning": "Associated data is now invalid",
         }
-
-    finally:
-        await client.close()
