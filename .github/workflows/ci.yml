@@ -31,7 +31,7 @@ jobs:
         python-version: "3.13"
 
     - name: Install dependencies
-      run: uv sync --locked --extra dev
+      run: uv sync --locked --group dev
 
     - name: Check code formatting with ruff
       id: ruff-format
@@ -46,9 +46,9 @@ jobs:
     - name: Type check with ty
       id: ty
       run: |
-        uv run ty check src/ --python-version 3.12
-        uv run ty check src/ --python-version 3.13
-        uv run ty check src/ --python-version 3.14
+        uv run ty check src/ tests/ --python-version 3.12 --output-format=github --error-on-warning
+        uv run ty check src/ tests/ --python-version 3.13 --output-format=github --error-on-warning
+        uv run ty check src/ tests/ --python-version 3.14 --output-format=github --error-on-warning
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -71,7 +71,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: uv sync --locked --extra dev
+      run: uv sync --locked --group dev
 
     - name: Run tests with coverage
       id: pytest

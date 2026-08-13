@@ -2,8 +2,6 @@
 
 import json
 
-import pytest
-
 from src.osdu_mcp_server.resources import get_workflow_resources
 
 
@@ -81,7 +79,9 @@ class TestWorkflowResources:
                 try:
                     json.load(f)
                 except json.JSONDecodeError as e:
-                    pytest.fail(f"Resource file {path} contains invalid JSON: {e}")
+                    raise AssertionError(
+                        f"Resource file {path} contains invalid JSON: {e}"
+                    ) from e
 
     def test_legal_tag_template_structure(self):
         """Test that legal tag template has expected structure."""
