@@ -3,11 +3,10 @@
 import logging
 from typing import Any
 
-from ..auth_handler import AuthHandler
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
 from ..osdu_client import OsduClient
-from ..service_urls import OSMCPService, get_service_base_url
+from ..service_urls import OSMCPService
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +14,7 @@ logger = logging.getLogger(__name__)
 class PartitionClient(OsduClient):
     """Client for OSDU Partition Service operations."""
 
-    def __init__(self, auth_handler: AuthHandler | None = None):
-        """Initialize partition client.
-
-        Args:
-            auth_handler: Authentication handler, defaults to the shared one
-        """
-        super().__init__(auth_handler)
-        self._base_path = get_service_base_url(OSMCPService.PARTITION)
+    service = OSMCPService.PARTITION
 
     async def list_partitions(self) -> list[str]:
         """List all accessible partitions.
@@ -34,7 +26,7 @@ class PartitionClient(OsduClient):
             OSMCPAPIError: For API errors
             OSMCPConnectionError: For connection errors
         """
-        path = f"{self._base_path}/partitions"
+        path = "/partitions"
 
         try:
             response = await self.get(path)
@@ -75,7 +67,7 @@ class PartitionClient(OsduClient):
         if not partition_id or not partition_id.strip():
             raise OSMCPValidationError("Partition ID cannot be empty")
 
-        path = f"{self._base_path}/partitions/{partition_id}"
+        path = f"/partitions/{partition_id}"
 
         try:
             # Set custom headers for this specific request
@@ -134,7 +126,7 @@ class PartitionClient(OsduClient):
         if not partition_id or not partition_id.strip():
             raise OSMCPValidationError("Partition ID cannot be empty")
 
-        path = f"{self._base_path}/partitions/{partition_id}"
+        path = f"/partitions/{partition_id}"
 
         # Ensure sensitive properties are marked correctly
         data = {"properties": self._validate_properties(properties)}
@@ -179,7 +171,7 @@ class PartitionClient(OsduClient):
         if not partition_id or not partition_id.strip():
             raise OSMCPValidationError("Partition ID cannot be empty")
 
-        path = f"{self._base_path}/partitions/{partition_id}"
+        path = f"/partitions/{partition_id}"
 
         # Ensure sensitive properties are marked correctly
         data = {"properties": self._validate_properties(properties)}
@@ -218,7 +210,7 @@ class PartitionClient(OsduClient):
         if not partition_id or not partition_id.strip():
             raise OSMCPValidationError("Partition ID cannot be empty")
 
-        path = f"{self._base_path}/partitions/{partition_id}"
+        path = f"/partitions/{partition_id}"
 
         headers = {
             "data-partition-id": partition_id,

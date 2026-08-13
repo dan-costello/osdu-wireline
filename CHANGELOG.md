@@ -16,9 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from this fork.
 * Restructured the README into per-client configuration guides under `docs/mcp-usage/` and
   per-provider authentication guides under `docs/authentication/`.
-* Added a complete environment variable reference to the README, covering all 15 variables the
+* Added a complete environment variable reference to the README, covering all 14 variables the
   server reads. The two required ones, `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION`,
   were previously documented only in the per-client setup guides.
+* Replaced `OSDU_MCP_LOGGING_ENABLED` and `OSDU_MCP_LOGGING_LEVEL` with a single
+  `OSDU_MCP_LOG_LEVEL`. The old pair is no longer read. **Behavior change:** logging is now always
+  on at `INFO` and applies uniformly to every module, where previously it was disabled by default
+  and, when enabled, reached only part of the codebase. Expect more output on stderr than before —
+  set `OSDU_MCP_LOG_LEVEL=ERROR` for the quiet equivalent of the old default. Third-party
+  libraries stay at `INFO` regardless, so `DEBUG` no longer means Azure and aiohttp wire chatter.
 
 ### Added
 
@@ -29,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* `schema_create` and `schema_update` sent an empty request body to the Schema service, so
+  neither tool could ever have created or updated a schema. `SchemaClient` was the only service
+  client that did not move a `json=` keyword into the request body, and the base client then
+  overwrote the body with `None`. Both tools now send the schema as intended. Anyone who worked
+  around this is safe to retry; the failure was total, so no partial or malformed schemas were
+  written.
 * Corrected the documentation for `OSDU_MCP_SERVER_DOMAIN`, which was described as a setting in
   the authentication guides, the `guide_record_lifecycle` prompt, and `acl-format-examples.json`.
   No code has ever read it: the data domain is a value you write into a record's ACL groups, not
@@ -41,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `config.example.yaml` template and the `pyyaml` dependency are gone.
 * Removed the `ConfigManager` class. Environment variables are now read by their literal names
   through `shared/env.py`, instead of being assembled from a `(section, key)` pair.
+* Removed the `LoggingManager` and `JSONFormatter` classes and the custom JSON log format they
+  produced. The formatter was off by default, reached only 12 of the 31 modules that log, and
+  emitted every line twice when enabled. Logging now goes through the standard library, so log
+  lines are plain text on stderr rather than JSON objects — a **breaking change** for anyone
+  parsing this server's output as structured logs.
 * Removed the `list_mcp_assets` prompt and the `AssetsGenerator` class behind it. Its tool and
   prompt inventory was a hand-maintained duplicate of the server's registrations, which MCP
   already exposes through `tools/list` and `prompts/list`, and its configuration section had gone
@@ -48,10 +65,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lives in the `reference://quick-start-workflows.md` resource. **Breaking** for clients invoking
   the prompt by name.
 
-The `OSDU_MCP_*` environment variable names are unchanged. One behavior change: the write and
-delete gates now accept `yes` and `1` in addition to `true`, matching how every other boolean
-variable is parsed. `OSDU_MCP_ENABLE_WRITE_MODE=1` and `OSDU_MCP_ENABLE_DELETE_MODE=1` therefore
-enable those operations where previously only the literal `true` did.
+### Upgrading
+
+The only environment variables that changed are the logging pair: replace
+`OSDU_MCP_LOGGING_ENABLED` and `OSDU_MCP_LOGGING_LEVEL` with `OSDU_MCP_LOG_LEVEL`. The removed
+names are silently ignored rather than rejected, so a stale config will not fail to start — it
+will just log at `INFO`. Every other `OSDU_MCP_*` name is unchanged.
+
+Two behavior changes to expect:
+
+* The write and delete gates now accept `yes` and `1` in addition to `true`, matching how every
+  other boolean variable is parsed. `OSDU_MCP_ENABLE_WRITE_MODE=1` and
+  `OSDU_MCP_ENABLE_DELETE_MODE=1` therefore enable those operations where previously only the
+  literal `true` did.
+* Server logs on stderr are more verbose by default, since logging is now always on at `INFO`
+  across every module. Set `OSDU_MCP_LOG_LEVEL=ERROR` to restore roughly the previous quiet.
 
 ---
 

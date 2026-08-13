@@ -4,6 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from aioresponses import aioresponses
 from mcp.shared.exceptions import McpError
 
 from osdu_wireline.tools.legal import (
@@ -78,3 +79,36 @@ async def test_legaltag_delete_no_confirmation(osdu_env):
             "WARNING: This will invalidate all associated data"
             in exc_info.value.error.message
         )
+
+
+@pytest.mark.asyncio
+async def test_legaltag_create_sends_body(osdu_env, sent_json):
+    """A successful create puts the tag properties on the wire, not just the URL."""
+    with patch.dict(os.environ, {"OSDU_MCP_ENABLE_WRITE_MODE": "true"}, clear=False):
+        with aioresponses() as mocked:
+            mocked.post(
+                "https://test.osdu.com/api/legal/v1/legaltags",
+                payload={"name": "opendes-Test-Tag"},
+            )
+
+            result = await legaltag_create(
+                name="Test-Tag",
+                description="A test tag",
+                country_of_origin=["US"],
+                contract_id="A1234",
+                originator="Test Originator",
+                security_classification="Private",
+                personal_data="No Personal Data",
+                export_classification="EAR99",
+                data_type="Transferred Data",
+            )
+
+            assert result["success"] is True
+
+            sent = sent_json(
+                mocked, "POST", "https://test.osdu.com/api/legal/v1/legaltags"
+            )
+            # The API takes the name without the partition prefix
+            assert sent["name"] == "Test-Tag"
+            assert sent["description"] == "A test tag"
+            assert sent["properties"]["contractId"] == "A1234"

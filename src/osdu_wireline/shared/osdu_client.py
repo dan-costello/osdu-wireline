@@ -6,7 +6,7 @@ and retry logic as defined in ADR-005.
 
 import asyncio
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 from urllib.parse import urljoin
 
 import aiohttp
@@ -16,6 +16,7 @@ from .app_context import get_app_context
 from .auth_handler import AuthHandler
 from .env import get_env_int, require_env
 from .exceptions import OSMCPAPIError, OSMCPConnectionError
+from .service_urls import OSMCPService, get_service_base_url
 
 
 class OsduClient:
@@ -26,7 +27,16 @@ class OsduClient:
 
         async with OsduClient() as client:
             data = await client.get("/api/path")
+
+    Subclasses name their service so request paths can be written bare:
+
+        class StorageClient(OsduClient):
+            service = OSMCPService.STORAGE
     """
+
+    #: Service whose base path is prepended to every request path. None means
+    #: callers pass fully-qualified paths, as tools/health_check.py does.
+    service: ClassVar[OSMCPService | None] = None
 
     def __init__(self, auth_handler: AuthHandler | None = None):
         """Initialize OSDU client.
@@ -42,6 +52,7 @@ class OsduClient:
         self._base_url: str = require_env("OSDU_MCP_SERVER_URL")
         self._data_partition: str = require_env("OSDU_MCP_SERVER_DATA_PARTITION")
         self._timeout = get_env_int("OSDU_MCP_SERVER_TIMEOUT", 30)
+        self._base_path = get_service_base_url(self.service) if self.service else ""
 
     @property
     def data_partition(self) -> str:
@@ -92,7 +103,7 @@ class OsduClient:
 
         Args:
             method: HTTP method (GET, POST, etc.)
-            path: API path
+            path: API path, relative to this client's service base path
             **kwargs: Additional request parameters
 
         Returns:
@@ -102,7 +113,7 @@ class OsduClient:
             OSMCPAPIError: For API errors
             OSMCPConnectionError: For connection errors
         """
-        url = urljoin(self._base_url, path)
+        url = urljoin(self._base_url, f"{self._base_path}{path}")
         session = await self._ensure_session()
 
         # Set up headers
@@ -162,31 +173,35 @@ class OsduClient:
         """
         return await self._make_request("GET", path, **kwargs)
 
-    async def post(self, path: str, data: Any, **kwargs: Any) -> dict[str, Any]:
+    async def post(self, path: str, data: Any = None, **kwargs: Any) -> dict[str, Any]:
         """POST request with retry logic.
 
         Args:
             path: API path
-            data: Request body data
+            data: Request body data, also accepted as a json= keyword
             **kwargs: Additional request parameters
 
         Returns:
             Response data as dictionary
         """
+        if data is None:
+            data = kwargs.pop("json", None)
         kwargs["json"] = data
         return await self._make_request("POST", path, **kwargs)
 
-    async def put(self, path: str, data: Any, **kwargs: Any) -> dict[str, Any]:
+    async def put(self, path: str, data: Any = None, **kwargs: Any) -> dict[str, Any]:
         """PUT request with retry logic.
 
         Args:
             path: API path
-            data: Request body data
+            data: Request body data, also accepted as a json= keyword
             **kwargs: Additional request parameters
 
         Returns:
             Response data as dictionary
         """
+        if data is None:
+            data = kwargs.pop("json", None)
         kwargs["json"] = data
         return await self._make_request("PUT", path, **kwargs)
 

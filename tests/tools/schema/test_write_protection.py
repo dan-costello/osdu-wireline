@@ -91,7 +91,7 @@ async def test_schema_update_write_protection():
 
 
 @pytest.mark.asyncio
-async def test_schema_create_write_enabled():
+async def test_schema_create_write_enabled(sent_json):
     """Test successful schema creation with write mode enabled."""
     mock_response = {"id": "test:test:test:1.0.0", "status": "DEVELOPMENT"}
 
@@ -133,6 +133,17 @@ async def test_schema_create_write_enabled():
                     schema={"type": "object"},
                 )
 
+                # The request must carry the schema; an earlier bug sent an
+                # empty body because the json= kwarg was overwritten with None.
+                sent = sent_json(
+                    mocked,
+                    "POST",
+                    "https://test.osdu.com/api/schema-service/v1/schema",
+                )
+                assert sent is not None
+                assert sent["schema"]["type"] == "object"
+                assert sent["schemaInfo"]["schemaIdentity"]["entityType"] == "test"
+
             assert result["success"] is True
             assert result["created"] is True
             assert result["id"] == "test:test:test:1.0.0"
@@ -140,7 +151,7 @@ async def test_schema_create_write_enabled():
 
 
 @pytest.mark.asyncio
-async def test_schema_update_write_enabled():
+async def test_schema_update_write_enabled(sent_json):
     """Test successful schema update with write mode enabled."""
     mock_get_response = {
         "id": "test:test:test:1.0.0",
@@ -202,6 +213,14 @@ async def test_schema_update_write_enabled():
                         "properties": {"name": {"type": "string"}},
                     },
                 )
+
+                sent = sent_json(
+                    mocked,
+                    "PUT",
+                    "https://test.osdu.com/api/schema-service/v1/schema",
+                )
+                assert sent is not None
+                assert sent["schema"]["properties"] == {"name": {"type": "string"}}
 
             assert result["success"] is True
             assert result["updated"] is True

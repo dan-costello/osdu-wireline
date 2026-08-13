@@ -6,7 +6,7 @@ from typing import Any
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
 from ..osdu_client import OsduClient
-from ..service_urls import OSMCPService, get_service_base_url
+from ..service_urls import OSMCPService
 
 logger = logging.getLogger(__name__)
 
@@ -14,34 +14,7 @@ logger = logging.getLogger(__name__)
 class StorageClient(OsduClient):
     """Client for OSDU Storage service operations."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialize StorageClient with service-specific configuration."""
-        super().__init__(*args, **kwargs)
-        self._base_path = get_service_base_url(OSMCPService.STORAGE)
-
-    async def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
-        """Override get to include service base path."""
-        full_path = f"{self._base_path}{path}"
-        return await super().get(full_path, **kwargs)
-
-    async def post(self, path: str, data: Any = None, **kwargs: Any) -> dict[str, Any]:
-        """Override post to include service base path."""
-        full_path = f"{self._base_path}{path}"
-        if data is None and "json" in kwargs:
-            data = kwargs.pop("json")
-        return await super().post(full_path, data, **kwargs)
-
-    async def put(self, path: str, data: Any = None, **kwargs: Any) -> dict[str, Any]:
-        """Override put to include service base path."""
-        full_path = f"{self._base_path}{path}"
-        if data is None and "json" in kwargs:
-            data = kwargs.pop("json")
-        return await super().put(full_path, data, **kwargs)
-
-    async def delete(self, path: str, **kwargs: Any) -> dict[str, Any]:
-        """Override delete to include service base path."""
-        full_path = f"{self._base_path}{path}"
-        return await super().delete(full_path, **kwargs)
+    service = OSMCPService.STORAGE
 
     def validate_record(self, record: dict[str, Any]) -> None:  # noqa: C901 - existing complexity, tracked as debt
         """Validate basic record structure.

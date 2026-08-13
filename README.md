@@ -24,7 +24,6 @@ A Model Context Protocol (MCP) server that provides AI assistants with access to
     - [Resources](#resources)
     - [Tools](#tools)
 5. [Environment Variables](#environment-variables)
-6. [Logging Configuration](#logging-configuration)
 
 ## Purpose
 
