@@ -6,13 +6,10 @@ workflow from legal compliance setup through record creation, validation,
 discovery, and cleanup.
 """
 
-from typing import Any
-
-# Define Message type for development/testing
-Message = dict[str, Any]
+from .prompt_types import Prompt
 
 
-async def guide_record_lifecycle() -> list[Message]:
+async def guide_record_lifecycle() -> list[Prompt]:
     """
     Provide comprehensive guidance for executing the complete OSDU record
     lifecycle workflow with validation at each step.

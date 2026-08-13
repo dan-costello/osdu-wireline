@@ -93,13 +93,13 @@ lint.ignore = [
     "SIM117", # allow nested with statements for readability
     "B011",  # allow assert False in tests
     "N803",  # OSDU wire parameter names (returnedFields) must match the API
-    "G004",  # f-strings in logging: JSONFormatter flattens via getMessage(),
-             # so lazy % yields identical output; structure comes from extra={}
+    "G004",  # f-strings in logging: messages are read by humans, not parsed, and
+             # readability at the call site beats deferred % interpolation
     "TRY003", # allow descriptive messages at the raise site
     "TRY300", # allow return inside try rather than a trailing else
+    "TRY401", # error_message is carried as a structured extra= field alongside the
+              # traceback logging.exception already emits, not in place of it
     "TRY301", # allow raise inside try, caught by the local handler
-    "TRY401", # error_message in the structured JSON payload is queryable and
-              # intentional; the traceback goes to a separate "exception" field
     "BLE001", # tool and credential-probe boundaries catch broadly on purpose;
               # handle_osdu_exceptions maps anything unexpected to McpError
 ]

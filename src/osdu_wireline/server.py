@@ -1,5 +1,6 @@
 """MCP server instance for OSDU platform integration."""
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -12,6 +13,7 @@ from .shared.app_context import (
     create_app_context,
     set_app_context,
 )
+from .shared.env import get_env
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -91,8 +93,22 @@ permission error until the matching gate is enabled.
 Read the `reference://quick-start-workflows.md` resource for common workflows and operational
 tips."""
 
-# Create FastMCP server instance
+
+def _get_log_level() -> str:
+    """Read OSDU_MCP_LOG_LEVEL, falling back to INFO when unset or unrecognized.
+
+    Returns:
+        A level name from logging's own registry, so setLevel always accepts it
+    """
+    value = (get_env("OSDU_MCP_LOG_LEVEL", "INFO") or "INFO").strip().upper()
+    if value in logging.getLevelNamesMapping():
+        return value
+    return "INFO"
+
+
 mcp = FastMCP("OSDU Wireline", instructions=SERVER_INSTRUCTIONS, lifespan=app_lifespan)
+
+logging.getLogger("osdu_wireline").setLevel(_get_log_level())
 
 # Register MCP resources
 for resource in get_workflow_resources():

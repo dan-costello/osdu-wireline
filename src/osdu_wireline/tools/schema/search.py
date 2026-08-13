@@ -1,13 +1,12 @@
 """Tool for advanced schema discovery with rich filtering and text search."""
 
 import fnmatch
+import logging
 
 from ...shared.clients.schema_client import SchemaClient
 from ...shared.exceptions import handle_osdu_exceptions
-from ...shared.logging_manager import get_logger
 
-# Get a logger with feature flag support
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Filter keys that map onto the schema identity and can be server-side filtered
 _IDENTITY_FILTER_KEYS = ("authority", "source", "entity", "status", "scope")

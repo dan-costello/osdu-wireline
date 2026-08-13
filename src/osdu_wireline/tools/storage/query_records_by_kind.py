@@ -1,10 +1,11 @@
 """Tool for querying records by kind."""
 
+import logging
+
 from ...shared.clients.storage_client import StorageClient
 from ...shared.exceptions import handle_osdu_exceptions
-from ...shared.logging_manager import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @handle_osdu_exceptions

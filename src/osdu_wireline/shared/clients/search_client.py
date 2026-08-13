@@ -1,12 +1,12 @@
 """OSDU Search service client."""
 
+import logging
 from typing import Any
 
-from ..logging_manager import get_logger
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService, get_service_base_url
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SearchClient(OsduClient):

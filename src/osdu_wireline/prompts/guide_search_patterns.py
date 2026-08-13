@@ -1,18 +1,9 @@
 """Search patterns guidance prompt."""
 
-from typing import Any
-
-from ..shared.exceptions import handle_osdu_exceptions
-from ..shared.logging_manager import get_logger
-
-# Define Message type for development/testing
-Message = dict[str, Any]
-
-logger = get_logger(__name__)
+from .prompt_types import Prompt
 
 
-@handle_osdu_exceptions
-async def guide_search_patterns() -> list[Message]:
+async def guide_search_patterns() -> list[Prompt]:
     """Provide search pattern guidance for OSDU operations.
 
     Returns:
@@ -122,10 +113,5 @@ search_query(
     kind="opendes:osdu:wellbore:1.0.0"
 )
 ```"""
-
-    logger.info(
-        "Generated search patterns guidance",
-        extra={"operation": "guide_search_patterns"},
-    )
 
     return [{"role": "user", "content": content}]

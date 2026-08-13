@@ -1,14 +1,14 @@
 """OSDU Storage service client."""
 
+import logging
 from typing import Any
 
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
-from ..logging_manager import get_logger
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService, get_service_base_url
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class StorageClient(OsduClient):
