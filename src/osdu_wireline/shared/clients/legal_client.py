@@ -1,9 +1,9 @@
 """OSDU Legal service client."""
 
-import os
 import re
 from typing import Any
 
+from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService, get_service_base_url
@@ -75,7 +75,7 @@ class LegalClient(OsduClient):
         Raises:
             OSMCPAPIError: If delete operations are disabled
         """
-        if not os.environ.get("OSDU_MCP_ENABLE_DELETE_MODE", "false").lower() == "true":
+        if not get_env_bool("OSDU_MCP_ENABLE_DELETE_MODE"):
             raise OSMCPAPIError(
                 "Delete operations are disabled. Set OSDU_MCP_ENABLE_DELETE_MODE=true to enable legal tag deletion",
                 status_code=403,

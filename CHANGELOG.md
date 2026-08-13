@@ -16,8 +16,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from this fork.
 * Restructured the README into per-client configuration guides under `docs/mcp-usage/` and
   per-provider authentication guides under `docs/authentication/`.
+* Added a complete environment variable reference to the README, covering all 15 variables the
+  server reads. The two required ones, `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION`,
+  were previously documented only in the per-client setup guides.
 
-The `OSDU_MCP_*` environment variables are unchanged.
+### Fixed
+
+* Corrected the documentation for `OSDU_MCP_SERVER_DOMAIN`, which was described as a setting in
+  the authentication guides, the `guide_record_lifecycle` prompt, and `acl-format-examples.json`.
+  No code has ever read it: the data domain is a value you write into a record's ACL groups, not
+  server configuration. The guidance on determining your domain remains.
+
+### Removed
+
+* Removed `config.yaml` support. Configuration is now supplied exclusively through `OSDU_MCP_*`
+  environment variables, which is how every documented client setup already worked. The
+  `config.example.yaml` template and the `pyyaml` dependency are gone.
+* Removed the `ConfigManager` class. Environment variables are now read by their literal names
+  through `shared/env.py`, instead of being assembled from a `(section, key)` pair.
+
+The `OSDU_MCP_*` environment variable names are unchanged. One behavior change: the write and
+delete gates now accept `yes` and `1` in addition to `true`, matching how every other boolean
+variable is parsed. `OSDU_MCP_ENABLE_WRITE_MODE=1` and `OSDU_MCP_ENABLE_DELETE_MODE=1` therefore
+enable those operations where previously only the literal `true` did.
 
 ---
 

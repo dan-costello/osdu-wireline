@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from ..auth_handler import AuthHandler
-from ..config_manager import ConfigManager
+from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService, get_service_base_url
@@ -15,18 +15,13 @@ logger = logging.getLogger(__name__)
 class PartitionClient(OsduClient):
     """Client for OSDU Partition Service operations."""
 
-    def __init__(
-        self,
-        config: ConfigManager | None = None,
-        auth_handler: AuthHandler | None = None,
-    ):
+    def __init__(self, auth_handler: AuthHandler | None = None):
         """Initialize partition client.
 
         Args:
-            config: Configuration manager instance, defaults to the shared one
             auth_handler: Authentication handler, defaults to the shared one
         """
-        super().__init__(config, auth_handler)
+        super().__init__(auth_handler)
         self._base_path = get_service_base_url(OSMCPService.PARTITION)
 
     async def list_partitions(self) -> list[str]:
@@ -239,9 +234,7 @@ class PartitionClient(OsduClient):
 
     def _is_write_allowed(self) -> bool:
         """Check if write operations are allowed."""
-        import os
-
-        return os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true"
+        return get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE")
 
     def _validate_properties(self, properties: dict[str, Any]) -> dict[str, Any]:
         """Validate and normalize partition properties.

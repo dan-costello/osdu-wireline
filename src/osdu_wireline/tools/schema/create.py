@@ -1,10 +1,10 @@
 """Tool for creating a new schema."""
 
 import logging
-import os
 from typing import Any
 
 from ...shared.clients.schema_client import SchemaClient
+from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ async def schema_create(
         OSMCPAPIError: If write mode is disabled or schema creation fails
     """
     # Check write protection
-    if not os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true":
+    if not get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE"):
         raise OSMCPAPIError(
             "Schema write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable write operations",
             status_code=403,

@@ -16,7 +16,6 @@ import pytest
 from azure.core.credentials import AccessToken
 
 from osdu_wireline.shared.auth_handler import AuthenticationMode, AuthHandler
-from osdu_wireline.shared.config_manager import ConfigManager
 from osdu_wireline.shared.exceptions import OSMCPAuthError
 
 
@@ -40,7 +39,6 @@ def create_test_jwt(exp: float | None = None) -> str:
 @pytest.mark.asyncio
 async def test_user_token_mode_detection():
     """Test USER_TOKEN mode has highest priority."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     valid_token = create_test_jwt()
 
@@ -52,20 +50,19 @@ async def test_user_token_mode_detection():
             "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json",  # Should be ignored
         },
     ):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.USER_TOKEN
 
 
 @pytest.mark.asyncio
 async def test_user_token_retrieval():
     """Test successful user token retrieval."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Create token that expires 2 hours from now (well in the future)
     valid_token = create_test_jwt(exp=time.time() + 7200)
 
     with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": valid_token}):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         token = await auth.get_access_token()
         assert token == valid_token
 
@@ -73,12 +70,11 @@ async def test_user_token_retrieval():
 @pytest.mark.asyncio
 async def test_user_token_validation_expired():
     """Test expired user token is rejected."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     expired_token = create_test_jwt(exp=time.time() - 3600)
 
     with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": expired_token}):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         with pytest.raises(OSMCPAuthError, match="expired"):
             await auth.get_access_token()
 
@@ -86,10 +82,9 @@ async def test_user_token_validation_expired():
 @pytest.mark.asyncio
 async def test_user_token_validation_invalid_format():
     """Test invalid JWT format is rejected."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": "not-a-valid-jwt"}):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         with pytest.raises(OSMCPAuthError, match="Invalid JWT token format"):
             await auth.get_access_token()
 
@@ -97,7 +92,6 @@ async def test_user_token_validation_invalid_format():
 @pytest.mark.asyncio
 async def test_gcp_mode_detection_explicit():
     """Test GCP mode detection when GOOGLE_APPLICATION_CREDENTIALS is set."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"}, clear=True
@@ -108,14 +102,13 @@ async def test_gcp_mode_detection_explicit():
             mock_creds.token = "gcp-token"
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             assert auth.mode == AuthenticationMode.GCP
 
 
 @pytest.mark.asyncio
 async def test_gcp_token_retrieval_with_refresh():
     """Test GCP token retrieval with automatic refresh."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"}, clear=True
@@ -126,7 +119,7 @@ async def test_gcp_token_retrieval_with_refresh():
             mock_creds.token = "gcp-token-123"
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             auth._gcp_credentials = mock_creds
 
             # Mock the refresh method
@@ -140,7 +133,6 @@ async def test_gcp_token_retrieval_with_refresh():
 @pytest.mark.asyncio
 async def test_gcp_requests_identity_scopes_by_default():
     """Test GCP credentials request identity scopes so OSDU can resolve entitlements."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"}, clear=True
@@ -150,7 +142,7 @@ async def test_gcp_requests_identity_scopes_by_default():
             mock_creds.valid = True
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            AuthHandler(mock_config)
+            AuthHandler()
 
             assert mock_gcp.call_args.kwargs["scopes"] == [
                 "https://www.googleapis.com/auth/cloud-platform",
@@ -162,7 +154,6 @@ async def test_gcp_requests_identity_scopes_by_default():
 @pytest.mark.asyncio
 async def test_gcp_custom_scope_replaces_defaults():
     """Test OSDU_MCP_AUTH_SCOPE overrides the default GCP scopes."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ,
@@ -177,7 +168,7 @@ async def test_gcp_custom_scope_replaces_defaults():
             mock_creds.valid = True
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            AuthHandler(mock_config)
+            AuthHandler()
 
             assert mock_gcp.call_args.kwargs["scopes"] == [
                 "https://www.googleapis.com/auth/custom-scope"
@@ -187,7 +178,6 @@ async def test_gcp_custom_scope_replaces_defaults():
 @pytest.mark.asyncio
 async def test_gcp_custom_scope_parses_comma_separated_list():
     """Test OSDU_MCP_AUTH_SCOPE accepts a comma-separated list with whitespace."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ,
@@ -202,7 +192,7 @@ async def test_gcp_custom_scope_parses_comma_separated_list():
             mock_creds.valid = True
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            AuthHandler(mock_config)
+            AuthHandler()
 
             assert mock_gcp.call_args.kwargs["scopes"] == [
                 "openid",
@@ -213,7 +203,6 @@ async def test_gcp_custom_scope_parses_comma_separated_list():
 @pytest.mark.asyncio
 async def test_azure_scope_unaffected_by_gcp_scope_handling():
     """Test Azure still passes OSDU_MCP_AUTH_SCOPE through as a single scope string."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ,
@@ -232,7 +221,7 @@ async def test_azure_scope_unaffected_by_gcp_scope_handling():
             )
             mock_cred.return_value = mock_cred_instance
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             token = await auth.get_access_token()
 
             assert token == "azure-token"
@@ -244,7 +233,6 @@ async def test_azure_scope_unaffected_by_gcp_scope_handling():
 @pytest.mark.asyncio
 async def test_gcp_credentials_not_found_error():
     """Test GCP credentials not found error message."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"}, clear=True
@@ -257,13 +245,12 @@ async def test_gcp_credentials_not_found_error():
             with pytest.raises(
                 OSMCPAuthError, match="GCP Application Default Credentials not found"
             ):
-                AuthHandler(mock_config)
+                AuthHandler()
 
 
 @pytest.mark.asyncio
 async def test_aws_mode_detection_explicit():
     """Test AWS mode detection when AWS_ACCESS_KEY_ID is set."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE"}, clear=True
@@ -282,14 +269,13 @@ async def test_aws_mode_detection_explicit():
             }
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             assert auth.mode == AuthenticationMode.AWS
 
 
 @pytest.mark.asyncio
 async def test_aws_token_retrieval():
     """Test AWS token retrieval with STS."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE"}, clear=True
@@ -318,7 +304,7 @@ async def test_aws_token_retrieval():
 
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             token = await auth._get_aws_token()
 
             assert token == "aws-session-token-123"
@@ -327,7 +313,6 @@ async def test_aws_token_retrieval():
 @pytest.mark.asyncio
 async def test_aws_credentials_not_found_error():
     """Test AWS credentials not found error message."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE"}, clear=True
@@ -338,13 +323,12 @@ async def test_aws_credentials_not_found_error():
             mock_session.return_value = mock_session_instance
 
             with pytest.raises(OSMCPAuthError, match="AWS credentials not found"):
-                AuthHandler(mock_config)
+                AuthHandler()
 
 
 @pytest.mark.asyncio
 async def test_mode_detection_priority_order():
     """Test authentication mode detection follows correct priority."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Priority 1: USER_TOKEN beats everything
     valid_token = create_test_jwt()
@@ -356,7 +340,7 @@ async def test_mode_detection_priority_order():
             "AWS_ACCESS_KEY_ID": "aws-key",
         },
     ):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.USER_TOKEN
 
     # Priority 2: Azure beats AWS/GCP
@@ -368,7 +352,7 @@ async def test_mode_detection_priority_order():
         },
         clear=True,
     ):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.AZURE
 
     # Priority 3: AWS explicit beats GCP
@@ -393,14 +377,13 @@ async def test_mode_detection_priority_order():
             }
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             assert auth.mode == AuthenticationMode.AWS
 
 
 @pytest.mark.asyncio
 async def test_aws_auto_discovery():
     """Test AWS auto-discovery when no explicit credentials."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # No explicit AWS env vars, but boto3 can discover credentials
     with patch.dict(os.environ, {}, clear=True):
@@ -419,14 +402,13 @@ async def test_aws_auto_discovery():
             }
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             assert auth.mode == AuthenticationMode.AWS
 
 
 @pytest.mark.asyncio
 async def test_gcp_auto_discovery():
     """Test GCP auto-discovery when no explicit credentials."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # No explicit GCP env vars, but google.auth can discover credentials
     with patch.dict(os.environ, {}, clear=True):
@@ -441,14 +423,13 @@ async def test_gcp_auto_discovery():
                 mock_creds.token = "gcp-token"
                 mock_gcp.return_value = (mock_creds, "test-project")
 
-                auth = AuthHandler(mock_config)
+                auth = AuthHandler()
                 assert auth.mode == AuthenticationMode.GCP
 
 
 @pytest.mark.asyncio
 async def test_no_credentials_error():
     """Test error when no authentication credentials found."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(os.environ, {}, clear=True):
         with patch("boto3.Session") as mock_boto:
@@ -460,18 +441,17 @@ async def test_no_credentials_error():
                 with pytest.raises(
                     OSMCPAuthError, match="No authentication credentials configured"
                 ):
-                    AuthHandler(mock_config)
+                    AuthHandler()
 
 
 @pytest.mark.asyncio
 async def test_close_all_credential_types():
     """Test cleanup of all credential types."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Test with USER_TOKEN mode
     valid_token = create_test_jwt()
     with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": valid_token}):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         auth.close()
 
         # Verify no errors on cleanup
@@ -485,7 +465,7 @@ async def test_close_all_credential_types():
             mock_cred_instance = MagicMock()
             mock_cred.return_value = mock_cred_instance
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             auth._azure_cached_token = AccessToken("token", 123456)
             auth.close()
 
@@ -508,7 +488,7 @@ async def test_close_all_credential_types():
             }
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             auth.close()
 
             assert auth._aws_session is None
@@ -523,7 +503,7 @@ async def test_close_all_credential_types():
             mock_creds.token = "gcp-token"
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             auth.close()
 
             assert auth._gcp_credentials is None
@@ -532,7 +512,6 @@ async def test_close_all_credential_types():
 @pytest.mark.asyncio
 async def test_gcp_token_refresh_error():
     """Test GCP token refresh error handling."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(
         os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"}, clear=True
@@ -544,7 +523,7 @@ async def test_gcp_token_refresh_error():
             mock_creds.valid = False  # Needs refresh
             mock_gcp.return_value = (mock_creds, "test-project")
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             # Mock refresh to raise error with "expired" message
             with patch("google.auth.transport.requests.Request"):
@@ -557,7 +536,6 @@ async def test_gcp_token_refresh_error():
 @pytest.mark.asyncio
 async def test_aws_token_retrieval_error():
     """Test AWS token retrieval error handling."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     with patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "test-key"}, clear=True):
         with patch("boto3.Session") as mock_session:
@@ -574,7 +552,7 @@ async def test_aws_token_retrieval_error():
             mock_sts.get_session_token.side_effect = Exception("STS error")
             mock_session_instance.client.return_value = mock_sts
 
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError, match="AWS token retrieval failed"):
                 await auth._get_aws_token()
@@ -583,14 +561,13 @@ async def test_aws_token_retrieval_error():
 @pytest.mark.asyncio
 async def test_user_token_expiring_soon():
     """Test token still works when expiring soon (with warning logged)."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Create token expiring in 2 minutes (120 seconds)
     # Token should still be accepted, but a warning should be logged
     expiring_soon_token = create_test_jwt(exp=time.time() + 120)
 
     with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": expiring_soon_token}):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         # Token should be accepted even though it's expiring soon
         token = await auth.get_access_token()
         assert token == expiring_soon_token

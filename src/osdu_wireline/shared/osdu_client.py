@@ -14,7 +14,7 @@ from aiohttp import ClientSession, ClientTimeout
 
 from .app_context import get_app_context
 from .auth_handler import AuthHandler
-from .config_manager import ConfigManager
+from .env import get_env_int, require_env
 from .exceptions import OSMCPAPIError, OSMCPConnectionError
 
 
@@ -28,28 +28,20 @@ class OsduClient:
             data = await client.get("/api/path")
     """
 
-    def __init__(
-        self,
-        config: ConfigManager | None = None,
-        auth_handler: AuthHandler | None = None,
-    ):
+    def __init__(self, auth_handler: AuthHandler | None = None):
         """Initialize OSDU client.
 
         Args:
-            config: Configuration manager instance, defaults to the shared one
             auth_handler: Authentication handler, defaults to the shared one
         """
-        if config is None or auth_handler is None:
-            context = get_app_context()
-            config = config if config is not None else context.config
-            auth_handler = auth_handler if auth_handler is not None else context.auth
+        if auth_handler is None:
+            auth_handler = get_app_context().auth
 
-        self.config = config
         self.auth_handler = auth_handler
         self._session: ClientSession | None = None
-        self._base_url: str = config.get_required("server", "url")
-        self._data_partition: str = config.get_required("server", "data_partition")
-        self._timeout = config.get("server", "timeout", 30)
+        self._base_url: str = require_env("OSDU_MCP_SERVER_URL")
+        self._data_partition: str = require_env("OSDU_MCP_SERVER_DATA_PARTITION")
+        self._timeout = get_env_int("OSDU_MCP_SERVER_TIMEOUT", 30)
 
     @property
     def data_partition(self) -> str:
