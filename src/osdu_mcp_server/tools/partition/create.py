@@ -5,9 +5,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.partition_client import PartitionClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 from ...shared.utils import get_trace_id
 
@@ -122,35 +120,31 @@ async def partition_create(
         }
 
     try:
-        # Initialize dependencies
-        config = ConfigManager()
-        auth_handler = AuthHandler(config)
-        client = PartitionClient(config, auth_handler)
+        async with PartitionClient() as client:
+            # Create the partition
+            await client.create_partition(partition_id, properties)
 
-        # Create the partition
-        result = await client.create_partition(partition_id, properties)
-
-        # Log successful creation
-        logger.info(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "INFO",
-                    "tool": "partition_create",
-                    "action": "partition_create_success",
-                    "partition_id": partition_id,
-                }
+            # Log successful creation
+            logger.info(
+                json.dumps(
+                    {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "trace_id": trace_id,
+                        "level": "INFO",
+                        "tool": "partition_create",
+                        "action": "partition_create_success",
+                        "partition_id": partition_id,
+                    }
+                )
             )
-        )
 
-        return {
-            "success": True,
-            "created": True,
-            "partition_id": partition_id,
-            "write_enabled": True,
-            "dry_run": False,
-        }
+            return {
+                "success": True,
+                "created": True,
+                "partition_id": partition_id,
+                "write_enabled": True,
+                "dry_run": False,
+            }
 
     except OSMCPError as e:
         # Log error
@@ -177,8 +171,3 @@ async def partition_create(
             "dry_run": False,
             "error": str(e),
         }
-
-    finally:
-        # Clean up resources
-        if "client" in locals():
-            await client.close()

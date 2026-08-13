@@ -5,9 +5,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.partition_client import PartitionClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 from ...shared.utils import get_trace_id
 
@@ -151,41 +149,33 @@ async def partition_delete(
         }
 
     try:
-        # Initialize dependencies
-        config = ConfigManager()
-        auth_handler = AuthHandler(config)
-        client = PartitionClient(config, auth_handler)
+        async with PartitionClient() as client:
+            # Delete the partition
+            await client.delete_partition(partition_id)
 
-        # Delete the partition
-        await client.delete_partition(partition_id)
-
-        # Log successful deletion
-        logger.warning(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "WARN",
-                    "tool": "partition_delete",
-                    "action": "partition_delete_success",
-                    "partition_id": partition_id,
-                    "user": (
-                        await auth_handler.get_user_info()
-                        if hasattr(auth_handler, "get_user_info")
-                        else "unknown"
-                    ),
-                }
+            # Log successful deletion
+            logger.warning(
+                json.dumps(
+                    {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "trace_id": trace_id,
+                        "level": "WARN",
+                        "tool": "partition_delete",
+                        "action": "partition_delete_success",
+                        "partition_id": partition_id,
+                        "user": "unknown",
+                    }
+                )
             )
-        )
 
-        return {
-            "success": True,
-            "deleted": True,
-            "partition_id": partition_id,
-            "write_enabled": True,
-            "confirmed": True,
-            "dry_run": False,
-        }
+            return {
+                "success": True,
+                "deleted": True,
+                "partition_id": partition_id,
+                "write_enabled": True,
+                "confirmed": True,
+                "dry_run": False,
+            }
 
     except OSMCPError as e:
         # Log error
@@ -213,8 +203,3 @@ async def partition_delete(
             "dry_run": False,
             "error": str(e),
         }
-
-    finally:
-        # Clean up resources
-        if "client" in locals():
-            await client.close()

@@ -1,8 +1,6 @@
 """Tool for logically deleting a record."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -28,11 +26,7 @@ async def storage_delete_record(id: str) -> dict:
 
     Note: Requires OSDU_MCP_ENABLE_DELETE_MODE=true
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Delete the record
         await client.delete_record(id)
 
@@ -42,7 +36,7 @@ async def storage_delete_record(id: str) -> dict:
             "deleted": True,
             "id": id,
             "delete_enabled": True,
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
 
         logger.warning(
@@ -51,6 +45,3 @@ async def storage_delete_record(id: str) -> dict:
         )
 
         return result
-
-    finally:
-        await client.close()

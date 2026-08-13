@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.legal_client import LegalClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -47,11 +45,7 @@ async def legaltag_get_properties() -> dict:
             }
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = LegalClient(config, auth)
-
-    try:
+    async with LegalClient() as client:
         # Get properties
         response = await client.get_legal_tag_properties()
 
@@ -61,6 +55,3 @@ async def legaltag_get_properties() -> dict:
         logger.info("Retrieved legal tag properties successfully")
 
         return result
-
-    finally:
-        await client.close()

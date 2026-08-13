@@ -2,9 +2,7 @@
 
 import logging
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.schema_client import SchemaClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -52,13 +50,9 @@ async def schema_list(
         # List OSDU schemas with pagination
         schema_list(authority="osdu", limit=20, offset=40)
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SchemaClient(config, auth)
-
-    try:
+    async with SchemaClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Get schemas
         response = await client.list_schemas(
@@ -107,6 +101,3 @@ async def schema_list(
         )
 
         return result
-
-    finally:
-        await client.close()

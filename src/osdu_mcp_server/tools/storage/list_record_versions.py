@@ -1,8 +1,6 @@
 """Tool for listing all versions of a record."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -26,11 +24,7 @@ async def storage_list_record_versions(id: str) -> dict:
             "partition": str
         }
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Get record versions
         response = await client.list_record_versions(id)
 
@@ -40,7 +34,7 @@ async def storage_list_record_versions(id: str) -> dict:
             "recordId": response.get("recordId", id),
             "versions": response.get("versions", []),
             "count": len(response.get("versions", [])),
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
 
         logger.info(
@@ -53,6 +47,3 @@ async def storage_list_record_versions(id: str) -> dict:
         )
 
         return result
-
-    finally:
-        await client.close()

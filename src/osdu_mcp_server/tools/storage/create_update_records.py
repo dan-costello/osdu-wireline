@@ -1,8 +1,6 @@
 """Tool for creating or updating records."""
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.storage_client import StorageClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 from ...shared.logging_manager import get_logger
 
@@ -51,11 +49,7 @@ async def storage_create_update_records(
 
     Note: Requires OSDU_MCP_ENABLE_WRITE_MODE=true
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = StorageClient(config, auth)
-
-    try:
+    async with StorageClient() as client:
         # Create or update records
         response = await client.create_update_records(records, skip_dupes)
 
@@ -66,7 +60,7 @@ async def storage_create_update_records(
             "records": [],
             "created": True,
             "write_enabled": True,
-            "partition": config.get("server", "data_partition"),
+            "partition": client.data_partition,
         }
 
         # Transform the OSDU response to our format
@@ -102,6 +96,3 @@ async def storage_create_update_records(
         )
 
         return result
-
-    finally:
-        await client.close()

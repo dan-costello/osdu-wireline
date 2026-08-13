@@ -3,9 +3,7 @@
 import logging
 from typing import Any
 
-from ...shared.auth_handler import AuthHandler
 from ...shared.clients.schema_client import SchemaClient
-from ...shared.config_manager import ConfigManager
 from ...shared.exceptions import handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -81,13 +79,9 @@ async def schema_get(id: str) -> dict[str, Any]:
         - Schema status can be "DEVELOPMENT", "PUBLISHED", or "OBSOLETE"
         - Only DEVELOPMENT status schemas can be modified
     """
-    config = ConfigManager()
-    auth = AuthHandler(config)
-    client = SchemaClient(config, auth)
-
-    try:
+    async with SchemaClient() as client:
         # Get current partition
-        partition = config.get("server", "data_partition")
+        partition = client.data_partition
 
         # Get schema
         response = await client.get_schema(id)
@@ -122,6 +116,3 @@ async def schema_get(id: str) -> dict[str, Any]:
             )
 
         return response
-
-    finally:
-        await client.close()
