@@ -7,9 +7,9 @@ from .search import schema_search
 from .update import schema_update
 
 __all__ = [
-    "schema_list",
-    "schema_get",
-    "schema_search",
     "schema_create",
+    "schema_get",
+    "schema_list",
+    "schema_search",
     "schema_update",
 ]

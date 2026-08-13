@@ -12,11 +12,11 @@ from .query_records_by_kind import storage_query_records_by_kind
 
 __all__ = [
     "storage_create_update_records",
+    "storage_delete_record",
+    "storage_fetch_records",
     "storage_get_record",
     "storage_get_record_version",
     "storage_list_record_versions",
-    "storage_query_records_by_kind",
-    "storage_fetch_records",
-    "storage_delete_record",
     "storage_purge_record",
+    "storage_query_records_by_kind",
 ]

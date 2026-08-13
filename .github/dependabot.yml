@@ -14,18 +14,14 @@ updates:
         patterns:
           - "pytest*"
           - "mypy"
-          - "black"
           - "ruff"
-          - "flake8"
       python-prod:
         patterns:
           - "*"
         exclude-patterns:
           - "pytest*"
           - "mypy"
-          - "black"
           - "ruff"
-          - "flake8"
     
   # GitHub Actions
   - package-ecosystem: "github-actions"

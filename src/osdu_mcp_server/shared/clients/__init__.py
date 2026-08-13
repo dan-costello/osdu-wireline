@@ -8,9 +8,9 @@ from .search_client import SearchClient
 from .storage_client import StorageClient
 
 __all__ = [
-    "PartitionClient",
     "EntitlementsClient",
     "LegalClient",
+    "PartitionClient",
     "SchemaClient",
     "SearchClient",
     "StorageClient",

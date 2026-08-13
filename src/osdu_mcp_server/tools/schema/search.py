@@ -133,8 +133,7 @@ async def schema_search(
                     "scope",
                 ]
                 and isinstance(value, list)
-                or key not in ["authority", "source", "entity", "status", "scope"]
-            ):
+            ) or key not in ["authority", "source", "entity", "status", "scope"]:
                 client_filters[key] = value
 
         # Apply server-side filtering through the API
@@ -161,10 +160,10 @@ async def schema_search(
             logger.info(f"Retrieved {len(schemas)} schemas from API response")
 
         except Exception as e:
-            logger.error(f"Error during schema search: {str(e)}")
+            logger.error(f"Error during schema search: {e!s}")
             return {
                 "success": False,
-                "error": f"Failed to retrieve schemas: {str(e)}",
+                "error": f"Failed to retrieve schemas: {e!s}",
                 "partition": partition,
             }
 
@@ -245,16 +244,11 @@ def _matches_client_filters(
             continue
 
         if (
-            key == "authority"
-            and schema_identity.get("authority") not in values
-            or key == "source"
-            and schema_identity.get("source") not in values
-            or key == "entity"
-            and schema_identity.get("entityType") not in values
-            or key == "status"
-            and schema.get("status") not in values
-            or key == "scope"
-            and schema.get("scope") not in values
+            (key == "authority" and schema_identity.get("authority") not in values)
+            or (key == "source" and schema_identity.get("source") not in values)
+            or (key == "entity" and schema_identity.get("entityType") not in values)
+            or (key == "status" and schema.get("status") not in values)
+            or (key == "scope" and schema.get("scope") not in values)
         ):
             return False
 
@@ -369,11 +363,8 @@ def _search_in_object(obj: dict, text: str) -> bool:
         # Check in list elements
         elif isinstance(value, list):
             for item in value:
-                if (
-                    isinstance(item, dict)
-                    and _search_in_object(item, text)
-                    or isinstance(item, str)
-                    and text in item.lower()
+                if (isinstance(item, dict) and _search_in_object(item, text)) or (
+                    isinstance(item, str) and text in item.lower()
                 ):
                     return True
 

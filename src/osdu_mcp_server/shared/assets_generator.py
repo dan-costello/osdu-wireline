@@ -11,7 +11,6 @@ class AssetsGenerator:
 
     def __init__(self):
         """Initialize the assets generator."""
-        pass
 
     def generate_comprehensive_overview(self) -> str:
         """Generate complete server capabilities overview."""

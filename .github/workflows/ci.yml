@@ -41,14 +41,14 @@ jobs:
         uv pip install -e .[dev]
         
     # Run all quality checks - continue on error to see all failures
-    - name: Check code formatting with black
-      id: black
+    - name: Check code formatting with ruff
+      id: ruff-format
       continue-on-error: true
       run: |
-        echo "::group::Black Formatting Check"
-        uv run black --check src/ tests/ --diff --color
+        echo "::group::Ruff Format Check"
+        uv run ruff format --check src/ tests/ --diff
         echo "::endgroup::"
-      
+
     - name: Lint with ruff
       id: ruff
       continue-on-error: true
@@ -87,11 +87,11 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Check each step's outcome
-        if [[ "${{ steps.black.outcome }}" == "failure" ]]; then
-          echo "❌ **Black formatting check failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Run \`black src/ tests/\` locally to fix formatting issues" >> $GITHUB_STEP_SUMMARY
+        if [[ "${{ steps.ruff-format.outcome }}" == "failure" ]]; then
+          echo "❌ **Ruff format check failed**" >> $GITHUB_STEP_SUMMARY
+          echo "   Run \`ruff format src/ tests/\` locally to fix formatting issues" >> $GITHUB_STEP_SUMMARY
         else
-          echo "✅ Black formatting check passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Ruff format check passed" >> $GITHUB_STEP_SUMMARY
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
         
@@ -120,7 +120,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Overall status
-        if [[ "${{ steps.black.outcome }}" == "failure" ]] || \
+        if [[ "${{ steps.ruff-format.outcome }}" == "failure" ]] || \
            [[ "${{ steps.ruff.outcome }}" == "failure" ]] || \
            [[ "${{ steps.mypy.outcome }}" == "failure" ]] || \
            [[ "${{ steps.pytest.outcome }}" == "failure" ]]; then

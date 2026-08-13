@@ -38,7 +38,6 @@ dev = [
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
-    "black>=25.9.0",
     "ruff>=0.16.2",
     "mypy>=1.18.2",
     "freezegun>=1.5.5",
@@ -62,13 +61,20 @@ line-length = 88
 target-version = "py312"
 lint.select = [
     "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
     "F",    # pyflakes
     "I",    # isort
+    "N",    # pep8-naming
     "T20",  # flake8-print
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
     "SIM",  # flake8-simplify
     "RET",  # flake8-return
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "PIE",  # flake8-pie
+    "RUF",  # ruff-specific rules
 ]
 lint.ignore = [
     "E501",  # line too long
@@ -76,7 +82,11 @@ lint.ignore = [
     "B904",  # allow raise without from in except
     "SIM117", # allow nested with statements for readability
     "B011",  # allow assert False in tests
+    "N803",  # OSDU wire parameter names (returnedFields) must match the API
 ]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 
 [tool.pytest.ini_options]

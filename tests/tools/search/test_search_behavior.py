@@ -116,7 +116,7 @@ async def test_search_by_id_finds_specific_record():
                 # Verify the HTTP call was made correctly
                 assert len(mocked.requests) == 1
                 # Extract the request from the mocked calls
-                request_key = list(mocked.requests.keys())[0]
+                request_key = next(iter(mocked.requests.keys()))
                 request = mocked.requests[request_key][0]
                 request_data = request.kwargs["json"]
                 assert request_data["query"] == 'id:("test:record:123")'
