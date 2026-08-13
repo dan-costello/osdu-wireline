@@ -126,11 +126,6 @@ venv.bak/
 # mkdocs documentation
 /site
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
 # Pyre type checker
 .pyre/
 
@@ -154,5 +149,5 @@ Thumbs.db
 ehthumbs.db
 
 # Config files (except example)
-config.yaml
+config*.yaml
 !config.example.yaml

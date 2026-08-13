@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 from datetime import UTC, datetime
+from typing import Any
 
 from .config_manager import ConfigManager
 from .utils import get_trace_id
@@ -109,7 +110,7 @@ class JSONFormatter(logging.Formatter):
         tool = module_parts[-1] if len(module_parts) > 0 else ""
 
         # Build the JSON structure
-        log_entry = {
+        log_entry: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat() + "Z",
             "trace_id": getattr(record, "trace_id", get_trace_id()),
             "level": record.levelname,
@@ -122,8 +123,9 @@ class JSONFormatter(logging.Formatter):
             log_entry["exception"] = self.formatException(record.exc_info)
 
         # Add any extra attributes
-        if hasattr(record, "extra") and record.extra:
-            log_entry.update(record.extra)
+        extra = getattr(record, "extra", None)
+        if isinstance(extra, dict):
+            log_entry.update(extra)
 
         # Add any extra fields passed in the log call
         extra_args = getattr(record, "args", {})

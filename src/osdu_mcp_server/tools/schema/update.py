@@ -66,6 +66,10 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
         # Get current partition
         partition = client.data_partition
 
+        # Set when the existing schema is readable; stays None on a 404 so the
+        # fallback below can tell "unknown" apart from a real status.
+        current_status: str | None = None
+
         # Get the existing schema first to verify its current status and scope
         try:
             existing_schema = await client.get_schema(id)
@@ -115,7 +119,7 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
 
         # Determine final status
         final_status = status
-        if not final_status and "current_status" in locals():
+        if not final_status and current_status is not None:
             # Use current status if known
             final_status = current_status
         elif not final_status:

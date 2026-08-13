@@ -15,24 +15,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
-        
+
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
       with:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
         python-version: "3.13"
-        
+
     - name: Install dependencies
-      run: uv sync --locked --extra dev
-        
+      run: uv sync --locked --group dev
+
     - name: Check code formatting with ruff
       id: ruff-format
       run: |
@@ -42,12 +42,37 @@ jobs:
       id: ruff-lint
       run: |
         uv run ruff check src/ tests/ --output-format=github
-      
-    - name: Type check with mypy
-      id: mypy
+
+    - name: Type check with ty
+      id: ty
       run: |
-        uv run mypy src/osdu_mcp_server --python-version 3.13 --pretty
-      
+        uv run ty check src/ tests/ --python-version 3.12 --output-format=github --error-on-warning
+        uv run ty check src/ tests/ --python-version 3.13 --output-format=github --error-on-warning
+        uv run ty check src/ tests/ --python-version 3.14 --output-format=github --error-on-warning
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13","3.14"]
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: uv sync --locked --group dev
+
     - name: Run tests with coverage
       id: pytest
       run: |

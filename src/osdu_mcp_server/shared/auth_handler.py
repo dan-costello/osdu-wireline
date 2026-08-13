@@ -219,10 +219,17 @@ class AuthHandler:
         Raises:
             OSMCPAuthError: If no AWS credentials found
         """
+        # Imported before the try below so a missing dependency cannot shadow
+        # the except clauses that reference these names.
         try:
             import boto3
             from botocore.exceptions import NoCredentialsError, ProfileNotFound
+        except ImportError:
+            raise OSMCPAuthError(
+                "boto3 library not installed. Install with: pip install boto3"
+            )
 
+        try:
             # Create session - boto3 handles credential chain
             self._aws_session = boto3.Session()
 
@@ -257,10 +264,6 @@ class AuthHandler:
                 "    export AWS_SECRET_ACCESS_KEY=...\n\n"
                 "  For more info: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html"
             )
-        except ImportError:
-            raise OSMCPAuthError(
-                "boto3 library not installed. Install with: pip install boto3"
-            )
 
     def _initialize_gcp_credential(self) -> None:
         """Initialize GCP Application Default Credentials.
@@ -276,10 +279,18 @@ class AuthHandler:
         Raises:
             OSMCPAuthError: If no GCP credentials found
         """
+        # Imported before the try below so a missing dependency cannot shadow
+        # the except clauses that reference these names.
         try:
             import google.auth
             from google.auth.exceptions import DefaultCredentialsError
+        except ImportError:
+            raise OSMCPAuthError(
+                "google-auth library not installed. "
+                "Install with: pip install google-auth"
+            )
 
+        try:
             custom_scope = os.environ.get("OSDU_MCP_AUTH_SCOPE", "")
             scopes = [
                 s.strip() for s in custom_scope.split(",") if s.strip()
@@ -304,11 +315,6 @@ class AuthHandler:
                 "  Service Account Key:\n"
                 "    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json\n\n"
                 "  For more info: https://cloud.google.com/docs/authentication/provide-credentials-adc"
-            )
-        except ImportError:
-            raise OSMCPAuthError(
-                "google-auth library not installed. "
-                "Install with: pip install google-auth"
             )
 
     async def get_access_token(self) -> str:
@@ -411,7 +417,7 @@ class AuthHandler:
         """
         try:
             # Check if we have a cached token that's still valid
-            if self._is_azure_token_valid():
+            if self._is_azure_token_valid() and self._azure_cached_token:
                 return self._azure_cached_token.token
 
             # Get client ID from standard Azure environment variable
@@ -426,6 +432,10 @@ class AuthHandler:
             scope = custom_scope or f"{client_id}/.default"
 
             # Get new token
+            if not self._azure_credential:
+                raise OSMCPAuthError(
+                    "Azure credential not initialized. Check AZURE_CLIENT_ID and AZURE_TENANT_ID"
+                )
             self._azure_cached_token = self._azure_credential.get_token(scope)
             logger.info("Azure token obtained successfully")
             return self._azure_cached_token.token
@@ -512,7 +522,7 @@ class AuthHandler:
             token = credentials["SessionToken"]
 
             logger.info("AWS session token obtained successfully")
-            return token
+            return str(token)
 
         except Exception as e:
             raise OSMCPAuthError(f"AWS token retrieval failed: {e}")
@@ -537,10 +547,18 @@ class AuthHandler:
         Raises:
             OSMCPAuthError: If token refresh fails
         """
+        # Imported before the try below so a missing dependency cannot shadow
+        # the except clause that references RefreshError.
         try:
             from google.auth.exceptions import RefreshError
             from google.auth.transport.requests import Request
+        except ImportError:
+            raise OSMCPAuthError(
+                "google-auth library not installed. "
+                "Install with: pip install google-auth"
+            )
 
+        try:
             # Check if token needs refresh
             # GCP credentials have .valid property
             if not self._gcp_credentials.valid:
@@ -560,7 +578,7 @@ class AuthHandler:
             if not token:
                 raise OSMCPAuthError("GCP token is None after refresh")
 
-            return token
+            return str(token)
 
         except RefreshError as e:
             error_msg = str(e).lower()

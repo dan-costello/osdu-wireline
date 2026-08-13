@@ -47,8 +47,8 @@ class OsduClient:
         self.config = config
         self.auth_handler = auth_handler
         self._session: ClientSession | None = None
-        self._base_url = config.get_required("server", "url")
-        self._data_partition = config.get_required("server", "data_partition")
+        self._base_url: str = config.get_required("server", "url")
+        self._data_partition: str = config.get_required("server", "data_partition")
         self._timeout = config.get("server", "timeout", 30)
 
     @property
