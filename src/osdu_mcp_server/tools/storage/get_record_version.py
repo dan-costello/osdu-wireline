@@ -41,12 +41,6 @@ async def storage_get_record_version(
         record = await client.get_record_version(id, version, attributes)
 
         # Build response
-        result = {
-            "success": True,
-            "record": record,
-            "partition": client.data_partition,
-        }
-
         logger.info(
             f"Retrieved record {id} version {version}",
             extra={
@@ -57,4 +51,8 @@ async def storage_get_record_version(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "record": record,
+            "partition": client.data_partition,
+        }

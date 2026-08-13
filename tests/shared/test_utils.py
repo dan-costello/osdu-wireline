@@ -13,7 +13,7 @@ def test_get_timestamp():
     timestamp = get_timestamp()
     assert timestamp == "2025-01-15T10:30:00Z"
     # Verify it's a valid ISO format
-    datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    datetime.fromisoformat(timestamp)
 
 
 def test_merge_dicts_simple():

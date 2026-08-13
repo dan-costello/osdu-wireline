@@ -14,13 +14,9 @@ from mcp.types import ErrorData
 class OSMCPError(Exception):
     """Base exception for OSDU MCP operations."""
 
-    pass
-
 
 class OSMCPAuthError(OSMCPError):
     """Authentication failures."""
-
-    pass
 
 
 class OSMCPAPIError(OSMCPError):
@@ -35,22 +31,16 @@ class OSMCPAPIError(OSMCPError):
 class OSMCPConfigError(OSMCPError):
     """Configuration validation errors."""
 
-    pass
-
 
 class OSMCPConnectionError(OSMCPError):
     """Network and connection errors."""
-
-    pass
 
 
 class OSMCPValidationError(OSMCPError):
     """Input validation errors."""
 
-    pass
 
-
-def handle_osdu_exceptions(
+def handle_osdu_exceptions(  # noqa: C901 - existing complexity, tracked as debt
     func: Callable[..., Coroutine[Any, Any, Any]] | None = None,
     *,
     default_message: str = "OSDU operation failed",
@@ -80,35 +70,29 @@ def handle_osdu_exceptions(
                 return await wrapped_func(*args, **kwargs)
             except OSMCPAuthError as e:
                 raise McpError(
-                    ErrorData(code=401, message=f"Authentication error: {str(e)}")
+                    ErrorData(code=401, message=f"Authentication error: {e!s}")
                 )
             except OSMCPAPIError as e:
                 status = f" (HTTP {e.status_code})" if e.status_code else ""
-                code = e.status_code if e.status_code else 500
+                code = e.status_code or 500
                 raise McpError(
-                    ErrorData(code=code, message=f"OSDU API error{status}: {str(e)}")
+                    ErrorData(code=code, message=f"OSDU API error{status}: {e!s}")
                 )
             except OSMCPConfigError as e:
                 raise McpError(
-                    ErrorData(code=400, message=f"Configuration error: {str(e)}")
+                    ErrorData(code=400, message=f"Configuration error: {e!s}")
                 )
             except OSMCPConnectionError as e:
-                raise McpError(
-                    ErrorData(code=503, message=f"Connection error: {str(e)}")
-                )
+                raise McpError(ErrorData(code=503, message=f"Connection error: {e!s}"))
             except OSMCPValidationError as e:
-                raise McpError(
-                    ErrorData(code=400, message=f"Validation error: {str(e)}")
-                )
+                raise McpError(ErrorData(code=400, message=f"Validation error: {e!s}"))
             except OSMCPError as e:
-                raise McpError(
-                    ErrorData(code=500, message=f"{default_message}: {str(e)}")
-                )
+                raise McpError(ErrorData(code=500, message=f"{default_message}: {e!s}"))
             except Exception as e:
                 raise McpError(
                     ErrorData(
                         code=500,
-                        message=f"Unexpected error in OSDU operation: {str(e)}",
+                        message=f"Unexpected error in OSDU operation: {e!s}",
                     )
                 )
 
@@ -117,6 +101,5 @@ def handle_osdu_exceptions(
     if func is None:
         # Called with parameters: @handle_osdu_exceptions(default_message="...")
         return decorator
-    else:
-        # Called without parameters: @handle_osdu_exceptions
-        return decorator(func)
+    # Called without parameters: @handle_osdu_exceptions
+    return decorator(func)

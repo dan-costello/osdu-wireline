@@ -62,16 +62,14 @@ async def legaltag_search(
                 tag["simplifiedName"] = client.simplify_tag_name(tag["name"])
 
         # Build response
-        result = {
-            "success": True,
-            "legalTags": legal_tags,
-            "count": len(legal_tags),
-            "partition": partition,
-        }
-
         logger.info(
             "Searched legal tags successfully",
             extra={"query": query, "count": len(legal_tags), "partition": partition},
         )
 
-        return result
+        return {
+            "success": True,
+            "legalTags": legal_tags,
+            "count": len(legal_tags),
+            "partition": partition,
+        }

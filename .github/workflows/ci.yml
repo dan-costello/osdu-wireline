@@ -1,11 +1,13 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:  # Allow manual trigger
 
 # Cancel in-progress runs for the same PR/branch
 concurrency:
@@ -14,127 +16,43 @@ concurrency:
 
 jobs:
   test:
-    name: Test Python ${{ matrix.python-version }}
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13"]
+    timeout-minutes: 15
         
     steps:
-    - uses: actions/checkout@v6
-      
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-        
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
       with:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
+        python-version: "3.13"
         
     - name: Install dependencies
-      run: |
-        uv sync --locked
-        uv pip install -e .[dev]
+      run: uv sync --locked --extra dev
         
-    # Run all quality checks - continue on error to see all failures
-    - name: Check code formatting with black
-      id: black
-      continue-on-error: true
+    - name: Check code formatting with ruff
+      id: ruff-format
       run: |
-        echo "::group::Black Formatting Check"
-        uv run black --check src/ tests/ --diff --color
-        echo "::endgroup::"
-      
-    - name: Lint with flake8
-      id: flake8
-      continue-on-error: true
+        uv run ruff format --diff src/ tests/
+
+    - name: Lint with ruff
+      id: ruff-lint
       run: |
-        echo "::group::Flake8 Linting"
-        uv run flake8 src/ --count --statistics --show-source --color always
-        echo "::endgroup::"
+        uv run ruff check src/ tests/ --output-format=github
       
     - name: Type check with mypy
       id: mypy
-      continue-on-error: true
       run: |
-        echo "::group::MyPy Type Checking"
-        PYTHONPATH=src uv run mypy src/osdu_mcp_server --pretty --color-output
-        echo "::endgroup::"
+        uv run mypy src/osdu_mcp_server --python-version 3.13 --pretty
       
-    # Run tests with coverage - continue on error to get results
     - name: Run tests with coverage
       id: pytest
-      continue-on-error: true
       run: |
-        echo "::group::PyTest with Coverage"
         uv run pytest \
           --cov=src/osdu_mcp_server \
-          --cov-report=xml \
           --cov-report=term-missing \
           --cov-fail-under=70 \
           -v
-        echo "::endgroup::"
-        
-    # Generate quality check summary
-    - name: Quality Check Summary
-      if: always()
-      run: |
-        echo "## Quality Check Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Check each step's outcome
-        if [[ "${{ steps.black.outcome }}" == "failure" ]]; then
-          echo "❌ **Black formatting check failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Run \`black src/ tests/\` locally to fix formatting issues" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "✅ Black formatting check passed" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [[ "${{ steps.flake8.outcome }}" == "failure" ]]; then
-          echo "❌ **Flake8 linting failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Check the logs above for specific linting errors" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "✅ Flake8 linting passed" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [[ "${{ steps.mypy.outcome }}" == "failure" ]]; then
-          echo "❌ **MyPy type checking failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Fix type errors shown in the logs above" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "✅ MyPy type checking passed" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [[ "${{ steps.pytest.outcome }}" == "failure" ]]; then
-          echo "❌ **PyTest failed**" >> $GITHUB_STEP_SUMMARY
-          echo "   Tests failed or coverage is below 70%" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "✅ PyTest passed with sufficient coverage" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Overall status
-        if [[ "${{ steps.black.outcome }}" == "failure" ]] || \
-           [[ "${{ steps.flake8.outcome }}" == "failure" ]] || \
-           [[ "${{ steps.mypy.outcome }}" == "failure" ]] || \
-           [[ "${{ steps.pytest.outcome }}" == "failure" ]]; then
-          echo "### ⚠️ Quality checks failed - see details above" >> $GITHUB_STEP_SUMMARY
-          exit 1
-        else
-          echo "### ✅ All quality checks passed!" >> $GITHUB_STEP_SUMMARY
-        fi
-          
-    # Upload coverage (optional)
-    - name: Upload coverage to Codecov (optional)
-      uses: codecov/codecov-action@v6
-      if: matrix.python-version == '3.12'  # Only upload once
-      continue-on-error: true  # Don't fail if service is down
-      with:
-        files: ./coverage.xml
-        fail_ci_if_error: false

@@ -38,16 +38,14 @@ async def entitlements_mine() -> dict:
         groups = response.get("groups", [])
 
         # Build simplified response
-        result = {
-            "success": True,
-            "groups": groups,
-            "count": len(groups),
-            "partition": partition,
-        }
-
         logger.info(
             "Retrieved user groups successfully",
             extra={"count": len(groups), "partition": partition},
         )
 
-        return result
+        return {
+            "success": True,
+            "groups": groups,
+            "count": len(groups),
+            "partition": partition,
+        }

@@ -7,9 +7,9 @@ from .list import partition_list
 from .update import partition_update
 
 __all__ = [
-    "partition_list",
-    "partition_get",
     "partition_create",
-    "partition_update",
     "partition_delete",
+    "partition_get",
+    "partition_list",
+    "partition_update",
 ]

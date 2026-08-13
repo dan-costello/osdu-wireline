@@ -97,7 +97,7 @@ async def _check_services(
 
         except Exception as e:
             # Mark service as unhealthy if request fails
-            health_status[service.value] = f"unhealthy: {str(e)}"
+            health_status[service.value] = f"unhealthy: {e!s}"
             # TODO: Add logging here to debug the actual error
 
     # Add version info to result if collected

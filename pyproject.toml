@@ -29,7 +29,6 @@ dependencies = [
     "boto3>=1.40.50",
     "google-auth>=2.41.1",
     "PyJWT>=2.10.1",
-    "ruff>=0.14.0",
 ]
 
 [project.optional-dependencies]
@@ -38,11 +37,9 @@ dev = [
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
-    "black>=25.9.0",
     "ruff>=0.16.2",
     "mypy>=1.18.2",
     "freezegun>=1.5.5",
-    "flake8>=7.3.0",
     "aioresponses>=0.7.8",
 ]
 
@@ -63,12 +60,37 @@ line-length = 88
 target-version = "py312"
 lint.select = [
     "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
     "F",    # pyflakes
     "I",    # isort
+    "N",    # pep8-naming
     "T20",  # flake8-print
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
     "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "PIE",  # flake8-pie
+    "RUF",  # ruff-specific rules
+    "ASYNC", # flake8-async
+    "LOG",  # flake8-logging
+    "G",    # flake8-logging-format
+    "S",    # flake8-bandit (security)
+    "BLE",  # flake8-blind-except
+    "DTZ",  # flake8-datetimez
+    "TRY",  # tryceratops
+    "PT",   # flake8-pytest-style
+    "PERF", # perflint
+    "FURB", # refurb
+    "RSE",  # flake8-raise
+    "TC",   # flake8-type-checking
+    "C90",  # mccabe complexity
+    "Q",    # flake8-quotes
+    "INT",  # flake8-gettext
+    "SLOT", # flake8-slots
+    "YTT",  # flake8-2020
 ]
 lint.ignore = [
     "E501",  # line too long
@@ -76,7 +98,30 @@ lint.ignore = [
     "B904",  # allow raise without from in except
     "SIM117", # allow nested with statements for readability
     "B011",  # allow assert False in tests
+    "N803",  # OSDU wire parameter names (returnedFields) must match the API
+    "G004",  # f-strings in logging: JSONFormatter flattens via getMessage(),
+             # so lazy % yields identical output; structure comes from extra={}
+    "TRY003", # allow descriptive messages at the raise site
+    "TRY300", # allow return inside try rather than a trailing else
+    "TRY301", # allow raise inside try, caught by the local handler
+    "TRY401", # error_message in the structured JSON payload is queryable and
+              # intentional; the traceback goes to a separate "exception" field
+    "BLE001", # tool and credential-probe boundaries catch broadly on purpose;
+              # handle_osdu_exceptions maps anything unexpected to McpError
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, build fake credentials, and pin naive timestamps by design.
+"tests/**" = ["S101", "S105", "S106", "DTZ005"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.uv]
+required-version = ">=0.12.3"
 
 
 [tool.pytest.ini_options]

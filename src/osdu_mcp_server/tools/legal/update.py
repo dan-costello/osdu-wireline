@@ -56,14 +56,6 @@ async def legaltag_update(
         tag = response
 
         # Build response
-        result = {
-            "success": True,
-            "legalTag": tag,
-            "updated": True,
-            "write_enabled": True,
-            "partition": partition,
-        }
-
         logger.info(
             "Legal tag updated",
             extra={
@@ -75,4 +67,10 @@ async def legaltag_update(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "legalTag": tag,
+            "updated": True,
+            "write_enabled": True,
+            "partition": partition,
+        }

@@ -9,9 +9,12 @@ from ...shared.logging_manager import get_logger
 # Get a logger with feature flag support
 logger = get_logger(__name__)
 
+# Filter keys that map onto the schema identity and can be server-side filtered
+_IDENTITY_FILTER_KEYS = ("authority", "source", "entity", "status", "scope")
+
 
 @handle_osdu_exceptions
-async def schema_search(
+async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
     # Text search parameters
     text: str | None = None,
     search_in: list[str] | None = None,
@@ -92,7 +95,6 @@ async def schema_search(
 
     # Analyze what can be server-side filtered
     server_filters: dict[str, list[str]] = {}
-    client_filters: dict[str, str | list[str]] = {}
 
     async with SchemaClient() as client:
         # Get current partition
@@ -122,20 +124,12 @@ async def schema_search(
 
         # Collect filters that need client-side processing
         # These include array filters and other advanced criteria
-        for key, value in filter.items():
-            if (
-                key
-                in [
-                    "authority",
-                    "source",
-                    "entity",
-                    "status",
-                    "scope",
-                ]
-                and isinstance(value, list)
-                or key not in ["authority", "source", "entity", "status", "scope"]
-            ):
-                client_filters[key] = value
+        client_filters = {
+            key: value
+            for key, value in filter.items()
+            if (key in _IDENTITY_FILTER_KEYS and isinstance(value, list))
+            or key not in _IDENTITY_FILTER_KEYS
+        }
 
         # Apply server-side filtering through the API
         logger.info(f"Executing schema list with server filters: {server_filters}")
@@ -161,10 +155,10 @@ async def schema_search(
             logger.info(f"Retrieved {len(schemas)} schemas from API response")
 
         except Exception as e:
-            logger.error(f"Error during schema search: {str(e)}")
+            logger.exception("Error during schema search")
             return {
                 "success": False,
-                "error": f"Failed to retrieve schemas: {str(e)}",
+                "error": f"Failed to retrieve schemas: {e!s}",
                 "partition": partition,
             }
 
@@ -210,17 +204,6 @@ async def schema_search(
         paginated_schemas = filtered_schemas[start_idx:end_idx]
 
         # Build response
-        result = {
-            "success": True,
-            "schemas": paginated_schemas,
-            "count": len(paginated_schemas),
-            "totalCount": total_count,  # Note: This is approximate due to client filtering
-            "offset": offset,
-            "partition": partition,
-            "filteredCount": len(filtered_schemas),  # Additional info for transparency
-            "query": text if text else None,  # Include search query for reference
-        }
-
         logger.info(
             "Schema search completed successfully",
             extra={
@@ -231,7 +214,16 @@ async def schema_search(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "schemas": paginated_schemas,
+            "count": len(paginated_schemas),
+            "totalCount": total_count,  # Note: This is approximate due to client filtering
+            "offset": offset,
+            "partition": partition,
+            "filteredCount": len(filtered_schemas),  # Additional info for transparency
+            "query": text or None,  # Include search query for reference
+        }
 
 
 def _matches_client_filters(
@@ -247,16 +239,11 @@ def _matches_client_filters(
             continue
 
         if (
-            key == "authority"
-            and schema_identity.get("authority") not in values
-            or key == "source"
-            and schema_identity.get("source") not in values
-            or key == "entity"
-            and schema_identity.get("entityType") not in values
-            or key == "status"
-            and schema.get("status") not in values
-            or key == "scope"
-            and schema.get("scope") not in values
+            (key == "authority" and schema_identity.get("authority") not in values)
+            or (key == "source" and schema_identity.get("source") not in values)
+            or (key == "entity" and schema_identity.get("entityType") not in values)
+            or (key == "status" and schema.get("status") not in values)
+            or (key == "scope" and schema.get("scope") not in values)
         ):
             return False
 
@@ -273,7 +260,7 @@ def _matches_client_filters(
     return True
 
 
-async def _matches_text_search(
+async def _matches_text_search(  # noqa: C901 - existing complexity, tracked as debt
     schema: dict,
     text: str,
     search_fields: list[str],
@@ -364,18 +351,15 @@ def _search_in_object(obj: dict, text: str) -> bool:
             return True
 
         # Recursively check nested objects
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             if _search_in_object(value, text):
                 return True
 
         # Check in list elements
         elif isinstance(value, list):
             for item in value:
-                if (
-                    isinstance(item, dict)
-                    and _search_in_object(item, text)
-                    or isinstance(item, str)
-                    and text in item.lower()
+                if (isinstance(item, dict) and _search_in_object(item, text)) or (
+                    isinstance(item, str) and text in item.lower()
                 ):
                     return True
 
@@ -417,15 +401,12 @@ def _sort_schemas(schemas: list[dict], sort_by: str, sort_order: str) -> list[di
                     value = None
                     break
             return value
-        else:
-            # For direct fields
-            return schema.get(sort_fields)
+        # For direct fields
+        return schema.get(sort_fields)
 
     # Sort with None values last
-    sorted_schemas = sorted(
+    return sorted(
         schemas,
         key=lambda s: (_get_sort_key(s) is None, _get_sort_key(s)),
         reverse=(sort_order.upper() == "DESC"),
     )
-
-    return sorted_schemas

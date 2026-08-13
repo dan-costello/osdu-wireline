@@ -52,11 +52,10 @@ async def search_query(
         limit = 1000
 
     async with SearchClient() as client:
-        result = await client.search_query(
+        return await client.search_query(
             query=query,
             kind=kind,
             limit=limit,
             offset=offset,
             returnedFields=returnedFields,
         )
-        return result

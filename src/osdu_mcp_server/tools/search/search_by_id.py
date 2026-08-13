@@ -40,5 +40,4 @@ async def search_by_id(id: str, limit: int = 10) -> dict[str, Any]:
         raise ValueError("ID parameter is required")
 
     async with SearchClient() as client:
-        result = await client.search_by_id(record_id=id, limit=limit)
-        return result
+        return await client.search_by_id(record_id=id, limit=limit)

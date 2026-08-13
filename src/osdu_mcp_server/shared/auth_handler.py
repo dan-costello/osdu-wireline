@@ -12,14 +12,16 @@ Supports:
 
 import asyncio
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
-from azure.core.credentials import AccessToken
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
+
+if TYPE_CHECKING:
+    from azure.core.credentials import AccessToken
 
 from .config_manager import ConfigManager
 from .exceptions import OSMCPAuthError
@@ -40,7 +42,7 @@ DEFAULT_GCP_SCOPES = [
 class AuthenticationMode(Enum):
     """Supported authentication modes."""
 
-    USER_TOKEN = "user_token"  # Manual Bearer token from environment
+    USER_TOKEN = "user_token"  # noqa: S105 - enum value, not a credential
     AZURE = "azure"  # Azure DefaultAzureCredential
     AWS = "aws"  # AWS boto3 SDK credentials
     GCP = "gcp"  # GCP Application Default Credentials
@@ -135,8 +137,8 @@ class AuthHandler:
             if credentials:
                 logger.info("Authentication mode: AWS (auto-discovered)")
                 return AuthenticationMode.AWS
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"AWS auto-discovery unavailable: {e}")
 
         # Priority 6: Try GCP auto-discovery
         try:
@@ -146,8 +148,8 @@ class AuthHandler:
             if credentials:
                 logger.info("Authentication mode: GCP (auto-discovered)")
                 return AuthenticationMode.GCP
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"GCP auto-discovery unavailable: {e}")
 
         # Priority 7: No credentials found
         raise OSMCPAuthError(
@@ -227,7 +229,7 @@ class AuthHandler:
             # Verify credentials are available
             credentials = self._aws_session.get_credentials()
             if not credentials:
-                raise NoCredentialsError()
+                raise NoCredentialsError
 
             # Get AWS account/region info for logging
             sts = self._aws_session.client("sts")
@@ -321,11 +323,11 @@ class AuthHandler:
         """
         if self.mode == AuthenticationMode.USER_TOKEN:
             return self._get_user_token()
-        elif self.mode == AuthenticationMode.AZURE:
+        if self.mode == AuthenticationMode.AZURE:
             return await self._get_azure_token()
-        elif self.mode == AuthenticationMode.AWS:
+        if self.mode == AuthenticationMode.AWS:
             return await self._get_aws_token()
-        elif self.mode == AuthenticationMode.GCP:
+        if self.mode == AuthenticationMode.GCP:
             return await self._get_gcp_token()
 
         raise OSMCPAuthError(f"Unsupported authentication mode: {self.mode}")
@@ -398,7 +400,7 @@ class AuthHandler:
         except jwt.DecodeError as e:
             raise OSMCPAuthError(f"Invalid JWT token format: {e}")
 
-    async def _get_azure_token(self) -> str:
+    async def _get_azure_token(self) -> str:  # noqa: C901 - existing complexity, tracked as debt
         """Get Azure access token with automatic refresh.
 
         Returns:
@@ -436,18 +438,18 @@ class AuthHandler:
                 raise OSMCPAuthError(
                     "Authentication failed. Please run 'az login' before using OSDU MCP Server"
                 )
-            elif "expired" in error_message or "refresh token" in error_message:
+            if "expired" in error_message or "refresh token" in error_message:
                 raise OSMCPAuthError(
                     "Azure authentication token expired. Please run 'az login' to refresh"
                 )
-            elif (
+            if (
                 "invalid_scope" in error_message
                 or "scope format is invalid" in error_message
             ):
                 raise OSMCPAuthError(
                     "Invalid Azure client ID. Please verify your AZURE_CLIENT_ID is correct"
                 )
-            elif (
+            if (
                 "no accounts were found" in error_message
                 or "environment variables are not fully configured" in error_message
             ):
@@ -456,27 +458,24 @@ class AuthHandler:
                         "Service Principal authentication failed. Please check your AZURE_CLIENT_ID, "
                         "AZURE_TENANT_ID, and AZURE_CLIENT_SECRET environment variables"
                     )
-                else:
-                    raise OSMCPAuthError(
-                        "No Azure credentials found. Please set up Service Principal credentials "
-                        "or run 'az login' for CLI authentication"
-                    )
-            else:
-                # Generic authentication error
                 raise OSMCPAuthError(
-                    "Authentication failed. Please check your Azure credentials"
+                    "No Azure credentials found. Please set up Service Principal credentials "
+                    "or run 'az login' for CLI authentication"
                 )
+            # Generic authentication error
+            raise OSMCPAuthError(
+                "Authentication failed. Please check your Azure credentials"
+            )
         except Exception as e:
             # Handle non-authentication errors (network issues, etc.)
             if "connection" in str(e).lower() or "timeout" in str(e).lower():
                 raise OSMCPAuthError(
                     "Failed to connect to Azure authentication service. Please check your network connection"
                 )
-            else:
-                # Unexpected error - provide minimal details to user
-                raise OSMCPAuthError(
-                    "Authentication configuration error. Please check your environment setup"
-                )
+            # Unexpected error - provide minimal details to user
+            raise OSMCPAuthError(
+                "Authentication configuration error. Please check your environment setup"
+            )
 
     async def _get_aws_token(self) -> str:
         """Get AWS token for OSDU authentication.
@@ -571,18 +570,17 @@ class AuthHandler:
                     "GCP credentials file not found. "
                     "Check GOOGLE_APPLICATION_CREDENTIALS path"
                 )
-            elif "invalid" in error_msg or "malformed" in error_msg:
+            if "invalid" in error_msg or "malformed" in error_msg:
                 raise OSMCPAuthError(
                     "GCP credentials invalid. "
                     "Run 'gcloud auth application-default login' to re-authenticate"
                 )
-            elif "expired" in error_msg:
+            if "expired" in error_msg:
                 raise OSMCPAuthError(
                     "GCP refresh token expired. "
                     "Run 'gcloud auth application-default login' to re-authenticate"
                 )
-            else:
-                raise OSMCPAuthError(f"GCP token refresh failed: {e}")
+            raise OSMCPAuthError(f"GCP token refresh failed: {e}")
 
         except Exception as e:
             raise OSMCPAuthError(f"Unexpected GCP authentication error: {e}")
@@ -614,8 +612,8 @@ class AuthHandler:
 
         # Add a buffer of 5 minutes before expiration
         expiry_buffer = timedelta(minutes=5)
-        token_expiry = datetime.fromtimestamp(self._azure_cached_token.expires_on)
-        return datetime.now() < (token_expiry - expiry_buffer)
+        token_expiry = datetime.fromtimestamp(self._azure_cached_token.expires_on, UTC)
+        return datetime.now(UTC) < (token_expiry - expiry_buffer)
 
     def close(self) -> None:
         """Clean up all authentication resources."""

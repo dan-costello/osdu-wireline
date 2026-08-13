@@ -48,22 +48,20 @@ class PartitionClient(OsduClient):
             if isinstance(response, list):
                 logger.info(f"Retrieved {len(response)} partitions")
                 return response
-            else:
-                logger.warning(f"Unexpected response format: {type(response)}")
-                return []
+            logger.warning(f"Unexpected response format: {type(response)}")
+            return []
 
         except OSMCPAPIError as e:
             if e.status_code == 404:
                 logger.info("No partitions found")
                 return []
-            elif e.status_code == 403:
+            if e.status_code == 403:
                 logger.warning("Insufficient permissions to list partitions")
                 raise OSMCPAPIError(
                     "Insufficient permissions to list partitions", e.status_code
                 )
-            else:
-                logger.error(f"API error listing partitions: {e}")
-                raise
+            logger.exception("API error listing partitions")
+            raise
 
     async def get_partition(self, partition_id: str) -> dict[str, Any]:
         """Get properties for a specific partition.
@@ -100,19 +98,18 @@ class PartitionClient(OsduClient):
                 # Handle plain text 404 response
                 logger.info(f"Partition not found: {partition_id}")
                 raise OSMCPAPIError(f"Partition '{partition_id}' not found", 404)
-            elif e.status_code == 401:
+            if e.status_code == 401:
                 logger.warning(f"Authentication required for partition: {partition_id}")
                 raise
-            elif e.status_code == 403:
+            if e.status_code == 403:
                 logger.warning(
                     f"Insufficient permissions for partition: {partition_id}"
                 )
                 raise OSMCPAPIError(
                     f"Insufficient permissions for partition '{partition_id}'", 403
                 )
-            else:
-                logger.error(f"API error getting partition {partition_id}: {e}")
-                raise
+            logger.exception(f"API error getting partition {partition_id}")
+            raise
 
     async def create_partition(
         self, partition_id: str, properties: dict[str, Any]

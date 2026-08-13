@@ -46,13 +46,6 @@ async def legaltag_batch_retrieve(names: list[str]) -> dict:
                 tag["simplifiedName"] = client.simplify_tag_name(tag["name"])
 
         # Build response
-        result = {
-            "success": True,
-            "legalTags": legal_tags,
-            "count": len(legal_tags),
-            "partition": partition,
-        }
-
         logger.info(
             "Batch retrieved legal tags successfully",
             extra={
@@ -62,4 +55,9 @@ async def legaltag_batch_retrieve(names: list[str]) -> dict:
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "legalTags": legal_tags,
+            "count": len(legal_tags),
+            "partition": partition,
+        }

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @handle_osdu_exceptions
-async def schema_update(
+async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
     id: str, schema: dict[str, Any], status: str | None = None
 ) -> dict[str, Any]:
     """Update an existing schema in DEVELOPMENT status.

@@ -81,14 +81,6 @@ async def legaltag_create(
         tag = response
 
         # Build response
-        result = {
-            "success": True,
-            "legalTag": tag,
-            "created": True,
-            "write_enabled": True,
-            "partition": partition,
-        }
-
         logger.info(
             "Legal tag created",
             extra={
@@ -100,4 +92,10 @@ async def legaltag_create(
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "legalTag": tag,
+            "created": True,
+            "write_enabled": True,
+            "partition": partition,
+        }

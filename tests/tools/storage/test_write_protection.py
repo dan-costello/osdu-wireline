@@ -31,7 +31,9 @@ async def test_storage_create_blocked_by_default(osdu_env):
         # Remove the env var if it exists
         os.environ.pop("OSDU_MCP_ENABLE_WRITE_MODE", None)
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="Write operations are disabled"
+        ) as exc_info:
             await storage_create_update_records([VALID_RECORD])
 
         assert "Write operations are disabled" in str(exc_info.value)
@@ -44,7 +46,9 @@ async def test_storage_delete_blocked_by_default(osdu_env):
         # Remove the env var if it exists
         os.environ.pop("OSDU_MCP_ENABLE_DELETE_MODE", None)
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="Delete operations are disabled"
+        ) as exc_info:
             await storage_delete_record("test:record:123")
 
         assert "Delete operations are disabled" in str(exc_info.value)
@@ -57,7 +61,9 @@ async def test_storage_purge_blocked_by_default(osdu_env):
         # Remove the env var if it exists
         os.environ.pop("OSDU_MCP_ENABLE_DELETE_MODE", None)
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="Delete operations are disabled"
+        ) as exc_info:
             await storage_purge_record("test:record:123", confirm=True)
 
         assert "Delete operations are disabled" in str(exc_info.value)
@@ -67,7 +73,9 @@ async def test_storage_purge_blocked_by_default(osdu_env):
 async def test_storage_purge_requires_confirmation(osdu_env):
     """Test storage purge requires explicit confirmation."""
     with patch.dict(os.environ, {"OSDU_MCP_ENABLE_DELETE_MODE": "true"}):
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="requires explicit confirmation"
+        ) as exc_info:
             # Without confirmation
             await storage_purge_record("test:record:123", confirm=False)
 
@@ -97,7 +105,9 @@ async def test_dual_protection_independence(osdu_env):
             assert result["write_enabled"] is True
 
         # But delete should still fail
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="Delete operations are disabled"
+        ) as exc_info:
             await storage_delete_record("test:record:123")
 
         assert "Delete operations are disabled" in str(exc_info.value)
@@ -114,7 +124,7 @@ async def test_record_validation(osdu_env):
             # Missing legal and data fields
         }
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception, match="Missing required field") as exc_info:
             await storage_create_update_records([invalid_record])
 
         assert "Missing required field" in str(exc_info.value)
@@ -127,7 +137,9 @@ async def test_record_validation(osdu_env):
             "data": {"test": "data"},
         }
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(
+            Exception, match="ACL must contain both 'viewers' and 'owners'"
+        ) as exc_info:
             await storage_create_update_records([invalid_acl_record])
 
         assert "ACL must contain both 'viewers' and 'owners'" in str(exc_info.value)

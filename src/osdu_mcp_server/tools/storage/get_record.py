@@ -38,12 +38,6 @@ async def storage_get_record(id: str, attributes: list[str] | None = None) -> di
         record = await client.get_record(id, attributes)
 
         # Build response
-        result = {
-            "success": True,
-            "record": record,
-            "partition": client.data_partition,
-        }
-
         logger.info(
             f"Retrieved record {id}",
             extra={
@@ -53,4 +47,8 @@ async def storage_get_record(id: str, attributes: list[str] | None = None) -> di
             },
         )
 
-        return result
+        return {
+            "success": True,
+            "record": record,
+            "partition": client.data_partition,
+        }
