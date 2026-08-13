@@ -83,7 +83,7 @@ async def test_storage_purge_requires_confirmation(osdu_env):
 
 
 @pytest.mark.asyncio
-async def test_dual_protection_independence(osdu_env):
+async def test_dual_protection_independence(osdu_env, sent_json):
     """Test that write and delete protections are independent."""
     # Test write enabled but delete disabled
     with patch.dict(os.environ, {"OSDU_MCP_ENABLE_WRITE_MODE": "true"}, clear=False):
@@ -103,6 +103,12 @@ async def test_dual_protection_independence(osdu_env):
             result = await storage_create_update_records([VALID_RECORD])
             assert result["success"] is True
             assert result["write_enabled"] is True
+
+            # The record must actually reach the wire, not just the URL
+            sent = sent_json(
+                mocked, "PUT", "https://test.osdu.com/api/storage/v2/records"
+            )
+            assert sent == [VALID_RECORD]
 
         # But delete should still fail
         with pytest.raises(

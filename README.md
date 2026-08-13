@@ -24,7 +24,6 @@ A Model Context Protocol (MCP) server that provides AI assistants with access to
     - [Resources](#resources)
     - [Tools](#tools)
 5. [Environment Variables](#environment-variables)
-6. [Logging Configuration](#logging-configuration)
 
 ## Purpose
 
@@ -161,7 +160,6 @@ data creation and updates while keeping strict control over destructive operatio
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_MCP_LOGGING_ENABLED` | No | `false` | Enables structured JSON logging |
-| `OSDU_MCP_LOGGING_LEVEL` | No | `INFO` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `OSDU_MCP_LOG_LEVEL` | No | `INFO` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Applies to this server's own loggers; third-party libraries stay at `INFO`. Logs go to stderr. |
 
 Boolean variables accept `true`, `yes`, or `1` (case-insensitive); anything else is false.

@@ -20,13 +20,13 @@ def test_get_env_returns_value():
 def test_get_env_returns_default_when_unset():
     """An unset variable falls back to the default."""
     with patch.dict(os.environ, {}, clear=True):
-        assert get_env("OSDU_MCP_LOGGING_LEVEL", "INFO") == "INFO"
+        assert get_env("OSDU_MCP_TEST_VALUE", "INFO") == "INFO"
 
 
 def test_get_env_treats_empty_as_unset():
     """An empty value is indistinguishable from unset."""
-    with patch.dict(os.environ, {"OSDU_MCP_LOGGING_LEVEL": ""}, clear=True):
-        assert get_env("OSDU_MCP_LOGGING_LEVEL", "INFO") == "INFO"
+    with patch.dict(os.environ, {"OSDU_MCP_TEST_VALUE": ""}, clear=True):
+        assert get_env("OSDU_MCP_TEST_VALUE", "INFO") == "INFO"
 
 
 def test_require_env_returns_value():
@@ -82,5 +82,5 @@ def test_get_env_bool_truth_table(value, expected):
 def test_get_env_bool_default_when_unset():
     """An unset variable uses the supplied default."""
     with patch.dict(os.environ, {}, clear=True):
-        assert get_env_bool("OSDU_MCP_LOGGING_ENABLED") is False
-        assert get_env_bool("OSDU_MCP_LOGGING_ENABLED", True) is True
+        assert get_env_bool("OSDU_MCP_TEST_FLAG") is False
+        assert get_env_bool("OSDU_MCP_TEST_FLAG", True) is True

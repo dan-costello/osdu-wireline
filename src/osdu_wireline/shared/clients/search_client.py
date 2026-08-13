@@ -1,28 +1,18 @@
 """OSDU Search service client."""
 
+import logging
 from typing import Any
 
-from ..logging_manager import get_logger
 from ..osdu_client import OsduClient
-from ..service_urls import OSMCPService, get_service_base_url
+from ..service_urls import OSMCPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SearchClient(OsduClient):
     """Client for OSDU Search service operations."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialize SearchClient with service-specific configuration."""
-        super().__init__(*args, **kwargs)
-        self._base_path = get_service_base_url(OSMCPService.SEARCH)
-
-    async def post(self, path: str, data: Any = None, **kwargs: Any) -> dict[str, Any]:
-        """Override post to include service base path."""
-        full_path = f"{self._base_path}{path}"
-        if data is None and "json" in kwargs:
-            data = kwargs.pop("json")
-        return await super().post(full_path, data, **kwargs)
+    service = OSMCPService.SEARCH
 
     async def search_query(
         self,

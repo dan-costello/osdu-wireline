@@ -208,6 +208,61 @@ async def test_osdu_client_correctly_formats_headers(mock_auth):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("style", ["positional", "json_kwarg"])
+async def test_osdu_client_sends_body_either_call_style(mock_auth, style, sent_json):
+    """A POST body reaches the wire whether passed positionally or as json=."""
+    body = {"name": "test", "value": 42}
+
+    with aioresponses() as mocked:
+        mocked.post("https://test-osdu.com/api/create", payload={"ok": True})
+
+        client = OsduClient(mock_auth)
+        if style == "positional":
+            await client.post("/api/create", body)
+        else:
+            await client.post("/api/create", json=body)
+
+        assert sent_json(mocked, "POST", "https://test-osdu.com/api/create") == body
+
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_osdu_client_prefixes_service_base_path(mock_auth):
+    """A subclass naming a service gets that base path prepended exactly once."""
+    from osdu_wireline.shared.service_urls import OSMCPService
+
+    class StubClient(OsduClient):
+        service = OSMCPService.STORAGE
+
+    with aioresponses() as mocked:
+        mocked.get(
+            "https://test-osdu.com/api/storage/v2/records/abc", payload={"id": "abc"}
+        )
+
+        client = StubClient(mock_auth)
+        result = await client.get("/records/abc")
+
+        assert result == {"id": "abc"}
+
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_osdu_client_without_service_does_not_prefix(mock_auth):
+    """The base client leaves fully-qualified paths alone, as health_check needs."""
+    with aioresponses() as mocked:
+        mocked.get("https://test-osdu.com/api/storage/v2/info", payload={"ok": True})
+
+        client = OsduClient(mock_auth)
+        result = await client.get("/api/storage/v2/info")
+
+        assert result == {"ok": True}
+
+        await client.close()
+
+
+@pytest.mark.asyncio
 async def test_osdu_client_requires_server_url(mock_auth):
     """Missing required configuration names the environment variable."""
     from osdu_wireline.shared.exceptions import OSMCPConfigError

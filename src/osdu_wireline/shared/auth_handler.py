@@ -11,6 +11,7 @@ Supports:
 """
 
 import asyncio
+import logging
 import os
 from datetime import UTC, datetime, timedelta
 from enum import Enum
@@ -24,9 +25,8 @@ if TYPE_CHECKING:
     from azure.core.credentials import AccessToken
 
 from .exceptions import OSMCPAuthError
-from .logging_manager import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # OSDU authorizes by the caller's email address, which is only present in the
 # token when identity scopes are requested. cloud-platform alone yields a token
