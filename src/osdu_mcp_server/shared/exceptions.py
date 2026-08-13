@@ -5,7 +5,7 @@ This module implements the exception hierarchy as defined in ADR-004.
 
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any
+from typing import Any, overload
 
 from mcp import McpError
 from mcp.types import ErrorData
@@ -38,6 +38,22 @@ class OSMCPConnectionError(OSMCPError):
 
 class OSMCPValidationError(OSMCPError):
     """Input validation errors."""
+
+
+@overload
+def handle_osdu_exceptions(
+    func: Callable[..., Coroutine[Any, Any, Any]],
+) -> Callable[..., Coroutine[Any, Any, Any]]: ...
+
+
+@overload
+def handle_osdu_exceptions(
+    *,
+    default_message: str = ...,
+) -> Callable[
+    [Callable[..., Coroutine[Any, Any, Any]]],
+    Callable[..., Coroutine[Any, Any, Any]],
+]: ...
 
 
 def handle_osdu_exceptions(  # noqa: C901 - existing complexity, tracked as debt
