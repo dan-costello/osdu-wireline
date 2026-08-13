@@ -29,7 +29,6 @@ dependencies = [
     "boto3>=1.40.50",
     "google-auth>=2.41.1",
     "PyJWT>=2.10.1",
-    "ruff>=0.14.0",
 ]
 
 [project.optional-dependencies]
