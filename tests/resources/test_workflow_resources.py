@@ -31,7 +31,7 @@ class TestWorkflowResources:
             assert len(resource.name) > 0
             assert isinstance(resource.description, str)
             assert len(resource.description) > 0
-            assert resource.mime_type == "application/json"
+            assert resource.mime_type in ("application/json", "text/markdown")
 
     def test_expected_template_resources_exist(self):
         """Test that expected template resources are registered."""
@@ -63,8 +63,15 @@ class TestWorkflowResources:
                 f"Expected reference {reference_name} not found in resources"
             )
 
-    def test_resource_files_exist_and_valid_json(self):
-        """Test that resource files exist and contain valid JSON."""
+    def test_expected_doc_resources_exist(self):
+        """Test that expected documentation resources are registered."""
+        resources = get_workflow_resources()
+        resource_names = [r.name for r in resources]
+
+        assert "Reference: quick-start-workflows.md" in resource_names
+
+    def test_resource_files_exist_and_are_readable(self):
+        """Test that resource files exist and parse according to their mime type."""
         resources = get_workflow_resources()
 
         for resource in resources:
@@ -74,14 +81,17 @@ class TestWorkflowResources:
             # Verify file exists
             assert path.exists(), f"Resource file does not exist: {path}"
 
-            # Verify file contains valid JSON
-            with open(path) as f:
-                try:
-                    json.load(f)
-                except json.JSONDecodeError as e:
-                    raise AssertionError(
-                        f"Resource file {path} contains invalid JSON: {e}"
-                    ) from e
+            if resource.mime_type == "application/json":
+                with open(path) as f:
+                    try:
+                        json.load(f)
+                    except json.JSONDecodeError as e:
+                        raise AssertionError(
+                            f"Resource file {path} contains invalid JSON: {e}"
+                        ) from e
+            else:
+                with open(path, encoding="utf-8") as f:
+                    assert f.read().strip(), f"Resource file {path} is empty"
 
     def test_legal_tag_template_structure(self):
         """Test that legal tag template has expected structure."""

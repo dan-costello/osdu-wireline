@@ -21,6 +21,7 @@ A Model Context Protocol (MCP) server that provides AI assistants with access to
    - [Authentication Methods](#authentication-methods)
 4. [Usage](#usage)
     - [Prompts](#prompts)
+    - [Resources](#resources)
     - [Tools](#tools)
 5. [Environment Variables](#environment-variables)
 6. [Logging Configuration](#logging-configuration)
@@ -65,8 +66,15 @@ The server automatically detects your authentication provider in this priority o
 ## Usage
 
 ### Prompts
-- **list_mcp_assets**: Comprehensive overview of all server capabilities with usage examples and quick start guidance
 - **guide_search_patterns**: Search pattern guidance for OSDU operations with Elasticsearch syntax examples
+- **guide_record_lifecycle**: Complete record lifecycle workflow, from creation through cleanup
+
+### Resources
+- **reference://quick-start-workflows.md**: Common workflows and operational tips
+- **reference://acl-format-examples.json**: ACL format examples for different OSDU environments
+- **reference://search-query-patterns.json**: Proven search query patterns for record validation
+- **template://legal-tag-template.json**: Working legal tag template structure
+- **template://processing-parameter-record.json**: Complete record template for ProcessingParameterType
 
 ### Tools
 

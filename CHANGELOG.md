@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   server reads. The two required ones, `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION`,
   were previously documented only in the per-client setup guides.
 
+### Added
+
+* The server now advertises usage instructions at initialize (MCP `instructions`), covering the
+  write and delete protection gates and where to start.
+* New `reference://quick-start-workflows.md` resource with common workflows and operational tips,
+  carried over from the removed `list_mcp_assets` prompt.
+
 ### Fixed
 
 * Corrected the documentation for `OSDU_MCP_SERVER_DOMAIN`, which was described as a setting in
@@ -34,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `config.example.yaml` template and the `pyyaml` dependency are gone.
 * Removed the `ConfigManager` class. Environment variables are now read by their literal names
   through `shared/env.py`, instead of being assembled from a `(section, key)` pair.
+* Removed the `list_mcp_assets` prompt and the `AssetsGenerator` class behind it. Its tool and
+  prompt inventory was a hand-maintained duplicate of the server's registrations, which MCP
+  already exposes through `tools/list` and `prompts/list`, and its configuration section had gone
+  stale (it documented Azure-only authentication). The workflow and tips content it carried now
+  lives in the `reference://quick-start-workflows.md` resource. **Breaking** for clients invoking
+  the prompt by name.
 
 The `OSDU_MCP_*` environment variable names are unchanged. One behavior change: the write and
 delete gates now accept `yes` and `1` in addition to `true`, matching how every other boolean
