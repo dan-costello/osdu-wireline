@@ -179,7 +179,7 @@ async def partition_delete(
 
     except OSMCPError as e:
         # Log error
-        logger.error(
+        logger.exception(
             json.dumps(
                 {
                     "timestamp": datetime.now(UTC).isoformat(),

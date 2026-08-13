@@ -60,7 +60,7 @@ class PartitionClient(OsduClient):
                 raise OSMCPAPIError(
                     "Insufficient permissions to list partitions", e.status_code
                 )
-            logger.error(f"API error listing partitions: {e}")
+            logger.exception("API error listing partitions")
             raise
 
     async def get_partition(self, partition_id: str) -> dict[str, Any]:
@@ -108,7 +108,7 @@ class PartitionClient(OsduClient):
                 raise OSMCPAPIError(
                     f"Insufficient permissions for partition '{partition_id}'", 403
                 )
-            logger.error(f"API error getting partition {partition_id}: {e}")
+            logger.exception(f"API error getting partition {partition_id}")
             raise
 
     async def create_partition(

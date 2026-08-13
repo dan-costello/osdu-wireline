@@ -43,7 +43,7 @@ class StorageClient(OsduClient):
         full_path = f"{self._base_path}{path}"
         return await super().delete(full_path, **kwargs)
 
-    def validate_record(self, record: dict[str, Any]) -> None:
+    def validate_record(self, record: dict[str, Any]) -> None:  # noqa: C901 - existing complexity, tracked as debt
         """Validate basic record structure.
 
         Args:

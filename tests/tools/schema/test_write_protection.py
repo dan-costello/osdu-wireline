@@ -37,7 +37,9 @@ async def test_schema_create_write_protection():
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
 
-            with pytest.raises(Exception) as excinfo:
+            with pytest.raises(
+                Exception, match="Schema write operations are disabled"
+            ) as excinfo:
                 await schema_create(
                     authority="test",
                     source="test",
@@ -77,7 +79,9 @@ async def test_schema_update_write_protection():
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
 
-            with pytest.raises(Exception) as excinfo:
+            with pytest.raises(
+                Exception, match="Schema write operations are disabled"
+            ) as excinfo:
                 await schema_update(
                     id="test:test:test:1.0.0", schema={"type": "object"}
                 )

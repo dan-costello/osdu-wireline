@@ -43,7 +43,7 @@ class TestLoggingManager(unittest.TestCase):
         manager.configure()
 
         # Verify the osdu_mcp_test logger is set to ERROR level
-        self.assertEqual(logging.getLogger("osdu_mcp_test").level, logging.ERROR)
+        assert logging.getLogger("osdu_mcp_test").level == logging.ERROR
 
     def test_logging_enabled(self):
         """Test that logging is configured when enabled."""
@@ -78,7 +78,7 @@ class TestLoggingManager(unittest.TestCase):
                 manager.configure()
 
                 # Verify log level
-                self.assertEqual(test_logger.level, logging.INFO)
+                assert test_logger.level == logging.INFO
 
     def test_json_formatter(self):
         """Test JSON formatter formats logs correctly."""
@@ -106,11 +106,11 @@ class TestLoggingManager(unittest.TestCase):
         log_json = json.loads(formatted)
 
         # Verify JSON structure
-        self.assertEqual(log_json["level"], "INFO")
-        self.assertEqual(log_json["message"], "Test message")
-        self.assertEqual(log_json["tool"], "test_logger")
-        self.assertTrue("timestamp" in log_json)
-        self.assertTrue("trace_id" in log_json)
+        assert log_json["level"] == "INFO"
+        assert log_json["message"] == "Test message"
+        assert log_json["tool"] == "test_logger"
+        assert "timestamp" in log_json
+        assert "trace_id" in log_json
 
     @patch("osdu_mcp_server.shared.logging_manager.ConfigManager")
     def test_get_logger(self, mock_config):
@@ -130,7 +130,7 @@ class TestLoggingManager(unittest.TestCase):
         logger = get_logger("test_module")
 
         # Verify logger is configured with correct name
-        self.assertEqual(logger.name, "osdu_mcp_test.test_module")
+        assert logger.name == "osdu_mcp_test.test_module"
 
     def test_configure_global(self):
         """Test the global configure_logging function."""
@@ -153,9 +153,7 @@ class TestLoggingManager(unittest.TestCase):
 
             # Verify we didn't modify the root logger
             root_logger = logging.getLogger()
-            self.assertEqual(
-                root_logger.level, logging.WARNING
-            )  # Default root logger level
+            assert root_logger.level == logging.WARNING  # Default root logger level
 
 
 if __name__ == "__main__":

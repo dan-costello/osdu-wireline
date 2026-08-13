@@ -40,7 +40,7 @@ class OSMCPValidationError(OSMCPError):
     """Input validation errors."""
 
 
-def handle_osdu_exceptions(
+def handle_osdu_exceptions(  # noqa: C901 - existing complexity, tracked as debt
     func: Callable[..., Coroutine[Any, Any, Any]] | None = None,
     *,
     default_message: str = "OSDU operation failed",
@@ -74,7 +74,7 @@ def handle_osdu_exceptions(
                 )
             except OSMCPAPIError as e:
                 status = f" (HTTP {e.status_code})" if e.status_code else ""
-                code = e.status_code if e.status_code else 500
+                code = e.status_code or 500
                 raise McpError(
                     ErrorData(code=code, message=f"OSDU API error{status}: {e!s}")
                 )

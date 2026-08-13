@@ -74,6 +74,23 @@ lint.select = [
     "ICN",  # flake8-import-conventions
     "PIE",  # flake8-pie
     "RUF",  # ruff-specific rules
+    "ASYNC", # flake8-async
+    "LOG",  # flake8-logging
+    "G",    # flake8-logging-format
+    "S",    # flake8-bandit (security)
+    "BLE",  # flake8-blind-except
+    "DTZ",  # flake8-datetimez
+    "TRY",  # tryceratops
+    "PT",   # flake8-pytest-style
+    "PERF", # perflint
+    "FURB", # refurb
+    "RSE",  # flake8-raise
+    "TC",   # flake8-type-checking
+    "C90",  # mccabe complexity
+    "Q",    # flake8-quotes
+    "INT",  # flake8-gettext
+    "SLOT", # flake8-slots
+    "YTT",  # flake8-2020
 ]
 lint.ignore = [
     "E501",  # line too long
@@ -82,7 +99,23 @@ lint.ignore = [
     "SIM117", # allow nested with statements for readability
     "B011",  # allow assert False in tests
     "N803",  # OSDU wire parameter names (returnedFields) must match the API
+    "G004",  # f-strings in logging: JSONFormatter flattens via getMessage(),
+             # so lazy % yields identical output; structure comes from extra={}
+    "TRY003", # allow descriptive messages at the raise site
+    "TRY300", # allow return inside try rather than a trailing else
+    "TRY301", # allow raise inside try, caught by the local handler
+    "TRY401", # error_message in the structured JSON payload is queryable and
+              # intentional; the traceback goes to a separate "exception" field
+    "BLE001", # tool and credential-probe boundaries catch broadly on purpose;
+              # handle_osdu_exceptions maps anything unexpected to McpError
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, build fake credentials, and pin naive timestamps by design.
+"tests/**" = ["S101", "S105", "S106", "DTZ005"]
 
 [tool.ruff.format]
 docstring-code-format = true

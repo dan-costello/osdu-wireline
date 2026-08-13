@@ -139,7 +139,7 @@ async def partition_get(
 
     except OSMCPError as e:
         # Log error
-        logger.error(
+        logger.exception(
             json.dumps(
                 {
                     "timestamp": datetime.now(UTC).isoformat(),

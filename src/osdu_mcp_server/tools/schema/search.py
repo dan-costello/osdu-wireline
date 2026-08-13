@@ -9,9 +9,12 @@ from ...shared.logging_manager import get_logger
 # Get a logger with feature flag support
 logger = get_logger(__name__)
 
+# Filter keys that map onto the schema identity and can be server-side filtered
+_IDENTITY_FILTER_KEYS = ("authority", "source", "entity", "status", "scope")
+
 
 @handle_osdu_exceptions
-async def schema_search(
+async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
     # Text search parameters
     text: str | None = None,
     search_in: list[str] | None = None,
@@ -92,7 +95,6 @@ async def schema_search(
 
     # Analyze what can be server-side filtered
     server_filters: dict[str, list[str]] = {}
-    client_filters: dict[str, str | list[str]] = {}
 
     async with SchemaClient() as client:
         # Get current partition
@@ -122,19 +124,12 @@ async def schema_search(
 
         # Collect filters that need client-side processing
         # These include array filters and other advanced criteria
-        for key, value in filter.items():
-            if (
-                key
-                in [
-                    "authority",
-                    "source",
-                    "entity",
-                    "status",
-                    "scope",
-                ]
-                and isinstance(value, list)
-            ) or key not in ["authority", "source", "entity", "status", "scope"]:
-                client_filters[key] = value
+        client_filters = {
+            key: value
+            for key, value in filter.items()
+            if (key in _IDENTITY_FILTER_KEYS and isinstance(value, list))
+            or key not in _IDENTITY_FILTER_KEYS
+        }
 
         # Apply server-side filtering through the API
         logger.info(f"Executing schema list with server filters: {server_filters}")
@@ -160,7 +155,7 @@ async def schema_search(
             logger.info(f"Retrieved {len(schemas)} schemas from API response")
 
         except Exception as e:
-            logger.error(f"Error during schema search: {e!s}")
+            logger.exception("Error during schema search")
             return {
                 "success": False,
                 "error": f"Failed to retrieve schemas: {e!s}",
@@ -227,7 +222,7 @@ async def schema_search(
             "offset": offset,
             "partition": partition,
             "filteredCount": len(filtered_schemas),  # Additional info for transparency
-            "query": text if text else None,  # Include search query for reference
+            "query": text or None,  # Include search query for reference
         }
 
 
@@ -265,7 +260,7 @@ def _matches_client_filters(
     return True
 
 
-async def _matches_text_search(
+async def _matches_text_search(  # noqa: C901 - existing complexity, tracked as debt
     schema: dict,
     text: str,
     search_fields: list[str],

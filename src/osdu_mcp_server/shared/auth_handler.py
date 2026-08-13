@@ -12,14 +12,16 @@ Supports:
 
 import asyncio
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
-from azure.core.credentials import AccessToken
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
+
+if TYPE_CHECKING:
+    from azure.core.credentials import AccessToken
 
 from .config_manager import ConfigManager
 from .exceptions import OSMCPAuthError
@@ -40,7 +42,7 @@ DEFAULT_GCP_SCOPES = [
 class AuthenticationMode(Enum):
     """Supported authentication modes."""
 
-    USER_TOKEN = "user_token"  # Manual Bearer token from environment
+    USER_TOKEN = "user_token"  # noqa: S105 - enum value, not a credential
     AZURE = "azure"  # Azure DefaultAzureCredential
     AWS = "aws"  # AWS boto3 SDK credentials
     GCP = "gcp"  # GCP Application Default Credentials
@@ -135,8 +137,8 @@ class AuthHandler:
             if credentials:
                 logger.info("Authentication mode: AWS (auto-discovered)")
                 return AuthenticationMode.AWS
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"AWS auto-discovery unavailable: {e}")
 
         # Priority 6: Try GCP auto-discovery
         try:
@@ -146,8 +148,8 @@ class AuthHandler:
             if credentials:
                 logger.info("Authentication mode: GCP (auto-discovered)")
                 return AuthenticationMode.GCP
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"GCP auto-discovery unavailable: {e}")
 
         # Priority 7: No credentials found
         raise OSMCPAuthError(
@@ -227,7 +229,7 @@ class AuthHandler:
             # Verify credentials are available
             credentials = self._aws_session.get_credentials()
             if not credentials:
-                raise NoCredentialsError()
+                raise NoCredentialsError
 
             # Get AWS account/region info for logging
             sts = self._aws_session.client("sts")
@@ -398,7 +400,7 @@ class AuthHandler:
         except jwt.DecodeError as e:
             raise OSMCPAuthError(f"Invalid JWT token format: {e}")
 
-    async def _get_azure_token(self) -> str:
+    async def _get_azure_token(self) -> str:  # noqa: C901 - existing complexity, tracked as debt
         """Get Azure access token with automatic refresh.
 
         Returns:
@@ -610,8 +612,8 @@ class AuthHandler:
 
         # Add a buffer of 5 minutes before expiration
         expiry_buffer = timedelta(minutes=5)
-        token_expiry = datetime.fromtimestamp(self._azure_cached_token.expires_on)
-        return datetime.now() < (token_expiry - expiry_buffer)
+        token_expiry = datetime.fromtimestamp(self._azure_cached_token.expires_on, UTC)
+        return datetime.now(UTC) < (token_expiry - expiry_buffer)
 
     def close(self) -> None:
         """Clean up all authentication resources."""

@@ -43,7 +43,7 @@ async def legaltag_get(name: str) -> dict:
         # Build response
         logger.info(
             "Retrieved legal tag successfully",
-            extra={"name": name, "full_name": full_name, "partition": partition},
+            extra={"tag_name": name, "full_name": full_name, "partition": partition},
         )
 
         return {
