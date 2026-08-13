@@ -1,4 +1,12 @@
-### Direct Installation
+# VS Code
+
+> **Note:** `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are always required.
+> The remaining environment variables depend on your cloud provider — the examples below use
+> Azure. See the auth guide for your provider:
+> [Azure](../authentication/azure.md) · [AWS](../authentication/aws.md) ·
+> [GCP](../authentication/gcp.md) · [Manual OAuth token](../authentication/manual_oauth.md)
+
+## Direct Installation
 
 To directly download and install this package from github without setting up a local development environment, you can use the following command:
 
@@ -10,7 +18,7 @@ To directly download and install this package from github without setting up a l
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://https://github.com/dan-costello/osdu-mcp-server@main",
+        "git+https://github.com/dan-costello/osdu-mcp-server@main",
         "osdu-mcp-server"
       ],
       "env": {
@@ -24,7 +32,7 @@ To directly download and install this package from github without setting up a l
 }
 ```
 
-### Local Development
+## Local Development
 
 If you are developing locally and want to test your changes, you can also use the local installation method:
 ```json

@@ -4,7 +4,7 @@ This document outlines the test strategy, architecture, and comprehensive test c
 
 ## Test Philosophy
 
-Following [ADR-010: Testing Philosophy and Strategy](../docs/adr.md#adr-010-testing-philosophy-and-strategy), we adopt a **behavior-driven testing approach** that focuses on testing what code does rather than how it does it.
+We adopt a **behavior-driven testing approach** that focuses on testing what code does rather than how it does it.
 
 ### Core Principles
 
@@ -198,7 +198,7 @@ uv run pytest -k "auth"
 
 ### Writing New Tests
 
-1. **Follow ADR-010** - Write behavior-focused tests
+1. **Follow Spec** - Write behavior-focused tests
 2. **Use appropriate mocking** - Mock only external boundaries
 3. **Clear naming** - Test names should describe behavior
 4. **One behavior per test** - Keep tests focused and simple
@@ -241,7 +241,6 @@ async def test_client_retries_on_temporary_failure():
 
 ## References
 
-- [ADR-010: Testing Philosophy and Strategy](../docs/adr.md#adr-010-testing-philosophy-and-strategy)
 - [pytest Documentation](https://docs.pytest.org/)
 - [aioresponses Documentation](https://github.com/pebble/aioresponses)
 - [Python Testing Best Practices](https://docs.pytest.org/en/latest/explanation/goodpractices.html)

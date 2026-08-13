@@ -56,7 +56,8 @@ The server automatically detects your authentication provider in this priority o
  - [Azure](./docs/authentication/azure.md)
  - [AWS](./docs/authentication/aws.md)
  - [GCP](./docs/authentication/gcp.md)
- - [Manual OAuth Token](./docs/authentication/manual_oauth.md)
+ - [Manual OAuth Token](./docs/authentication/manual_oauth.md)  
+ - [Domain Configuration (all providers)](./docs/authentication/domain.md)
 
 ## Usage
 

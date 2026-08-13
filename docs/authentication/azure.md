@@ -1,6 +1,7 @@
 # Azure Authentication
 
-**Method 1: Azure CLI (Development)**
+## Method 1: Azure CLI (Development)
+
 - **Setup**: Run `az login` before using the server
 - **Environment Variables**:
   - `AZURE_CLIENT_ID`: Your OSDU application ID
@@ -10,24 +11,25 @@
 **Example:**
 ```bash
 az login
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
+claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-osdu-app-id" \
   -e "AZURE_TENANT_ID=your-tenant-id"
 ```
 
-**Method 2: Service Principal (Production)**
+## Method 2: Service Principal (Production)
+
 - **Setup**: Create or use an existing service principal
 - **Environment Variables**:
   - `AZURE_CLIENT_ID`: Service principal ID
   - `AZURE_CLIENT_SECRET`: Service principal secret
   - `AZURE_TENANT_ID`: Your Azure tenant ID
-  - `OSDU_MCP_AUTH_SCOPE`: (Optional) Custom OAuth scope for v1.0 token environments (see GCP Authentication for its GCP meaning)
+  - `OSDU_MCP_AUTH_SCOPE`: (Optional) Custom OAuth scope for v1.0 token environments (this variable has a different meaning on GCP — see [GCP Authentication](./gcp.md))
 
 **Example:**
 ```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
+claude mcp add osdu-mcp-server uvx "git+https://github.com/dan-costello/osdu-mcp-server@main" \
   -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
   -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-service-principal-id" \
@@ -63,27 +65,10 @@ az account get-access-token --resource YOUR_AZURE_CLIENT_ID
 - **"Invalid resource"**: The client hasn't been authorized. Follow authorization setup above.
 - **"Authentication failed"**: Verify your client ID matches your OSDU application or service principal.
 
+## Domain Configuration
 
-### Domain Configuration (Azure, AWS, GCP)
+OSDU deployments use different data domain formats for Access Control Lists (ACL). See [Domain Configuration](./domain.md) to set `OSDU_MCP_SERVER_DOMAIN` correctly and avoid ACL format errors.
 
-**Critical for ACL Format**: OSDU deployments use different data domain formats for Access Control Lists (ACL). Configure your data domain to avoid ACL format errors:
+---
 
-```json
-"env": {
-  "OSDU_MCP_SERVER_DOMAIN": "contoso.com"
-}
-```
-
-**Data Domain Examples:**
-- Standard OSDU: `contoso.com` (default)
-- Microsoft OSDU: `dataservices.energy`
-- Microsoft Internal: `msft-osdu-test.org`
-
-**Data Domain Detection Methods:**
-1. **Environment Variable** (Recommended): Set `OSDU_MCP_SERVER_DOMAIN`
-2. **Use Entitlements Tool**: Run `entitlements_mine()` to see your group format
-3. **Check with Administrator**: Ask your OSDU administrator for the correct data domain
-
-**Important**: The data domain is the internal OSDU data system domain used in ACL group emails, not the FQDN from your server URL.
-
-If not set, the server will attempt to extract the domain from your server URL. For more guidance, use the MCP resource: `ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.json")`.
+Configure your MCP client: [Claude Code](../mcp-usage/claude_code.md) · [Claude Desktop](../mcp-usage/claude_desktop.md) · [VS Code](../mcp-usage/vs_code.md)
