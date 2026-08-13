@@ -38,7 +38,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "ruff>=0.16.2",
-    "mypy>=1.18.2",
+    "ty>=0.0.71",
     "freezegun>=1.5.5",
     "aioresponses>=0.7.8",
 ]
@@ -120,6 +120,9 @@ max-complexity = 10
 [tool.ruff.format]
 docstring-code-format = true
 
+[tool.ty.environment]
+python-version = "3.12"
+
 [tool.uv]
 required-version = ">=0.12.3"
 
@@ -147,10 +150,5 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
-]
-
-[dependency-groups]
-dev = [
-    "ty>=0.0.71",
 ]
 

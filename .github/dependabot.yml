@@ -13,14 +13,14 @@ updates:
       python-dev:
         patterns:
           - "pytest*"
-          - "mypy"
+          - "ty"
           - "ruff"
       python-prod:
         patterns:
           - "*"
         exclude-patterns:
           - "pytest*"
-          - "mypy"
+          - "ty"
           - "ruff"
     
   # GitHub Actions

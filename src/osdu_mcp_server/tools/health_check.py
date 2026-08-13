@@ -34,7 +34,7 @@ async def health_check(
     auth_handler = get_app_context().auth
 
     async with OsduClient() as client:
-        result = {
+        result: dict[str, Any] = {
             "connectivity": "pending",
             "server_url": client.server_url,
             "data_partition": client.data_partition,
