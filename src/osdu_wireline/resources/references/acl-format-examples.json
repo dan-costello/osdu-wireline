@@ -12,21 +12,16 @@
   "domain_detection": {
     "description": "How to determine your OSDU data domain",
     "important_note": "The data domain is the internal OSDU data system domain used in ACL group emails, NOT the FQDN from your server URL",
-    "method_1_environment_variable": {
-      "description": "Set OSDU_MCP_SERVER_DOMAIN environment variable (Recommended)",
-      "example": "OSDU_MCP_SERVER_DOMAIN=contoso.com",
-      "usage": "This explicitly sets your internal OSDU domain"
-    },
-    "method_2_entitlements": {
+    "method_1_entitlements": {
       "description": "Use entitlements_mine tool to see your actual group format",
       "example": "entitlements_mine()",
       "usage": "Look at the group emails to determine the domain part"
     },
-    "method_3_administrator": {
+    "method_2_administrator": {
       "description": "Ask your OSDU administrator for the correct internal domain",
       "usage": "Most reliable method for enterprise deployments"
     },
-    "method_4_defaults": {
+    "method_3_defaults": {
       "standard_osdu": "contoso.com",
       "microsoft_osdu": "dataservices.energy",
       "microsoft_internal": "msft-osdu-test.org"
@@ -130,8 +125,7 @@
       "6. If ACL error occurs, check entitlements_mine to see actual group formats",
       "7. Use exact groups from entitlements response in ACL"
     ],
-    "validation_tool": "entitlements_mine() - shows groups you have access to",
-    "environment_variable": "Set OSDU_MCP_SERVER_DOMAIN=your-domain to override detection"
+    "validation_tool": "entitlements_mine() - shows groups you have access to"
   },
   
   "troubleshooting": {
@@ -143,9 +137,8 @@
   
   "determining_your_format": {
     "method_1": "Use entitlements_mine tool to see your actual group format",
-    "method_2": "Set OSDU_MCP_SERVER_DOMAIN environment variable to override", 
-    "method_3": "Check existing records in your environment",
-    "method_4": "Consult your OSDU administrator",
-    "method_5": "Try formats: standard_osdu → microsoft_osdu → microsoft_internal → custom"
+    "method_2": "Check existing records in your environment",
+    "method_3": "Consult your OSDU administrator",
+    "method_4": "Try formats: standard_osdu → microsoft_osdu → microsoft_internal → custom"
   }
 }

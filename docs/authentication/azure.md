@@ -67,7 +67,7 @@ az account get-access-token --resource YOUR_AZURE_CLIENT_ID
 
 ## Domain Configuration
 
-OSDU deployments use different data domain formats for Access Control Lists (ACL). See [Domain Configuration](./domain.md) to set `OSDU_MCP_SERVER_DOMAIN` correctly and avoid ACL format errors.
+OSDU deployments use different data domain formats for Access Control Lists (ACL). See [Domain Configuration](./domain.md) to determine your data domain and avoid ACL format errors.
 
 ---
 

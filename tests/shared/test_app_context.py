@@ -13,6 +13,7 @@ from osdu_wireline.shared.app_context import (
     set_app_context,
 )
 from osdu_wireline.shared.auth_handler import AuthenticationMode
+from osdu_wireline.shared.osdu_client import OsduClient
 
 # USER_TOKEN mode has the highest priority and needs no cloud SDK calls
 TEST_ENV = {
@@ -39,15 +40,13 @@ def test_get_app_context_caches_instance():
         assert first is second
 
 
-def test_get_app_context_reads_configuration():
-    """The lazily built context exposes configured server settings."""
+def test_context_clients_read_configuration():
+    """Clients built from the shared context pick up server settings."""
     with patch.dict(os.environ, TEST_ENV):
-        context = get_app_context()
+        client = OsduClient(get_app_context().auth)
 
-        assert context.config.get_required("server", "url") == "https://test-osdu.com"
-        assert (
-            context.config.get_required("server", "data_partition") == "test-partition"
-        )
+        assert client.server_url == "https://test-osdu.com"
+        assert client.data_partition == "test-partition"
 
 
 def test_set_and_reset_app_context():

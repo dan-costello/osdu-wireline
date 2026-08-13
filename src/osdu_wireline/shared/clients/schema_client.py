@@ -1,8 +1,8 @@
 """OSDU Schema service client."""
 
-import os
 from typing import Any
 
+from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService, get_service_base_url
@@ -225,7 +225,7 @@ class SchemaClient(OsduClient):
             OSMCPAPIError: If write mode is disabled
         """
         # Check write protection
-        if not os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true":
+        if not get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE"):
             raise OSMCPAPIError(
                 "Write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable.",
                 status_code=403,
@@ -279,7 +279,7 @@ class SchemaClient(OsduClient):
             OSMCPAPIError: If write mode is disabled
         """
         # Check write protection
-        if not os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true":
+        if not get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE"):
             raise OSMCPAPIError(
                 "Write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable.",
                 status_code=403,

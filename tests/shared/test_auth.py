@@ -9,15 +9,12 @@ from azure.core.credentials import AccessToken
 from azure.core.exceptions import ClientAuthenticationError
 
 from osdu_wireline.shared.auth_handler import AuthenticationMode, AuthHandler
-from osdu_wireline.shared.config_manager import ConfigManager
 from osdu_wireline.shared.exceptions import OSMCPAuthError
 
 
 @pytest.mark.asyncio
 async def test_auth_handler_get_token_success():
     """Test successful token retrieval with derived scope."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False  # Default exclusions
 
     mock_token = AccessToken(
         token="test-token",
@@ -31,7 +28,7 @@ async def test_auth_handler_get_token_success():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}, clear=True):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
             token = await auth.get_access_token()
 
             assert token == "test-token"
@@ -44,8 +41,6 @@ async def test_auth_handler_get_token_success():
 @pytest.mark.asyncio
 async def test_auth_handler_token_caching():
     """Test that tokens are cached and reused."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     mock_token = AccessToken(
         token="cached-token",
@@ -59,7 +54,7 @@ async def test_auth_handler_token_caching():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             # First call
             token1 = await auth.get_access_token()
@@ -74,8 +69,6 @@ async def test_auth_handler_token_caching():
 @pytest.mark.asyncio
 async def test_auth_handler_token_refresh():
     """Test that expired tokens are refreshed."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     # Create an expired token
     expired_token = AccessToken(
@@ -96,7 +89,7 @@ async def test_auth_handler_token_refresh():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             # First call (gets expired token)
             token1 = await auth.get_access_token()
@@ -111,8 +104,6 @@ async def test_auth_handler_token_refresh():
 @pytest.mark.asyncio
 async def test_auth_handler_azure_auto_detection():
     """Test that authentication method is auto-detected based on AZURE_CLIENT_SECRET."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False  # Default for other auth methods
 
     # Test 1: With client secret (Service Principal)
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
@@ -121,7 +112,7 @@ async def test_auth_handler_azure_auto_detection():
             {"AZURE_CLIENT_SECRET": "test-secret", "AZURE_CLIENT_ID": "test"},
         ):
             # Create the handler but we're only interested in how the credential was instantiated
-            AuthHandler(mock_config)
+            AuthHandler()
 
             # Should exclude CLI when secret is present
             call_kwargs = mock_cred.call_args.kwargs
@@ -133,7 +124,7 @@ async def test_auth_handler_azure_auto_detection():
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test"}, clear=True):
             # Create the handler but we're only interested in how the credential was instantiated
-            AuthHandler(mock_config)
+            AuthHandler()
 
             # Should allow CLI and PowerShell when no secret
             call_kwargs = mock_cred.call_args.kwargs
@@ -147,8 +138,6 @@ async def test_auth_handler_azure_auto_detection():
 @pytest.mark.asyncio
 async def test_auth_handler_get_token_failure():
     """Test token retrieval failure with user-friendly error."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -157,7 +146,7 @@ async def test_auth_handler_get_token_failure():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -168,8 +157,6 @@ async def test_auth_handler_get_token_failure():
 @pytest.mark.asyncio
 async def test_auth_handler_azure_cli_error():
     """Test Azure CLI authentication error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -179,7 +166,7 @@ async def test_auth_handler_azure_cli_error():
         mock_cred.return_value = mock_cred_instance
 
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -192,8 +179,6 @@ async def test_auth_handler_azure_cli_error():
 @pytest.mark.asyncio
 async def test_auth_handler_expired_token_error():
     """Test expired token error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -203,7 +188,7 @@ async def test_auth_handler_expired_token_error():
         mock_cred.return_value = mock_cred_instance
 
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -214,8 +199,6 @@ async def test_auth_handler_expired_token_error():
 @pytest.mark.asyncio
 async def test_auth_handler_no_credentials_error():
     """Test no credentials error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -225,7 +208,7 @@ async def test_auth_handler_no_credentials_error():
         mock_cred.return_value = mock_cred_instance
 
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -236,8 +219,6 @@ async def test_auth_handler_no_credentials_error():
 @pytest.mark.asyncio
 async def test_auth_handler_service_principal_error():
     """Test service principal authentication error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -250,7 +231,7 @@ async def test_auth_handler_service_principal_error():
             os.environ,
             {"AZURE_CLIENT_ID": "test-client-id", "AZURE_CLIENT_SECRET": "test-secret"},
         ):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -262,8 +243,6 @@ async def test_auth_handler_service_principal_error():
 @pytest.mark.asyncio
 async def test_auth_handler_invalid_scope_error():
     """Test invalid scope error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -273,7 +252,7 @@ async def test_auth_handler_invalid_scope_error():
         mock_cred.return_value = mock_cred_instance
 
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -284,8 +263,6 @@ async def test_auth_handler_invalid_scope_error():
 @pytest.mark.asyncio
 async def test_auth_handler_network_error():
     """Test network connection error with helpful message."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -293,7 +270,7 @@ async def test_auth_handler_network_error():
         mock_cred.return_value = mock_cred_instance
 
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
@@ -306,8 +283,6 @@ async def test_auth_handler_network_error():
 @pytest.mark.asyncio
 async def test_auth_handler_validate_token():
     """Test token validation."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     mock_token = AccessToken(
         token="valid-token",
@@ -321,7 +296,7 @@ async def test_auth_handler_validate_token():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
 
             # Test successful validation
             assert await auth.validate_token() is True
@@ -336,8 +311,6 @@ async def test_auth_handler_validate_token():
 
 def test_auth_handler_close():
     """Test cleanup of authentication resources."""
-    mock_config = MagicMock(spec=ConfigManager)
-    mock_config.get.return_value = False
 
     with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
@@ -345,7 +318,7 @@ def test_auth_handler_close():
 
         # Mock environment variable for client ID
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}):
-            auth = AuthHandler(mock_config)
+            auth = AuthHandler()
         auth._azure_cached_token = AccessToken("token", 123456)
 
         auth.close()
@@ -360,32 +333,29 @@ def test_auth_handler_close():
 
 def test_auth_handler_mode_detection_azure():
     """Test Azure authentication mode detection."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Test Azure mode with CLIENT_ID
     with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test"}, clear=True):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.AZURE
 
 
 def test_auth_handler_mode_detection_auto():
     """Test automatic authentication mode detection."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # Test Azure auto-detection with CLIENT_ID
     with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test-client-id"}, clear=True):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.AZURE
 
     # Test Azure auto-detection with TENANT_ID only
     with patch.dict(os.environ, {"AZURE_TENANT_ID": "test-tenant"}, clear=True):
-        auth = AuthHandler(mock_config)
+        auth = AuthHandler()
         assert auth.mode == AuthenticationMode.AZURE
 
 
 def test_auth_handler_mode_detection_error():
     """Test error when no valid authentication mode can be detected."""
-    mock_config = MagicMock(spec=ConfigManager)
 
     # No credentials available
     with patch.dict(os.environ, {}, clear=True):
@@ -398,4 +368,4 @@ def test_auth_handler_mode_detection_error():
                 with pytest.raises(
                     OSMCPAuthError, match="No authentication credentials configured"
                 ):
-                    AuthHandler(mock_config)
+                    AuthHandler()

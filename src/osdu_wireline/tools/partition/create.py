@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ...shared.clients.partition_client import PartitionClient
+from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
 from ...shared.utils import get_trace_id
 
@@ -47,11 +48,7 @@ async def partition_create(
     trace_id = get_trace_id()
 
     # Check write permissions first
-    import os
-
-    write_enabled = (
-        os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true"
-    )
+    write_enabled = get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE")
 
     # Log the operation
     logger.info(

@@ -1,8 +1,8 @@
 """OSDU Storage service client."""
 
-import os
 from typing import Any
 
+from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
 from ..logging_manager import get_logger
 from ..osdu_client import OsduClient
@@ -101,7 +101,7 @@ class StorageClient(OsduClient):
         Raises:
             OSMCPAPIError: If write operations are disabled
         """
-        if os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() != "true":
+        if not get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE"):
             raise OSMCPAPIError(
                 "Write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable record creation and updates",
                 status_code=403,
@@ -113,7 +113,7 @@ class StorageClient(OsduClient):
         Raises:
             OSMCPAPIError: If delete operations are disabled
         """
-        if os.environ.get("OSDU_MCP_ENABLE_DELETE_MODE", "false").lower() != "true":
+        if not get_env_bool("OSDU_MCP_ENABLE_DELETE_MODE"):
             raise OSMCPAPIError(
                 "Delete operations are disabled. Set OSDU_MCP_ENABLE_DELETE_MODE=true to enable record deletion",
                 status_code=403,

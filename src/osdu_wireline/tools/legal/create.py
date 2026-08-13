@@ -1,10 +1,10 @@
 """Tool for creating legal tags (write-protected)."""
 
 import logging
-import os
 from typing import Any
 
 from ...shared.clients.legal_client import LegalClient
+from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ async def legaltag_create(
     Note: Requires OSDU_MCP_ENABLE_WRITE_MODE=true
     """
     # Check write protection
-    if not os.environ.get("OSDU_MCP_ENABLE_WRITE_MODE", "false").lower() == "true":
+    if not get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE"):
         raise OSMCPAPIError(
             "Legal tag write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable write operations",
             status_code=403,

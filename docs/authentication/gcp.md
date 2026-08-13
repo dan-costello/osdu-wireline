@@ -49,7 +49,7 @@ claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wirel
 
 ## Domain Configuration
 
-OSDU deployments use different data domain formats for Access Control Lists (ACL). See [Domain Configuration](./domain.md) to set `OSDU_MCP_SERVER_DOMAIN` correctly and avoid ACL format errors.
+OSDU deployments use different data domain formats for Access Control Lists (ACL). See [Domain Configuration](./domain.md) to determine your data domain and avoid ACL format errors.
 
 ---
 

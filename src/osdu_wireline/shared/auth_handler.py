@@ -23,7 +23,6 @@ from azure.identity import DefaultAzureCredential
 if TYPE_CHECKING:
     from azure.core.credentials import AccessToken
 
-from .config_manager import ConfigManager
 from .exceptions import OSMCPAuthError
 from .logging_manager import get_logger
 
@@ -59,7 +58,6 @@ class AuthHandler:
 
     Attributes:
         mode: Detected authentication mode
-        config: Configuration manager
         _azure_credential: Azure credential instance
         _azure_cached_token: Cached Azure token
         _aws_session: AWS boto3 session
@@ -67,14 +65,8 @@ class AuthHandler:
         _gcp_project: GCP project ID
     """
 
-    def __init__(self, config: ConfigManager):
-        """Initialize authentication handler with automatic mode detection.
-
-        Args:
-            config: Configuration manager instance
-        """
-        self.config = config
-
+    def __init__(self) -> None:
+        """Initialize authentication handler with automatic mode detection."""
         # Azure credentials
         self._azure_credential: DefaultAzureCredential | None = None
         self._azure_cached_token: AccessToken | None = None

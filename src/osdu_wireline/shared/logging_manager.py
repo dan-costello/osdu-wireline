@@ -10,20 +10,15 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-from .config_manager import ConfigManager
+from .env import get_env, get_env_bool
 from .utils import get_trace_id
 
 
 class LoggingManager:
     """Manages logging configuration with feature flag support."""
 
-    def __init__(self, config: ConfigManager | None = None):
-        """Initialize logging manager.
-
-        Args:
-            config: Configuration manager instance (if None, one will be created)
-        """
-        self.config = config or ConfigManager()
+    def __init__(self) -> None:
+        """Initialize logging manager."""
         self._initialized = False
 
     def configure(self) -> None:
@@ -40,7 +35,7 @@ class LoggingManager:
         is_test = "pytest" in sys.modules
 
         # Check if logging is enabled via environment variable
-        logging_enabled = self.config.get("logging", "enabled", False)
+        logging_enabled = get_env_bool("OSDU_MCP_LOGGING_ENABLED", False)
 
         # Get logger but don't reconfigure root logger during tests
         logger_name = "osdu_mcp" if not is_test else "osdu_mcp_test"
@@ -49,7 +44,7 @@ class LoggingManager:
         # Configure logger if logging is enabled
         if logging_enabled and not is_test:
             # Get log level from config
-            log_level_str = self.config.get("logging", "level", "INFO")
+            log_level_str = get_env("OSDU_MCP_LOGGING_LEVEL", "INFO") or "INFO"
             log_level = getattr(logging, log_level_str.upper(), logging.INFO)
 
             # Configure logger

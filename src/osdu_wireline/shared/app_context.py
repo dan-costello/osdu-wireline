@@ -1,9 +1,9 @@
-"""Process-wide OSDU application context (config + auth).
+"""Process-wide OSDU application context.
 
 The context is constructed once by the FastMCP lifespan and shared by every
-tool invocation, so configuration is read from disk once and the auth handler's
-token cache survives across calls. A lazy fallback keeps tools callable outside
-an MCP request (direct calls, tests, scripts).
+tool invocation, so the auth handler's token cache survives across calls. A
+lazy fallback keeps tools callable outside an MCP request (direct calls,
+tests, scripts).
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ import threading
 from dataclasses import dataclass, field
 
 from .auth_handler import AuthHandler
-from .config_manager import ConfigManager
 
 
 @dataclass
@@ -21,11 +20,9 @@ class AppContext:
     """Long-lived, shared dependencies for all OSDU tools.
 
     Attributes:
-        config: Configuration manager instance
         _auth: Authentication handler, constructed on first access
     """
 
-    config: ConfigManager
     _auth: AuthHandler | None = field(default=None, repr=False)
 
     @property
@@ -40,7 +37,7 @@ class AppContext:
             Shared authentication handler
         """
         if self._auth is None:
-            self._auth = AuthHandler(self.config)
+            self._auth = AuthHandler()
         return self._auth
 
     def close(self) -> None:
@@ -60,7 +57,7 @@ def create_app_context() -> AppContext:
     Returns:
         New application context
     """
-    return AppContext(config=ConfigManager())
+    return AppContext()
 
 
 def set_app_context(context: AppContext | None) -> None:

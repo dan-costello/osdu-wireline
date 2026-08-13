@@ -81,21 +81,15 @@ Prepare these values for your workflow:
 
 ### 🌐 Data Domain Configuration (Critical for ACL Format)
 
-**ACL format varies by OSDU deployment.** Determine your data domain before starting:
-
-**Method 1: Environment Variable (Recommended)**
-```json
-"env": {
-  "OSDU_MCP_SERVER_DOMAIN": "contoso.com"
-}
-```
+**ACL format varies by OSDU deployment.** Determine your data domain before starting — it is
+the value you write into each record's ACL groups, not a server setting.
 
 **Data Domain Examples:**
 - Standard OSDU: `contoso.com`
 - Microsoft OSDU: `dataservices.energy`
 - Microsoft Internal: `msft-osdu-test.org`
 
-**Method 2: Check Your Groups**
+**Check Your Groups**
 ```
 entitlements_mine()
 ```

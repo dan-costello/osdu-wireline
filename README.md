@@ -22,9 +22,7 @@ A Model Context Protocol (MCP) server that provides AI assistants with access to
 4. [Usage](#usage)
     - [Prompts](#prompts)
     - [Tools](#tools)
-5. [Write/Delete Protection](#writedelete-protection)
-    - [Write Operations](#write-operations)
-    - [Delete Operations](#delete-operations)
+5. [Environment Variables](#environment-variables)
 6. [Logging Configuration](#logging-configuration)
 
 ## Purpose
@@ -34,6 +32,9 @@ This server enables AI assistants to interact with OSDU platform services includ
 Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) to help me learn more about MCP and OSDU in general.
 
 ## Configuration
+
+All configuration is supplied through environment variables, set in your MCP client's `env` block.
+See [Environment Variables](#environment-variables) for the complete reference.
 
 ### Connecting to MCP Clients
 This server currently uses stdio for communication with MCP clients. Below are examples of how to configure the server for different MCP clients:
@@ -114,44 +115,45 @@ The server automatically detects your authentication provider in this priority o
 - **storage_delete_record**: Logically delete a record (delete-protected)
 - **storage_purge_record**: Permanently delete a record (delete-protected)
 
+## Environment Variables
 
+**Server** — `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are required; the server
+raises a configuration error on the first tool call without them.
 
-## Write/Delete Protection
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OSDU_MCP_SERVER_URL` | Yes | — | Base URL of the OSDU platform, e.g. `https://osdu.contoso.com` |
+| `OSDU_MCP_SERVER_DATA_PARTITION` | Yes | — | Data partition ID, e.g. `opendes` |
+| `OSDU_MCP_SERVER_TIMEOUT` | No | `30` | HTTP request timeout in seconds |
 
-### Write Operations
+**Authentication** — the provider is auto-detected from whichever of these is set; see
+[Authentication](#authentication) for the priority order and per-provider guides.
 
-Write operations (create, update) for any service are disabled by default, you must explicitly enable them:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OSDU_MCP_USER_TOKEN` | No | — | OAuth bearer token; selects manual-token mode, which takes priority over all cloud providers |
+| `AZURE_CLIENT_ID` | No | — | Azure app registration client ID; required once Azure mode is selected |
+| `AZURE_TENANT_ID` | No | — | Azure tenant ID; setting either Azure variable selects Azure mode |
+| `AZURE_CLIENT_SECRET` | No | — | Azure client secret, for service principal authentication |
+| `AWS_ACCESS_KEY_ID` | No | — | Selects AWS mode explicitly; IAM roles and SSO are also auto-discovered |
+| `AWS_PROFILE` | No | — | Named AWS CLI profile; also selects AWS mode |
+| `GOOGLE_APPLICATION_CREDENTIALS` | No | — | Path to a GCP service account key; selects GCP mode |
+| `OSDU_MCP_AUTH_SCOPE` | No | Provider default | Overrides the OAuth scope. Azure defaults to `{AZURE_CLIENT_ID}/.default`; GCP accepts a comma-separated list |
 
-```json
-"env": {
-  "OSDU_MCP_ENABLE_WRITE_MODE": "true"
-}
-```
+**Write and delete protection** — the tools marked write-protected and delete-protected above are
+disabled by default and must be enabled explicitly. The two gates are separate, so you can allow
+data creation and updates while keeping strict control over destructive operations.
 
-### Delete Operations
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OSDU_MCP_ENABLE_WRITE_MODE` | No | `false` | Enables create and update operations across all services |
+| `OSDU_MCP_ENABLE_DELETE_MODE` | No | `false` | Enables delete and purge operations |
 
-Delete and purge operations are separately controlled and disabled by default:
+**Logging**
 
-```json
-"env": {
-  "OSDU_MCP_ENABLE_DELETE_MODE": "true"
-}
-```
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OSDU_MCP_LOGGING_ENABLED` | No | `false` | Enables structured JSON logging |
+| `OSDU_MCP_LOGGING_LEVEL` | No | `INFO` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 
-This dual protection allows you to enable data creation and updates while maintaining strict control over destructive operations.
-
-## Logging Configuration
-
-The MCP server uses structured JSON logging. By default, logging is disabled due to verbosity. You can enable it by setting:
-
-```json
-"env": {
-  "OSDU_MCP_LOGGING_ENABLED": "true",
-  "OSDU_MCP_LOGGING_LEVEL": "INFO" 
-}
-```
-
-Valid logging levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
-
-
-
+Boolean variables accept `true`, `yes`, or `1` (case-insensitive); anything else is false.

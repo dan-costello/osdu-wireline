@@ -100,34 +100,25 @@ graph LR
 | Token validation | Verify token validation behavior | Mock validation responses |
 | Resource cleanup | Ensure proper cleanup on close | Check credential cleanup |
 
-### Configuration Tests (`test_config.py`)
+### Configuration Tests (`test_env.py`)
 
-```mermaid
-graph TD
-    A[Configuration Priority] --> B[Environment Variables]
-    A --> C[YAML File]
-    A --> D[Default Values]
-    
-    B --> E[Highest Priority]
-    C --> F[Medium Priority]
-    D --> G[Lowest Priority]
-    
-    style B fill:#f90,stroke:#333,stroke-width:2px
-    style C fill:#fc9,stroke:#333,stroke-width:2px
-    style D fill:#fec,stroke:#333,stroke-width:2px
-```
+Configuration comes entirely from environment variables, read by their literal names through
+the accessors in `shared/env.py`:
+
+| Accessor | Purpose |
+|----------|---------|
+| `get_env` | String value, or a default when unset or empty |
+| `require_env` | String value, or `OSMCPConfigError` naming the variable |
+| `get_env_int` | Integer value, or a default when unset or unparseable |
+| `get_env_bool` | True for `true`, `yes`, or `1`; otherwise False |
 
 | Test Scenario | Purpose | Method |
 |---------------|---------|--------|
-| Environment priority | ENV vars override YAML | Set env var and verify precedence |
-| YAML fallback | Use YAML when env not set | Mock YAML content, test retrieval |
-| Default fallback | Return defaults when nothing set | Test with no env or YAML |
-| Required config error | Error when required config missing | Test get_required with missing value |
-| Boolean parsing | Parse 'true'/'false' from env | Set env vars with boolean strings |
-| Numeric parsing | Parse numbers from env | Set env vars with numeric strings |
-| YAML error handling | Handle missing/invalid YAML | Mock file not found |
-| Get all config | Retrieve complete configuration | Test get_all_config method |
-| Custom config file | Support alternate config files | Test with custom file path |
+| Value lookup | Read values by literal variable name | Set env var and verify retrieval |
+| Default fallback | Return defaults when unset or empty | Test with no env set |
+| Required config error | Error names the missing variable | `require_env` with nothing set |
+| Boolean truth table | Only true/yes/1 enable a flag | Parametrized env values |
+| Numeric parsing | Parse ints, fall back when unparseable | Set numeric and garbage values |
 
 ### HTTP Client Tests (`test_osdu_client.py`)
 
