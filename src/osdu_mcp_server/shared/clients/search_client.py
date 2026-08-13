@@ -93,7 +93,7 @@ class SearchClient(OsduClient):
 
         def _project_result(result: dict[str, Any]) -> dict[str, Any]:
             if not returned_fields_set:
-                simplified_result = {
+                simplified_result: dict[str, Any] = {
                     "id": result.get("id"),
                     "kind": result.get("kind"),
                     "data": result.get("data", {}),
@@ -103,7 +103,7 @@ class SearchClient(OsduClient):
                     simplified_result["version"] = result["version"]
                 return simplified_result
 
-            simplified_result: dict[str, Any] = {}
+            simplified_result = {}
             for field_name in returned_fields_set:
                 if field_name in result:
                     simplified_result[field_name] = result[field_name]
