@@ -8,9 +8,9 @@ import pytest
 from azure.core.credentials import AccessToken
 from azure.core.exceptions import ClientAuthenticationError
 
-from osdu_mcp_server.shared.auth_handler import AuthenticationMode, AuthHandler
-from osdu_mcp_server.shared.config_manager import ConfigManager
-from osdu_mcp_server.shared.exceptions import OSMCPAuthError
+from osdu_wireline.shared.auth_handler import AuthenticationMode, AuthHandler
+from osdu_wireline.shared.config_manager import ConfigManager
+from osdu_wireline.shared.exceptions import OSMCPAuthError
 
 
 @pytest.mark.asyncio
@@ -24,9 +24,7 @@ async def test_auth_handler_get_token_success():
         expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
     )
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.return_value = mock_token
         mock_cred.return_value = mock_cred_instance
@@ -54,9 +52,7 @@ async def test_auth_handler_token_caching():
         expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
     )
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.return_value = mock_token
         mock_cred.return_value = mock_cred_instance
@@ -93,9 +89,7 @@ async def test_auth_handler_token_refresh():
         expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
     )
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = [expired_token, new_token]
         mock_cred.return_value = mock_cred_instance
@@ -121,9 +115,7 @@ async def test_auth_handler_azure_auto_detection():
     mock_config.get.return_value = False  # Default for other auth methods
 
     # Test 1: With client secret (Service Principal)
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         with patch.dict(
             os.environ,
             {"AZURE_CLIENT_SECRET": "test-secret", "AZURE_CLIENT_ID": "test"},
@@ -138,9 +130,7 @@ async def test_auth_handler_azure_auto_detection():
             assert call_kwargs["exclude_azure_powershell_credential"] is True
 
     # Test 2: Without client secret (Azure CLI/PowerShell)
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         with patch.dict(os.environ, {"AZURE_CLIENT_ID": "test"}, clear=True):
             # Create the handler but we're only interested in how the credential was instantiated
             AuthHandler(mock_config)
@@ -160,9 +150,7 @@ async def test_auth_handler_get_token_failure():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = Exception("Unknown error")
         mock_cred.return_value = mock_cred_instance
@@ -183,9 +171,7 @@ async def test_auth_handler_azure_cli_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = ClientAuthenticationError(
             "Please run 'az login' to set up an account"
@@ -198,7 +184,7 @@ async def test_auth_handler_azure_cli_error():
             with pytest.raises(OSMCPAuthError) as exc_info:
                 await auth.get_access_token()
 
-            assert "Please run 'az login' before using OSDU MCP Server" in str(
+            assert "Please run 'az login' before using OSDU Wireline" in str(
                 exc_info.value
             )
 
@@ -209,9 +195,7 @@ async def test_auth_handler_expired_token_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = ClientAuthenticationError(
             "The refresh token has expired or is invalid"
@@ -233,9 +217,7 @@ async def test_auth_handler_no_credentials_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = ClientAuthenticationError(
             "Environment variables are not fully configured"
@@ -257,9 +239,7 @@ async def test_auth_handler_service_principal_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = ClientAuthenticationError(
             "Environment variables are not fully configured"
@@ -285,9 +265,7 @@ async def test_auth_handler_invalid_scope_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = ClientAuthenticationError(
             "The scope format is invalid. AADSTS70011: The provided request must include a 'scope' input parameter."
@@ -309,9 +287,7 @@ async def test_auth_handler_network_error():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.side_effect = Exception("Connection timeout")
         mock_cred.return_value = mock_cred_instance
@@ -338,9 +314,7 @@ async def test_auth_handler_validate_token():
         expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
     )
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred_instance.get_token.return_value = mock_token
         mock_cred.return_value = mock_cred_instance
@@ -365,9 +339,7 @@ def test_auth_handler_close():
     mock_config = MagicMock(spec=ConfigManager)
     mock_config.get.return_value = False
 
-    with patch(
-        "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
-    ) as mock_cred:
+    with patch("osdu_wireline.shared.auth_handler.DefaultAzureCredential") as mock_cred:
         mock_cred_instance = MagicMock()
         mock_cred.return_value = mock_cred_instance
 

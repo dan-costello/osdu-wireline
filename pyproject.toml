@@ -3,14 +3,14 @@ requires = ["uv_build>=0.12.3,<0.13"]
 build-backend = "uv_build"
 
 [project]
-name = "osdu-mcp-server"
-version = "0.9.0"
-description = "MCP server for OSDU platform integration"
+name = "osdu-wireline"
+version = "0.1.0"
+description = "OSDU Wireline - an MCP server for OSDU platform integration. An independent project, not affiliated with or endorsed by The Open Group or the OSDU Forum."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{name = "OSDU MCP Server Contributors"}]
+authors = [{name = "OSDU Wireline Contributors"}]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.scripts]
-osdu-mcp-server = "osdu_mcp_server.main:main"
+osdu-wireline = "osdu_wireline.main:main"
 
 [dependency-groups]
 dev = [
@@ -125,7 +125,7 @@ filterwarnings = [
 
 [tool.coverage]
 run.branch = true
-run.source = ["osdu_mcp_server"]
+run.source = ["osdu_wireline"]
 run.omit = ["*/main.py"]
 report.exclude_lines = [
     "pragma: no cover",

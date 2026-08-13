@@ -9,7 +9,7 @@ from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 from mcp.shared.exceptions import McpError
 
-from osdu_mcp_server.tools.search import search_by_id, search_by_kind, search_query
+from osdu_wireline.tools.search import search_by_id, search_by_kind, search_query
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_search_query_returns_structured_results():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -99,7 +99,7 @@ async def test_search_by_id_finds_specific_record():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
@@ -149,7 +149,7 @@ async def test_search_by_kind_handles_no_results():
 
     with patch.dict(os.environ, test_env):
         with patch(
-            "osdu_mcp_server.shared.auth_handler.DefaultAzureCredential"
+            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
         ) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token

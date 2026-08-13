@@ -7,7 +7,7 @@ not the data consumer (AI model). Focus on contract compliance and data structur
 
 import pytest
 
-from osdu_mcp_server.prompts.list_assets import list_mcp_assets
+from osdu_wireline.prompts.list_assets import list_mcp_assets
 
 
 @pytest.mark.asyncio
@@ -43,7 +43,7 @@ async def test_list_mcp_assets_content_has_required_sections():
     content = result[0]["content"]
 
     # Verify main sections are present
-    assert "OSDU MCP Server Assets" in content
+    assert "OSDU Wireline Assets" in content
     assert "📊 Server Overview" in content
     assert "📝 Prompts" in content
     assert "🔧 Tools" in content

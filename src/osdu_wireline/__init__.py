@@ -1,0 +1,6 @@
+"""OSDU Wireline - MCP server for OSDU platform integration."""
+
+from .prompts import list_mcp_assets
+
+__version__ = "0.9.0"
+__all__ = ["list_mcp_assets"]

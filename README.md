@@ -1,7 +1,6 @@
-# OSDU MCP Server
+# OSDU Wireline
 
-[![CI](https://github.com/dan-costello/osdu-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/dan-costello/osdu-mcp-server/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/dan-costello/osdu-mcp-server)](https://github.com/dan-costello/osdu-mcp-server/releases)
+[![CI](https://github.com/dan-costello/osdu-wireline/actions/workflows/ci.yml/badge.svg)](https://github.com/dan-costello/osdu-wireline/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%20|%203.13%20|%203.14-blue)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with ty](https://img.shields.io/badge/type%20checked-ty-261230.svg)](https://github.com/astral-sh/ty)
@@ -10,139 +9,41 @@
 
 A Model Context Protocol (MCP) server that provides AI assistants with access to OSDU platform capabilities.
 
+> *An independent project. Not affiliated with, endorsed by, or an official product of The Open Group or the OSDU Forum. OSDU is a trademark of The Open Group.*
+
+## TOC
+
+1. [Purpose](#purpose)
+2. [Configuration](#configuration)
+   - [Connecting to MCP Clients](#connecting-to-mcp-clients)
+3. [Authentication](#authentication)
+   - [Authentication Priority](#authentication-priority)
+   - [Authentication Methods](#authentication-methods)
+4. [Usage](#usage)
+    - [Prompts](#prompts)
+    - [Tools](#tools)
+5. [Write/Delete Protection](#writedelete-protection)
+    - [Write Operations](#write-operations)
+    - [Delete Operations](#delete-operations)
+6. [Logging Configuration](#logging-configuration)
+
 ## Purpose
 
-This server enables AI assistants to interact with OSDU platform services including search, data management, and schema operations through the MCP protocol.
+This server enables AI assistants to interact with OSDU platform services including search, data management, and schema operations through the MCP protocol.  
 
-## AI-Driven Development
-
-[![AI-Driven](https://img.shields.io/badge/AI--Driven-Development-blueviolet)](https://github.com/danielscholl-osdu/osdu-mcp-server/blob/main/case-study.md)
-[![Copilot-Ready](https://img.shields.io/badge/GitHub%20Copilot-Ready-8A2BE2?logo=github)](https://github.com/danielscholl-osdu/osdu-mcp-server/blob/main/.github/copilot-instructions.md)
-
-This project follows an AI-driven development workflow:
-- 🤖 **Built with AI** - Developed using Claude Code and GitHub Copilot
-- 📋 **AI Task Assignment** - Issues labeled with `copilot` are automatically assigned
-- 📚 **AI-Friendly Documentation** - Comprehensive guides for AI agents in [CLAUDE.md](CLAUDE.md) and [.github/copilot-instructions.md](.github/copilot-instructions.md)
-- 🔄 **Multi-Agent Orchestration** - Different AI agents handle different tasks based on their strengths
-
-See our [Case Study](case-study.md) for insights on building quality code with AI agents.
-
-## Documentation
-
-- [Project Brief](docs/project-brief.md)
-- [Project Requirements](docs/project-prd.md)
-- [Architecture Overview](docs/project-architect.md)
-- [Architecture Design Decisions](docs/adr/README.md)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd osdu-mcp-server
-
-# Install using uv (recommended)
-uv sync
-uv pip install -e '.[dev]'
-```
+Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) to help me learn more about MCP and OSDU in general.
 
 ## Configuration
 
-### Claude Code CLI
+### Connecting to MCP Clients
+This server currently uses stdio for communication with MCP clients. Below are examples of how to configure the server for different MCP clients:
+ - [Claude Code](./docs/mcp-usage/claude_code.md)
+ - [Claude Desktop](./docs/mcp-usage/claude_desktop.md)
+ - [VS Code](./docs/mcp-usage/vs_code.md)
 
-To add this MCP server using the Claude Code CLI:
+## Authentication
 
-```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "AZURE_CLIENT_ID=your-client-id" \
-  -e "AZURE_TENANT_ID=your-tenant-id"
-```
-
-### Direct Installation
-
-To use this MCP server in your projects, add the following to your `.mcp.json` file:
-
-```json
-{
-  "mcpServers": {
-    "osdu-mcp-server": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main",
-        "osdu-mcp-server"
-      ],
-      "env": {
-        "OSDU_MCP_SERVER_URL": "https://your-osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "your-partition",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
-      }
-    }
-  }
-}
-```
-
-### VS Code Quick Install
-
-[![Install with UV in VS Code](https://img.shields.io/badge/VS_Code-UV-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode:mcp/install?%7B%22name%22%3A%22osdu-mcp-server%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22--from%22%2C%22git%2Bhttps%3A%2F%2Fgithub.com%2Fdanielscholl-osdu%2Fosdu-mcp-server%40main%22%2C%22osdu-mcp-server%22%5D%2C%22env%22%3A%7B%22OSDU_MCP_SERVER_URL%22%3A%22%24%7Binput%3Aosdu_url%7D%22%2C%22OSDU_MCP_SERVER_DATA_PARTITION%22%3A%22%24%7Binput%3Adata_partition%7D%22%2C%22AZURE_CLIENT_ID%22%3A%22%24%7Binput%3Aazure_client_id%7D%22%2C%22AZURE_TENANT_ID%22%3A%22%24%7Binput%3Aazure_tenant_id%7D%22%7D%2C%22inputs%22%3A%5B%7B%22id%22%3A%22osdu_url%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22OSDU%20Server%20URL%20(e.g.%2C%20https%3A%2F%2Fyour-osdu.com)%22%7D%2C%7B%22id%22%3A%22data_partition%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22OSDU%20Data%20Partition%20(e.g.%2C%20your-partition)%22%7D%2C%7B%22id%22%3A%22azure_client_id%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Azure%20Client%20ID%22%7D%2C%7B%22id%22%3A%22azure_tenant_id%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Azure%20Tenant%20ID%22%7D%2C%7B%22id%22%3A%22azure_client_secret%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Azure%20Client%20Secret%20(optional%20for%20Service%20Principal%20auth)%22%2C%22password%22%3Atrue%7D%5D%7D)
-
-### Local Development
-
-For local development, you can also use the local installation method:
-
-To use the OSDU MCP Server, configure it through your MCP client's configuration file:
-
-```json
-{
-  "mcpServers": {
-    "osdu-mcp-server": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "osdu-mcp-server"],
-      "env": {
-        "OSDU_MCP_SERVER_URL": "https://your-osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "your-partition",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant"
-      }
-    }
-  }
-}
-```
-
-### Domain Configuration
-
-**Critical for ACL Format**: OSDU deployments use different data domain formats for Access Control Lists (ACL). Configure your data domain to avoid ACL format errors:
-
-```json
-"env": {
-  "OSDU_MCP_SERVER_DOMAIN": "contoso.com"
-}
-```
-
-**Data Domain Examples:**
-- Standard OSDU: `contoso.com` (default)
-- Microsoft OSDU: `dataservices.energy`
-- Microsoft Internal: `msft-osdu-test.org`
-
-**Data Domain Detection Methods:**
-1. **Environment Variable** (Recommended): Set `OSDU_MCP_SERVER_DOMAIN`
-2. **Use Entitlements Tool**: Run `entitlements_mine()` to see your group format
-3. **Check with Administrator**: Ask your OSDU administrator for the correct data domain
-
-**Important**: The data domain is the internal OSDU data system domain used in ACL group emails, not the FQDN from your server URL.
-
-If not set, the server will attempt to extract the domain from your server URL. For more guidance, use the MCP resource: `ReadMcpResourceTool(server="osdu-mcp-server", uri="file://acl-format-examples.json")`.
-
-### Authentication Methods
-
-The server supports **multi-cloud authentication** with automatic provider detection:
-
-#### Authentication Priority
+### Authentication Priority
 
 The server automatically detects your authentication provider in this priority order:
 
@@ -153,267 +54,14 @@ The server automatically detects your authentication provider in this priority o
 5. **AWS** (auto-discovery) - IAM roles, SSO
 6. **GCP** (auto-discovery) - gcloud, metadata service
 
----
-
-#### Azure Authentication
-
-**Method 1: Azure CLI (Development)**
-- **Setup**: Run `az login` before using the server
-- **Environment Variables**:
-  - `AZURE_CLIENT_ID`: Your OSDU application ID
-  - `AZURE_TENANT_ID`: Your Azure tenant ID
-  - No `AZURE_CLIENT_SECRET` needed
-
-**Example:**
-```bash
-az login
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "AZURE_CLIENT_ID=your-osdu-app-id" \
-  -e "AZURE_TENANT_ID=your-tenant-id"
-```
-
-**Method 2: Service Principal (Production)**
-- **Setup**: Create or use an existing service principal
-- **Environment Variables**:
-  - `AZURE_CLIENT_ID`: Service principal ID
-  - `AZURE_CLIENT_SECRET`: Service principal secret
-  - `AZURE_TENANT_ID`: Your Azure tenant ID
-  - `OSDU_MCP_AUTH_SCOPE`: (Optional) Custom OAuth scope for v1.0 token environments (see GCP Authentication for its GCP meaning)
-
-**Example:**
-```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "AZURE_CLIENT_ID=your-service-principal-id" \
-  -e "AZURE_CLIENT_SECRET=your-service-principal-secret" \
-  -e "AZURE_TENANT_ID=your-tenant-id"
-```
-
----
-
-#### AWS Authentication
-
-**Method 1: AWS SSO (Development)**
-- **Setup**: Configure AWS SSO and log in
-- **Environment Variables**:
-  - `AWS_PROFILE`: Your AWS profile name
-  - (Other OSDU config as usual)
-
-**Example:**
-```bash
-aws sso login --profile dev-profile
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "AWS_PROFILE=dev-profile"
-```
-
-**Method 2: Access Keys (Production)**
-- **Setup**: Obtain AWS access keys
-- **Environment Variables**:
-  - `AWS_ACCESS_KEY_ID`: Your AWS access key
-  - `AWS_SECRET_ACCESS_KEY`: Your AWS secret key
-  - `AWS_REGION`: AWS region (e.g., us-east-1)
-
-**Example:**
-```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE" \
-  -e "AWS_SECRET_ACCESS_KEY=your-secret-key" \
-  -e "AWS_REGION=us-east-1"
-```
-
-**Method 3: IAM Roles (EC2/ECS/Lambda)**
-- **Setup**: Assign IAM role to your compute instance
-- **Environment Variables**: None needed! Automatic credential discovery
-- **Note**: Works on EC2, ECS/Fargate, Lambda with appropriate IAM roles
-
----
-
-#### GCP Authentication
-
-**Method 1: gcloud CLI (Development)**
-- **Setup**: Run `gcloud auth application-default login`
-- **Environment Variables**: None needed! Automatic credential discovery
-
-**Example:**
-```bash
-gcloud auth application-default login
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition"
-```
-
-**Method 2: Service Account Key (Production)**
-- **Setup**: Download service account JSON key
-- **Environment Variables**:
-  - `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account JSON key
-
-**Example:**
-```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json"
-```
-
-**Method 3: Workload Identity (GKE)**
-- **Setup**: Configure Workload Identity on GKE
-- **Environment Variables**: None needed! Automatic credential discovery
-- **Note**: Works on GKE with Workload Identity configured
-
-**Scopes**
-
-All GCP methods request `cloud-platform` plus the identity scopes `openid` and `userinfo.email` by default. The identity scopes grant no additional access — they make the caller's email address present in the token, which OSDU requires to resolve entitlements. Without them every OSDU request fails with `401 Access denied`.
-
-- `OSDU_MCP_AUTH_SCOPE`: (Optional) Comma-separated list of scopes that replaces the defaults
-
-**Example:**
-```bash
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "OSDU_MCP_AUTH_SCOPE=https://www.googleapis.com/auth/cloud-platform,openid,https://www.googleapis.com/auth/userinfo.email"
-```
-
----
-
-#### Manual OAuth Token (Any Provider)
-
-**Use Case**: Custom OAuth providers, testing, or unsupported clouds
-
-- **Setup**: Obtain OAuth Bearer token from your provider
-- **Environment Variables**:
-  - `OSDU_MCP_USER_TOKEN`: Your OAuth Bearer token (JWT format)
-  - **Priority**: This method ALWAYS takes precedence over all others
-
-**Example:**
-```bash
-# Obtain token from your OAuth provider
-TOKEN=$(your-oauth-command)
-
-claude mcp add osdu-mcp-server uvx "git+https://github.com/danielscholl-osdu/osdu-mcp-server@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "OSDU_MCP_USER_TOKEN=$TOKEN"
-```
-
-**Token Requirements:**
-- Valid JWT format (header.payload.signature)
-- Not expired
-- Server warns if token expires within 5 minutes
-
-**Security Notes:**
-- Tokens are validated for format and expiration
-- Tokens are never logged
-- Tokens must be refreshed manually when they expire
-
-#### Authorization Setup
-
-**When you need additional setup:**
-- ✅ **Azure CLI auth**: Always requires authorization setup
-- ✅ **External service principal**: Requires authorization setup  
-- ❌ **OSDU app's own service principal**: No additional setup needed
-
-**For Azure CLI or External Service Principal:**
-
-1. **Navigate to your OSDU application** in **App registrations**
-2. **Go to Expose an API** → **Authorized client applications**
-3. **Click Add a client application**
-4. **Enter the client ID**:
-   - Azure CLI: `04b07795-8ddb-461a-bbee-02f9e1bf7b46`
-   - External Service Principal: Your service principal's ID
-5. **Select the `user_impersonation` scope**
-6. **Click Add**
-
-**Verify authentication:**
-```bash
-az account get-access-token --resource YOUR_AZURE_CLIENT_ID
-```
-
-**Common Issues:**
-- **"Application not found"**: Azure CLI app doesn't exist in some tenants. Use service principal instead.
-- **"Invalid resource"**: The client hasn't been authorized. Follow authorization setup above.
-- **"Authentication failed"**: Verify your client ID matches your OSDU application or service principal.
-
-
-### Write Operations
-
-Write operations (create, update) for any service are disabled by default, you must explicitly enable them:
-
-```json
-"env": {
-  "OSDU_MCP_ENABLE_WRITE_MODE": "true"
-}
-```
-
-### Delete Operations
-
-Delete and purge operations are separately controlled and disabled by default:
-
-```json
-"env": {
-  "OSDU_MCP_ENABLE_DELETE_MODE": "true"
-}
-```
-
-This dual protection allows you to enable data creation and updates while maintaining strict control over destructive operations.
-
-### Complete Configuration Example
-
-Here's a complete `.mcp.json` configuration example with all common environment variables:
-
-```json
-{
-  "mcpServers": {
-    "osdu-mcp-server": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "osdu-mcp-server"],
-      "env": {
-        "OSDU_MCP_SERVER_URL": "https://your-osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "OSDU_MCP_SERVER_DOMAIN": "contoso.com",
-        "OSDU_MCP_ENABLE_WRITE_MODE": "true",
-        "OSDU_MCP_ENABLE_DELETE_MODE": "true",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id",
-        "AZURE_CLIENT_SECRET": "your-client-secret"
-      }
-    }
-  }
-}
-```
-
-### Logging Configuration
-
-The MCP server uses structured JSON logging that follows [ADR-016](docs/adr/016-structured-logging-and-observability-pattern.md). By default, logging is disabled due to verbosity. You can enable it by setting:
-
-```json
-"env": {
-  "OSDU_MCP_LOGGING_ENABLED": "true",
-  "OSDU_MCP_LOGGING_LEVEL": "INFO" 
-}
-```
-
-Valid logging levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+### Authentication Methods
+ - [Azure](./docs/authentication/azure.md)
+ - [AWS](./docs/authentication/aws.md)
+ - [GCP](./docs/authentication/gcp.md)
+ - [Manual OAuth Token](./docs/authentication/manual_oauth.md)  
+ - [Domain Configuration (all providers)](./docs/authentication/domain.md)
 
 ## Usage
-
-### Health Check
-
-```
-osdu:health_check
-```
-
-This returns the health status of your OSDU platform, checking authentication and the availability of all services (storage, search, legal, schema, file, workflow, entitlements, and dataset).
-
-## Available Capabilities
 
 ### Prompts
 - **list_mcp_assets**: Comprehensive overview of all server capabilities with usage examples and quick start guidance
@@ -465,6 +113,45 @@ This returns the health status of your OSDU platform, checking authentication an
 - **storage_fetch_records**: Retrieve multiple records at once
 - **storage_delete_record**: Logically delete a record (delete-protected)
 - **storage_purge_record**: Permanently delete a record (delete-protected)
+
+
+
+## Write/Delete Protection
+
+### Write Operations
+
+Write operations (create, update) for any service are disabled by default, you must explicitly enable them:
+
+```json
+"env": {
+  "OSDU_MCP_ENABLE_WRITE_MODE": "true"
+}
+```
+
+### Delete Operations
+
+Delete and purge operations are separately controlled and disabled by default:
+
+```json
+"env": {
+  "OSDU_MCP_ENABLE_DELETE_MODE": "true"
+}
+```
+
+This dual protection allows you to enable data creation and updates while maintaining strict control over destructive operations.
+
+## Logging Configuration
+
+The MCP server uses structured JSON logging. By default, logging is disabled due to verbosity. You can enable it by setting:
+
+```json
+"env": {
+  "OSDU_MCP_LOGGING_ENABLED": "true",
+  "OSDU_MCP_LOGGING_LEVEL": "INFO" 
+}
+```
+
+Valid logging levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 
 

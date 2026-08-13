@@ -2,7 +2,7 @@
 
 import json
 
-from src.osdu_mcp_server.resources import get_workflow_resources
+from src.osdu_wireline.resources import get_workflow_resources
 
 
 class TestWorkflowResources:

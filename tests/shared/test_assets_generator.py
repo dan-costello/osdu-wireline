@@ -5,7 +5,7 @@ Following ADR-010 Testing Philosophy: Test content generation functionality
 without testing subjective content quality.
 """
 
-from osdu_mcp_server.shared.assets_generator import AssetsGenerator
+from osdu_wireline.shared.assets_generator import AssetsGenerator
 
 
 def test_assets_generator_initialization():
@@ -29,7 +29,7 @@ def test_generate_comprehensive_overview_includes_required_sections():
     content = generator.generate_comprehensive_overview()
 
     # Verify main structural sections are present
-    assert "OSDU MCP Server Assets" in content
+    assert "OSDU Wireline Assets" in content
     assert "Server Overview" in content
     assert "Prompts" in content
     assert "Tools" in content
@@ -44,7 +44,7 @@ def test_generate_header_returns_title():
     header = generator._generate_header()
 
     assert isinstance(header, str)
-    assert "OSDU MCP Server Assets" in header
+    assert "OSDU Wireline Assets" in header
 
 
 def test_generate_server_overview_returns_content():
@@ -54,7 +54,7 @@ def test_generate_server_overview_returns_content():
 
     assert isinstance(overview, str)
     assert len(overview) > 0
-    assert "OSDU MCP Server" in overview
+    assert "OSDU Wireline" in overview
 
 
 def test_generate_prompts_section_includes_list_assets():

@@ -12,7 +12,7 @@ from unittest.mock import patch
 import jwt
 import pytest
 
-from osdu_mcp_server.shared.app_context import reset_app_context
+from osdu_wireline.shared.app_context import reset_app_context
 
 # USER_TOKEN mode validates JWT structure and expiry, so use a real token
 TEST_TOKEN = jwt.encode(

@@ -1,1 +1,1 @@
-"""Test suite for OSDU MCP Server."""
+"""Test suite for OSDU Wireline."""

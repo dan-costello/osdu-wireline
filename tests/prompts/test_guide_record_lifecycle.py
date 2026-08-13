@@ -7,7 +7,7 @@ not the data consumer (AI model). Focus on contract compliance and data structur
 
 import pytest
 
-from osdu_mcp_server.prompts.guide_record_lifecycle import guide_record_lifecycle
+from osdu_wireline.prompts.guide_record_lifecycle import guide_record_lifecycle
 
 
 @pytest.mark.asyncio

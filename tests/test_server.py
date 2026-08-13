@@ -1,8 +1,8 @@
 """Tests for the MCP server integration."""
 
-from osdu_mcp_server.server import mcp
-from osdu_mcp_server.tools.health_check import health_check
-from osdu_mcp_server.tools.schema import (
+from osdu_wireline.server import mcp
+from osdu_wireline.tools.health_check import health_check
+from osdu_wireline.tools.schema import (
     schema_create,
     schema_get,
     schema_list,
@@ -14,7 +14,7 @@ from osdu_mcp_server.tools.schema import (
 def test_server_instance():
     """Test that server instance is created correctly."""
     assert mcp is not None
-    assert mcp.name == "OSDU MCP Server"
+    assert mcp.name == "OSDU Wireline"
 
 
 def test_tools_registered():

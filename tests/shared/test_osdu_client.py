@@ -6,8 +6,8 @@ import aiohttp
 import pytest
 from aioresponses import aioresponses
 
-from osdu_mcp_server.shared.exceptions import OSMCPAPIError, OSMCPConnectionError
-from osdu_mcp_server.shared.osdu_client import OsduClient
+from osdu_wireline.shared.exceptions import OSMCPAPIError, OSMCPConnectionError
+from osdu_wireline.shared.osdu_client import OsduClient
 
 
 @pytest.mark.asyncio
@@ -192,9 +192,7 @@ async def test_osdu_client_reuses_session():
     mock_auth = AsyncMock()
     mock_auth.get_access_token.return_value = "test-token"
 
-    with patch(
-        "osdu_mcp_server.shared.osdu_client.ClientSession"
-    ) as mock_session_class:
+    with patch("osdu_wireline.shared.osdu_client.ClientSession") as mock_session_class:
         mock_session = AsyncMock()
         mock_session.closed = False
         mock_session_class.return_value = mock_session
@@ -227,9 +225,7 @@ async def test_osdu_client_correctly_formats_headers():
     mock_auth.get_access_token.return_value = "test-token"
 
     # Mock at the session level to capture headers
-    with patch(
-        "osdu_mcp_server.shared.osdu_client.ClientSession"
-    ) as mock_session_class:
+    with patch("osdu_wireline.shared.osdu_client.ClientSession") as mock_session_class:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json.return_value = {"result": "success"}

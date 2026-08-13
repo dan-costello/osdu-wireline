@@ -9,9 +9,9 @@ from unittest.mock import patch
 
 import pytest
 
-from osdu_mcp_server.tools.partition.create import partition_create
-from osdu_mcp_server.tools.partition.delete import partition_delete
-from osdu_mcp_server.tools.partition.update import partition_update
+from osdu_wireline.tools.partition.create import partition_create
+from osdu_wireline.tools.partition.delete import partition_delete
+from osdu_wireline.tools.partition.update import partition_update
 
 
 @pytest.mark.asyncio
