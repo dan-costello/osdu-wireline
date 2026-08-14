@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from ...shared.clients.schema_client import SchemaClient
+from ...shared.clients.schema_client import SchemaClient, SchemaId
 from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
@@ -94,8 +94,10 @@ async def schema_create(
         partition = client.data_partition
 
         # Format schema ID for logging and response
-        schema_id = client.format_schema_id(
-            authority, source, entity, major_version, minor_version, patch_version
+        schema_id = str(
+            SchemaId(
+                authority, source, entity, major_version, minor_version, patch_version
+            )
         )
 
         # Ensure schema has the minimum required elements

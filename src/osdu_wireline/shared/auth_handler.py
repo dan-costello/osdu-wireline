@@ -398,7 +398,7 @@ class AuthHandler:
         except jwt.DecodeError as e:
             raise OSMCPAuthError(f"Invalid JWT token format: {e}")
 
-    async def _get_azure_token(self) -> str:  # noqa: C901 - existing complexity, tracked as debt
+    async def _get_azure_token(self) -> str:
         """Get Azure access token with automatic refresh.
 
         Returns:
@@ -418,16 +418,12 @@ class AuthHandler:
                 raise OSMCPAuthError(
                     "AZURE_CLIENT_ID environment variable is required for Azure authentication"
                 )
-
-            # Derive OAuth scope from client ID or custom scope
-            custom_scope = os.environ.get("OSDU_MCP_AUTH_SCOPE")
-            scope = custom_scope or f"{client_id}/.default"
-
             # Get new token
             if not self._azure_credential:
                 raise OSMCPAuthError(
                     "Azure credential not initialized. Check AZURE_CLIENT_ID and AZURE_TENANT_ID"
                 )
+            scope = os.environ.get("OSDU_MCP_AUTH_SCOPE") or f"{client_id}/.default"
             self._azure_cached_token = self._azure_credential.get_token(scope)
             logger.info("Azure token obtained successfully")
             return self._azure_cached_token.token
@@ -436,38 +432,33 @@ class AuthHandler:
             # Handle specific authentication errors with user-friendly messages
             error_message = str(e).lower()
 
-            if "az login" in error_message or "azurecli" in error_message:
-                raise OSMCPAuthError(
-                    "Authentication failed. Please run 'az login' before using OSDU Wireline"
-                )
-            if "expired" in error_message or "refresh token" in error_message:
-                raise OSMCPAuthError(
-                    "Azure authentication token expired. Please run 'az login' to refresh"
-                )
-            if (
-                "invalid_scope" in error_message
-                or "scope format is invalid" in error_message
-            ):
-                raise OSMCPAuthError(
-                    "Invalid Azure client ID. Please verify your AZURE_CLIENT_ID is correct"
-                )
-            if (
-                "no accounts were found" in error_message
-                or "environment variables are not fully configured" in error_message
-            ):
-                if os.environ.get("AZURE_CLIENT_SECRET"):
-                    raise OSMCPAuthError(
-                        "Service Principal authentication failed. Please check your AZURE_CLIENT_ID, "
-                        "AZURE_TENANT_ID, and AZURE_CLIENT_SECRET environment variables"
-                    )
-                raise OSMCPAuthError(
-                    "No Azure credentials found. Please set up Service Principal credentials "
-                    "or run 'az login' for CLI authentication"
-                )
-            # Generic authentication error
+            has_client_secret = bool(os.environ.get("AZURE_CLIENT_SECRET"))
+            no_credentials_message = (
+                "Service Principal authentication failed. Please check your "
+                "AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_CLIENT_SECRET"
+                if has_client_secret
+                else "No Azure credentials found. Please set up Service Principal "
+                "credentials or run 'az login' for CLI authentication"
+            )
+
+            error_dict_mapping = {
+                "az login": "Authentication failed. Please run 'az login' before using OSDU Wireline",
+                "azurecli": "Authentication failed. Please run 'az login' before using OSDU Wireline",
+                "expired": "Azure authentication token expired. Please run 'az login' to refresh",
+                "refresh token": "Azure authentication token expired. Please run 'az login' to refresh",
+                "invalid_scope": "Invalid Azure client ID. Please verify your AZURE_CLIENT_ID is correct",
+                "scope format is invalid": "Invalid Azure client ID. Please verify your AZURE_CLIENT_ID is correct",
+                "no accounts were found": no_credentials_message,
+                "environment variables are not fully configured": no_credentials_message,
+            }
+
+            for key, message in error_dict_mapping.items():
+                if key in error_message:
+                    raise OSMCPAuthError(message)
             raise OSMCPAuthError(
                 "Authentication failed. Please check your Azure credentials"
             )
+
         except Exception as e:
             # Handle non-authentication errors (network issues, etc.)
             if "connection" in str(e).lower() or "timeout" in str(e).lower():

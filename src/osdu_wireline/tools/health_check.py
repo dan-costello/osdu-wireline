@@ -12,7 +12,7 @@ from ..shared.service_urls import OSMCPService, get_service_info_endpoint
 from ..shared.utils import get_timestamp
 
 
-@handle_osdu_exceptions(default_message="Health check failed")
+@handle_osdu_exceptions
 async def health_check(
     include_services: bool = True,
     include_auth: bool = True,

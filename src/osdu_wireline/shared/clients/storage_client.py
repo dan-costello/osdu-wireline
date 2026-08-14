@@ -16,7 +16,7 @@ class StorageClient(OsduClient):
 
     service = OSMCPService.STORAGE
 
-    def validate_record(self, record: dict[str, Any]) -> None:  # noqa: C901 - existing complexity, tracked as debt
+    def validate_record(self, record: dict[str, Any]) -> None:
         """Validate basic record structure.
 
         Args:
@@ -25,6 +25,11 @@ class StorageClient(OsduClient):
         Raises:
             OSMCPValidationError: If record validation fails
         """
+        self._validate_required_fields(record)
+        self._validate_acl(record)
+        self._validate_legal(record)
+
+    def _validate_required_fields(self, record: dict[str, Any]) -> None:
         required_fields = ["kind", "acl", "legal", "data"]
         for field in required_fields:
             if field not in record:
@@ -32,41 +37,43 @@ class StorageClient(OsduClient):
                     f"Missing required field '{field}' in record. Records must contain: {', '.join(required_fields)}"
                 )
 
-        # Validate ACL
-        if "acl" in record:
-            acl = record["acl"]
-            if not isinstance(acl, dict):
-                raise OSMCPValidationError(
-                    "ACL must be an object. Access control lists must be dictionary objects"
-                )
-            if "viewers" not in acl or "owners" not in acl:
-                raise OSMCPValidationError(
-                    "ACL must contain both 'viewers' and 'owners' arrays. Access control lists define who can read and modify the record"
-                )
-            if not isinstance(acl["viewers"], list) or not isinstance(
-                acl["owners"], list
-            ):
-                raise OSMCPValidationError(
-                    "ACL viewers and owners must be arrays. Access control lists must contain arrays of group names"
-                )
+    def _validate_acl(self, record: dict[str, Any]) -> None:
+        if "acl" not in record:
+            return
+        acl = record["acl"]
+        if not isinstance(acl, dict):
+            raise OSMCPValidationError(
+                "ACL must be an object. Access control lists must be dictionary objects"
+            )
+        if "viewers" not in acl or "owners" not in acl:
+            raise OSMCPValidationError(
+                "ACL must contain both 'viewers' and 'owners' arrays. Access control lists define who can read and modify the record"
+            )
+        if not isinstance(acl["viewers"], list) or not isinstance(
+            acl["owners"], list
+        ):
+            raise OSMCPValidationError(
+                "ACL viewers and owners must be arrays. Access control lists must contain arrays of group names"
+            )
 
-        # Validate Legal
-        if "legal" in record:
-            legal = record["legal"]
-            if not isinstance(legal, dict):
-                raise OSMCPValidationError(
-                    "Legal must be an object. Legal information must be a dictionary object"
-                )
-            if "legaltags" not in legal or "otherRelevantDataCountries" not in legal:
-                raise OSMCPValidationError(
-                    "Legal must contain both 'legaltags' and 'otherRelevantDataCountries' arrays. Legal information is required for compliance"
-                )
-            if not isinstance(legal["legaltags"], list) or not isinstance(
-                legal["otherRelevantDataCountries"], list
-            ):
-                raise OSMCPValidationError(
-                    "Legal legaltags and otherRelevantDataCountries must be arrays. Legal information must contain arrays of strings"
-                )
+    def _validate_legal(self, record: dict[str, Any]) -> None:
+        if "legal" not in record:
+            return
+        legal = record["legal"]
+        if not isinstance(legal, dict):
+            raise OSMCPValidationError(
+                "Legal must be an object. Legal information must be a dictionary object"
+            )
+        if "legaltags" not in legal or "otherRelevantDataCountries" not in legal:
+            raise OSMCPValidationError(
+                "Legal must contain both 'legaltags' and 'otherRelevantDataCountries' arrays. Legal information is required for compliance"
+            )
+        if not isinstance(legal["legaltags"], list) or not isinstance(
+            legal["otherRelevantDataCountries"], list
+        ):
+            raise OSMCPValidationError(
+                "Legal legaltags and otherRelevantDataCountries must be arrays. Legal information must contain arrays of strings"
+            )
 
     def check_write_permission(self) -> None:
         """Check if write operations are enabled.
