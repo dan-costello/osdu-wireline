@@ -49,9 +49,7 @@ class StorageClient(OsduClient):
             raise OSMCPValidationError(
                 "ACL must contain both 'viewers' and 'owners' arrays. Access control lists define who can read and modify the record"
             )
-        if not isinstance(acl["viewers"], list) or not isinstance(
-            acl["owners"], list
-        ):
+        if not isinstance(acl["viewers"], list) or not isinstance(acl["owners"], list):
             raise OSMCPValidationError(
                 "ACL viewers and owners must be arrays. Access control lists must contain arrays of group names"
             )
