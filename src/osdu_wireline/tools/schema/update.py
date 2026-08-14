@@ -3,15 +3,45 @@
 import logging
 from typing import Any
 
-from ...shared.clients.schema_client import SchemaClient
+from ...shared.clients.schema_client import SchemaClient, SchemaId
 from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPAPIError, handle_osdu_exceptions
 
 logger = logging.getLogger(__name__)
 
 
+def _validate_schema_update_allowed(
+    id: str, current_scope: str | None, current_status: str | None, status: str | None
+) -> None:
+    if current_scope == "SHARED":
+        raise OSMCPAPIError(
+            f"Cannot update schema in SHARED scope: {id}. Only INTERNAL scope schemas can be modified.",
+            status_code=403,
+        )
+
+    if current_status != "DEVELOPMENT" and status is None:
+        raise OSMCPAPIError(
+            f"Cannot update schema with status {current_status}: {id}. Only schemas in DEVELOPMENT status can be modified.",
+            status_code=403,
+        )
+
+    # Validate status transition
+    if status is not None:
+        if current_status == "PUBLISHED" and status != "OBSOLETE":
+            raise OSMCPAPIError(
+                f"Invalid status transition from {current_status} to {status}. PUBLISHED schemas can only transition to OBSOLETE.",
+                status_code=400,
+            )
+
+        if current_status == "OBSOLETE":
+            raise OSMCPAPIError(
+                f"Cannot update schema with status OBSOLETE: {id}. OBSOLETE is a terminal state.",
+                status_code=403,
+            )
+
+
 @handle_osdu_exceptions
-async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
+async def schema_update(
     id: str, schema_definition: dict[str, Any], status: str | None = None
 ) -> dict[str, Any]:
     """Update an existing schema in DEVELOPMENT status.
@@ -76,43 +106,18 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
 
             # Extract schema info from existing schema
             schema_info = existing_schema.get("schemaInfo", {})
-            current_status = schema_info.get("status")
+            current_status = schema_info.get("status", "DEVELOPMENT")
             current_scope = schema_info.get("scope")
 
             # Validate schema can be updated
-            if current_scope == "SHARED":
-                raise OSMCPAPIError(
-                    f"Cannot update schema in SHARED scope: {id}. Only INTERNAL scope schemas can be modified.",
-                    status_code=403,
-                )
-
-            if current_status != "DEVELOPMENT" and status is None:
-                raise OSMCPAPIError(
-                    f"Cannot update schema with status {current_status}: {id}. Only schemas in DEVELOPMENT status can be modified.",
-                    status_code=403,
-                )
-
-            # Validate status transition
-            if status is not None:
-                if current_status == "PUBLISHED" and status != "OBSOLETE":
-                    raise OSMCPAPIError(
-                        f"Invalid status transition from {current_status} to {status}. PUBLISHED schemas can only transition to OBSOLETE.",
-                        status_code=400,
-                    )
-
-                if current_status == "OBSOLETE":
-                    raise OSMCPAPIError(
-                        f"Cannot update schema with status OBSOLETE: {id}. OBSOLETE is a terminal state.",
-                        status_code=403,
-                    )
+            _validate_schema_update_allowed(id, current_scope, current_status, status)
 
         except OSMCPAPIError as e:
             if e.status_code == 404:
-                # Schema doesn't exist, no validation needed
-                logger.warning(f"Schema {id} not found for update")
-            else:
-                # Re-raise any other errors
-                raise
+                raise OSMCPAPIError(
+                    f"Schema {id} not found. Cannot update a non-existent schema.",
+                )
+            raise
 
         # Update schema
         response = await client.update_schema(
@@ -120,22 +125,9 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
         )
 
         # Determine final status
-        final_status = status
-        if not final_status and current_status is not None:
-            # Use current status if known
-            final_status = current_status
-        elif not final_status:
-            # Try to get it from the response or default to DEVELOPMENT
-            final_status = response.get("status", "DEVELOPMENT")
-
-        # Extract schema identity components if available
-        components = id.split(":")
-        authority = components[0] if len(components) > 0 else None
-        source = components[1] if len(components) > 1 else None
-        entity = components[2] if len(components) > 2 else None
-
-        # Version components
-        version = components[3] if len(components) > 3 else None
+        final_status: str = (
+            status or current_status or response.get("status", "DEVELOPMENT")
+        )
 
         # Build response
         result = {
@@ -155,16 +147,17 @@ async def schema_update(  # noqa: C901 - existing complexity, tracked as debt
             if "createdBy" in schema_info:
                 result["createdBy"] = schema_info["createdBy"]
 
+        parsed_id = SchemaId.parse(id)
         logger.info(
             "Updated schema successfully",
             extra={
                 "schema_id": id,
                 "partition": partition,
                 "status": final_status,
-                "authority": authority,
-                "source": source,
-                "entity": entity,
-                "version": version,
+                "authority": parsed_id.authority,
+                "source": parsed_id.source,
+                "entity": parsed_id.entity,
+                "version": parsed_id.version,
             },
         )
 

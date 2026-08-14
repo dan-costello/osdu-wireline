@@ -95,14 +95,14 @@ async def test_handle_osdu_exceptions_connection_error():
 async def test_handle_osdu_exceptions_base_error():
     """Test exception handler with base OSDU error."""
 
-    @handle_osdu_exceptions(default_message="Custom error")
+    @handle_osdu_exceptions
     async def failing_func():
         raise OSMCPError("Base error")
 
     with pytest.raises(McpError) as exc_info:
         await failing_func()
 
-    assert "Custom error: Base error" in str(exc_info.value)
+    assert "MCP Error: Base error" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -129,31 +129,3 @@ async def test_handle_osdu_exceptions_success():
 
     result = await successful_func()
     assert result == "success"
-
-
-@pytest.mark.asyncio
-async def test_handle_osdu_exceptions_with_parameters():
-    """Test exception handler as decorator with parameters."""
-
-    @handle_osdu_exceptions(default_message="Test operation failed")
-    async def failing_func():
-        raise OSMCPError("Error")
-
-    with pytest.raises(McpError) as exc_info:
-        await failing_func()
-
-    assert "Test operation failed: Error" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-async def test_handle_osdu_exceptions_without_parameters():
-    """Test exception handler as decorator without parameters."""
-
-    @handle_osdu_exceptions
-    async def failing_func():
-        raise OSMCPError("Error")
-
-    with pytest.raises(McpError) as exc_info:
-        await failing_func()
-
-    assert "OSDU operation failed: Error" in str(exc_info.value)

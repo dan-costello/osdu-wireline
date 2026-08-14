@@ -13,7 +13,7 @@ _IDENTITY_FILTER_KEYS = ("authority", "source", "entity", "status", "scope")
 
 
 @handle_osdu_exceptions
-async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
+async def schema_search(
     # Text search parameters
     text: str | None = None,
     search_in: list[str] | None = None,
@@ -93,33 +93,11 @@ async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
     filter = filter or {}
 
     # Analyze what can be server-side filtered
-    server_filters: dict[str, list[str]] = {}
+    server_filters = _extract_server_filters(filter)
 
     async with SchemaClient() as client:
         # Get current partition
         partition = client.data_partition
-
-        # Process server-side filtering
-        # These are filters that can be directly passed to the API
-        authority_val = filter.get("authority")
-        if isinstance(authority_val, str):
-            server_filters["authority"] = [authority_val]
-
-        source_val = filter.get("source")
-        if isinstance(source_val, str):
-            server_filters["source"] = [source_val]
-
-        entity_val = filter.get("entity")
-        if isinstance(entity_val, str):
-            server_filters["entityType"] = [entity_val]
-
-        status_val = filter.get("status")
-        if isinstance(status_val, str):
-            server_filters["status"] = [status_val]
-
-        scope_val = filter.get("scope")
-        if isinstance(scope_val, str):
-            server_filters["scope"] = [scope_val]
 
         # Collect filters that need client-side processing
         # These include array filters and other advanced criteria
@@ -138,19 +116,9 @@ async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
             # Make API request with server-side filters using search_schemas which internally redirects
             # to list_schemas with the appropriate parameters - this ensures forward compatibility
             # if a dedicated search endpoint is added in the future
-            response = await client.search_schemas(
-                filter_criteria=server_filters,
-                latest_version=latest_version,
-                limit=api_limit,
-                offset=offset,
+            response, schemas = await _fetch_schemas(
+                client, server_filters, latest_version, api_limit, offset
             )
-
-            # Extract schemas from response - API returns "schemaInfos" but we map to "schemas" for consistency
-            schemas = response.get("schemaInfos", [])
-            if not schemas:
-                # Fallback - though schemaInfos is the expected field name from the API
-                schemas = response.get("schemas", [])
-
             logger.info(f"Retrieved {len(schemas)} schemas from API response")
 
         except Exception as e:
@@ -167,31 +135,16 @@ async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
             f"Retrieved {len(schemas)} schemas from server, applying client-side filtering"
         )
 
-        # Apply client-side filtering
-        filtered_schemas = []
-        for schema in schemas:
-            if _matches_client_filters(schema, client_filters, version_pattern):
-                # If text search is enabled, check if schema matches
-                if text:
-                    matches = await _matches_text_search(
-                        schema, text, search_in, include_content, client
-                    )
-                    if not matches:
-                        continue
-
-                # Add schema to filtered results
-                filtered_schemas.append(schema)
-
-                # Fetch full schema content if requested
-                if include_content and "id" in schema.get("schemaIdentity", {}):
-                    schema_id = schema["schemaIdentity"]["id"]
-                    try:
-                        schema_content = await client.get_schema(schema_id)
-                        schema["schemaContent"] = schema_content.get("schema", {})
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to fetch schema content for {schema_id}: {e}"
-                        )
+        # Apply client-side filtering, text search, and content enrichment
+        filtered_schemas = await _filter_and_enrich_schemas(
+            schemas,
+            client_filters,
+            version_pattern,
+            text,
+            search_in,
+            include_content,
+            client,
+        )
 
         # Apply sorting if needed
         if sort_by:
@@ -223,6 +176,85 @@ async def schema_search(  # noqa: C901 - existing complexity, tracked as debt
             "filteredCount": len(filtered_schemas),  # Additional info for transparency
             "query": text or None,  # Include search query for reference
         }
+
+
+def _extract_server_filters(
+    filter: dict[str, str | list[str]],
+) -> dict[str, list[str]]:
+    """Build server-side filter criteria from string-valued identity filter keys."""
+    key_mapping = {
+        "authority": "authority",
+        "source": "source",
+        "entity": "entityType",
+        "status": "status",
+        "scope": "scope",
+    }
+    server_filters: dict[str, list[str]] = {}
+    for filter_key, api_key in key_mapping.items():
+        value = filter.get(filter_key)
+        if isinstance(value, str):
+            server_filters[api_key] = [value]
+    return server_filters
+
+
+async def _fetch_schemas(
+    client: SchemaClient,
+    server_filters: dict[str, list[str]],
+    latest_version: bool,
+    api_limit: int,
+    offset: int,
+) -> tuple[dict, list[dict]]:
+    """Call the API and extract the schema list from the response."""
+    response = await client.search_schemas(
+        filter_criteria=server_filters,
+        latest_version=latest_version,
+        limit=api_limit,
+        offset=offset,
+    )
+    # Extract schemas from response - API returns "schemaInfos" but we map to "schemas" for consistency
+    schemas = response.get("schemaInfos", [])
+    if not schemas:
+        # Fallback - though schemaInfos is the expected field name from the API
+        schemas = response.get("schemas", [])
+    return response, schemas
+
+
+async def _filter_and_enrich_schemas(
+    schemas: list[dict],
+    client_filters: dict,
+    version_pattern: str | None,
+    text: str | None,
+    search_in: list[str],
+    include_content: bool,
+    client: SchemaClient,
+) -> list[dict]:
+    """Apply client-side filtering, text search, and optional content enrichment."""
+    filtered_schemas = []
+    for schema in schemas:
+        if not _matches_client_filters(schema, client_filters, version_pattern):
+            continue
+
+        # If text search is enabled, check if schema matches
+        if text:
+            matches = await _matches_text_search(
+                schema, text, search_in, include_content, client
+            )
+            if not matches:
+                continue
+
+        # Add schema to filtered results
+        filtered_schemas.append(schema)
+
+        # Fetch full schema content if requested
+        if include_content and "id" in schema.get("schemaIdentity", {}):
+            schema_id = schema["schemaIdentity"]["id"]
+            try:
+                schema_content = await client.get_schema(schema_id)
+                schema["schemaContent"] = schema_content.get("schema", {})
+            except Exception as e:
+                logger.warning(f"Failed to fetch schema content for {schema_id}: {e}")
+
+    return filtered_schemas
 
 
 def _matches_client_filters(
@@ -259,7 +291,65 @@ def _matches_client_filters(
     return True
 
 
-async def _matches_text_search(  # noqa: C901 - existing complexity, tracked as debt
+def _matches_identity_fields(
+    schema_identity: dict, search_fields: list[str], text_lower: str
+) -> bool:
+    """Check case-insensitive substring match against schema identity fields."""
+    identity_field_map = {
+        "id": "id",
+        "authority": "authority",
+        "source": "source",
+        "entityType": "entityType",
+    }
+    for field_name, identity_key in identity_field_map.items():
+        if (
+            field_name in search_fields
+            and text_lower in schema_identity.get(identity_key, "").lower()
+        ):
+            return True
+    return False
+
+
+async def _get_schema_content_for_search(
+    schema: dict, include_content: bool, client: SchemaClient
+) -> dict | None:
+    """Resolve the full schema content to search, fetching it if necessary."""
+    if include_content and "schemaContent" in schema:
+        return schema["schemaContent"]
+
+    schema_id = schema.get("schemaIdentity", {}).get("id")
+    if not schema_id:
+        return None
+
+    try:
+        schema_data = await client.get_schema(schema_id)
+        return schema_data.get("schema", {})
+    except Exception:
+        return None
+
+
+def _matches_content_fields(
+    schema_content: dict, search_fields: list[str], text_lower: str
+) -> bool:
+    """Check case-insensitive substring match against schema content fields."""
+    if (
+        "title" in search_fields
+        and text_lower in schema_content.get("title", "").lower()
+    ):
+        return True
+    if (
+        "description" in search_fields
+        and text_lower in schema_content.get("description", "").lower()
+    ):
+        return True
+    if "properties" in search_fields:
+        properties = schema_content.get("properties", {})
+        if _search_in_object(properties, text_lower):
+            return True
+    return False
+
+
+async def _matches_text_search(
     schema: dict,
     text: str,
     search_fields: list[str],
@@ -269,69 +359,23 @@ async def _matches_text_search(  # noqa: C901 - existing complexity, tracked as 
     """Check if schema matches text search criteria."""
     # Convert to lowercase for case-insensitive search
     text_lower = text.lower()
-
-    # Search in schema metadata
     schema_identity = schema.get("schemaIdentity", {})
 
-    # Check in identity fields
-    if (
-        "id" in search_fields
-        and schema_identity.get("id", "").lower().find(text_lower) != -1
-    ):
-        return True
-    if (
-        "authority" in search_fields
-        and schema_identity.get("authority", "").lower().find(text_lower) != -1
-    ):
-        return True
-    if (
-        "source" in search_fields
-        and schema_identity.get("source", "").lower().find(text_lower) != -1
-    ):
-        return True
-    if (
-        "entityType" in search_fields
-        and schema_identity.get("entityType", "").lower().find(text_lower) != -1
-    ):
+    if _matches_identity_fields(schema_identity, search_fields, text_lower):
         return True
 
     # Need to fetch full schema if searching in content
-    if any(
-        field in search_fields
-        for field in ["title", "description", "properties", "content"]
-    ):
-        if include_content and "schemaContent" in schema:
-            schema_content = schema["schemaContent"]
-        else:
-            try:
-                schema_id = schema_identity.get("id")
-                if not schema_id:
-                    return False
+    content_fields = ["title", "description", "properties", "content"]
+    if not any(field in search_fields for field in content_fields):
+        return False
 
-                schema_data = await client.get_schema(schema_id)
-                schema_content = schema_data.get("schema", {})
-            except Exception:
-                return False
+    schema_content = await _get_schema_content_for_search(
+        schema, include_content, client
+    )
+    if schema_content is None:
+        return False
 
-        # Search in schema content fields
-        if (
-            "title" in search_fields
-            and schema_content.get("title", "").lower().find(text_lower) != -1
-        ):
-            return True
-        if (
-            "description" in search_fields
-            and schema_content.get("description", "").lower().find(text_lower) != -1
-        ):
-            return True
-
-        # Search in properties (recursively)
-        if "properties" in search_fields:
-            properties = schema_content.get("properties", {})
-            if _search_in_object(properties, text_lower):
-                return True
-
-    return False
+    return _matches_content_fields(schema_content, search_fields, text_lower)
 
 
 def _search_in_object(obj: dict, text: str) -> bool:

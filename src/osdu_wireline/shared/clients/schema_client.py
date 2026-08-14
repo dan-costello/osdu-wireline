@@ -3,17 +3,15 @@
 from typing import Any
 
 from ..env import get_env_bool
-from ..exceptions import OSMCPAPIError
+from ..exceptions import OSMCPAPIError, OSMCPValidationError
 from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService
 
 
-class SchemaClient(OsduClient):
-    """Client for OSDU Schema service operations."""
+class SchemaId:
+    """Parsed OSDU schema identifier (authority:source:entity:major.minor.patch)."""
 
-    service = OSMCPService.SCHEMA
-
-    def format_schema_id(
+    def __init__(
         self,
         authority: str,
         source: str,
@@ -21,21 +19,70 @@ class SchemaClient(OsduClient):
         major: int,
         minor: int,
         patch: int,
-    ) -> str:
-        """Format schema ID from components.
+    ):
+        self.authority = authority
+        self.source = source
+        self.entity = entity
+        self.major = major
+        self.minor = minor
+        self.patch = patch
+
+    @classmethod
+    def parse(cls, id_str: str) -> "SchemaId":
+        """Parse a schema ID string into its components.
 
         Args:
-            authority: Schema authority
-            source: Schema source
-            entity: Schema entity type
-            major: Major version number
-            minor: Minor version number
-            patch: Patch version number
+            id_str: Schema ID (format: authority:source:entity:major.minor.patch)
 
         Returns:
-            Formatted schema ID string (authority:source:entity:major.minor.patch)
+            Parsed SchemaId
+
+        Raises:
+            OSMCPValidationError: If id_str is not a well-formed schema ID
         """
-        return f"{authority}:{source}:{entity}:{major}.{minor}.{patch}"
+        parts = id_str.split(":")
+        if len(parts) != 4:
+            raise OSMCPValidationError(
+                f"Invalid schema ID '{id_str}': expected format "
+                "authority:source:entity:major.minor.patch"
+            )
+        authority, source, entity, version = parts
+        version_parts = version.split(".")
+        if len(version_parts) != 3 or not all(
+            part.isdigit() for part in version_parts
+        ):
+            raise OSMCPValidationError(
+                f"Invalid schema ID '{id_str}': version '{version}' must be "
+                "major.minor.patch"
+            )
+        major, minor, patch = (int(part) for part in version_parts)
+        return cls(authority, source, entity, major, minor, patch)
+
+    @property
+    def version(self) -> str:
+        """Version string (major.minor.patch)."""
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+    def __str__(self) -> str:
+        return f"{self.authority}:{self.source}:{self.entity}:{self.version}"
+
+    def to_schema_identity(self) -> dict[str, Any]:
+        """Build the OSDU API 'schemaIdentity' representation."""
+        return {
+            "authority": self.authority,
+            "source": self.source,
+            "entityType": self.entity,
+            "schemaVersionMajor": self.major,
+            "schemaVersionMinor": self.minor,
+            "schemaVersionPatch": self.patch,
+            "id": str(self),
+        }
+
+
+class SchemaClient(OsduClient):
+    """Client for OSDU Schema service operations."""
+
+    service = OSMCPService.SCHEMA
 
     async def list_schemas(
         self,
@@ -213,23 +260,13 @@ class SchemaClient(OsduClient):
                 status_code=403,
             )
 
-        # Format schema ID
-        schema_id = self.format_schema_id(
+        # Build request body
+        schema_id = SchemaId(
             authority, source, entity, major_version, minor_version, patch_version
         )
-
-        # Build request body
         body = {
             "schemaInfo": {
-                "schemaIdentity": {
-                    "authority": authority,
-                    "source": source,
-                    "entityType": entity,
-                    "schemaVersionMajor": major_version,
-                    "schemaVersionMinor": minor_version,
-                    "schemaVersionPatch": patch_version,
-                    "id": schema_id,
-                },
+                "schemaIdentity": schema_id.to_schema_identity(),
                 "status": status,
             },
             "schema": schema,
