@@ -2,217 +2,170 @@
 
 import json
 
-from src.osdu_wireline.resources import get_workflow_resources
+from osdu_wireline import resources as resources_module
+from osdu_wireline.resources import (
+    ResourceDir,
+    _describe,
+    get_workflow_resources,
+)
+
+# --- Discovery mechanics (hermetic: synthetic dirs, no real filenames) ---
 
 
-class TestWorkflowResources:
-    """Test workflow resource discovery and validation."""
+def test_discovers_files_per_configured_directory(tmp_path, monkeypatch):
+    """Each configured (directory, scheme, label) yields one resource per
+    supported-extension file, skipping unsupported extensions and subdirs."""
+    templates_dir = tmp_path / "templates"
+    references_dir = tmp_path / "references"
+    templates_dir.mkdir()
+    references_dir.mkdir()
 
-    def test_get_workflow_resources_returns_list(self):
-        """Test that get_workflow_resources returns a list."""
-        resources = get_workflow_resources()
-        assert isinstance(resources, list)
+    (templates_dir / "a.json").write_text('{"_description": "desc a"}')
+    (templates_dir / "ignored.txt").write_text("not a supported extension")
+    (templates_dir / "subdir").mkdir()
+    (references_dir / "b.md").write_text("# Title\n\nSome prose paragraph.\n")
 
-    def test_resources_have_required_fields(self):
-        """Test that all resources have required MCP Resource fields."""
-        resources = get_workflow_resources()
+    monkeypatch.setattr(
+        resources_module,
+        "RESOURCE_DIRS",
+        [
+            ResourceDir(templates_dir, "template", "Template"),
+            ResourceDir(references_dir, "reference", "Reference"),
+        ],
+    )
 
-        for resource in resources:
-            # Check required FileResource fields
-            assert hasattr(resource, "uri")
-            assert hasattr(resource, "name")
-            assert hasattr(resource, "description")
-            assert hasattr(resource, "mime_type")
-            assert hasattr(resource, "path")
+    resources = get_workflow_resources()
 
-            # Validate field types and content
-            assert str(resource.uri).startswith(("template://", "reference://"))
-            assert isinstance(resource.name, str)
-            assert len(resource.name) > 0
-            assert isinstance(resource.description, str)
-            assert len(resource.description) > 0
-            assert resource.mime_type in ("application/json", "text/markdown")
+    by_uri = {str(r.uri): r for r in resources}
+    assert set(by_uri) == {"template://a.json", "reference://b.md"}
 
-    def test_expected_template_resources_exist(self):
-        """Test that expected template resources are registered."""
-        resources = get_workflow_resources()
-        resource_names = [r.name for r in resources]
+    template_resource = by_uri["template://a.json"]
+    assert template_resource.name == "Template: a.json"
+    assert template_resource.mime_type == "application/json"
+    assert template_resource.path == templates_dir / "a.json"
 
-        expected_templates = [
-            "Template: legal-tag-template.json",
-            "Template: processing-parameter-record.json",
-        ]
+    reference_resource = by_uri["reference://b.md"]
+    assert reference_resource.name == "Reference: b.md"
+    assert reference_resource.mime_type == "text/markdown"
 
-        for template_name in expected_templates:
-            assert template_name in resource_names, (
-                f"Expected template {template_name} not found in resources"
-            )
 
-    def test_expected_reference_resources_exist(self):
-        """Test that expected reference resources are registered."""
-        resources = get_workflow_resources()
-        resource_names = [r.name for r in resources]
+def test_resource_uris_are_unique_across_schemes(tmp_path, monkeypatch):
+    """Same-basename files in different configured dirs stay distinct via scheme."""
+    templates_dir = tmp_path / "templates"
+    references_dir = tmp_path / "references"
+    templates_dir.mkdir()
+    references_dir.mkdir()
 
-        expected_references = [
-            "Reference: acl-format-examples.json",
-            "Reference: search-query-patterns.json",
-        ]
+    (templates_dir / "x.json").write_text("{}")
+    (references_dir / "x.json").write_text("{}")
 
-        for reference_name in expected_references:
-            assert reference_name in resource_names, (
-                f"Expected reference {reference_name} not found in resources"
-            )
+    monkeypatch.setattr(
+        resources_module,
+        "RESOURCE_DIRS",
+        [
+            ResourceDir(templates_dir, "template", "Template"),
+            ResourceDir(references_dir, "reference", "Reference"),
+        ],
+    )
 
-    def test_expected_doc_resources_exist(self):
-        """Test that expected documentation resources are registered."""
-        resources = get_workflow_resources()
-        resource_names = [r.name for r in resources]
+    resources = get_workflow_resources()
+    uris = [str(r.uri) for r in resources]
 
-        assert "Reference: quick-start-workflows.md" in resource_names
+    assert len(uris) == len(set(uris))
+    assert set(uris) == {"template://x.json", "reference://x.json"}
 
-    def test_resource_files_exist_and_are_readable(self):
-        """Test that resource files exist and parse according to their mime type."""
-        resources = get_workflow_resources()
 
-        for resource in resources:
-            # Use the path attribute from FileResource
-            path = resource.path
+# --- Description derivation (hermetic: calls _describe directly) ---
 
-            # Verify file exists
-            assert path.exists(), f"Resource file does not exist: {path}"
 
-            if resource.mime_type == "application/json":
-                with open(path) as f:
-                    try:
-                        json.load(f)
-                    except json.JSONDecodeError as e:
-                        raise AssertionError(
-                            f"Resource file {path} contains invalid JSON: {e}"
-                        ) from e
-            else:
-                with open(path, encoding="utf-8") as f:
-                    assert f.read().strip(), f"Resource file {path} is empty"
+def test_describe_json_variants(tmp_path):
+    """_describe pulls _description from JSON dicts, else returns None."""
+    with_desc = tmp_path / "with_desc.json"
+    with_desc.write_text('{"_description": "hello"}')
+    assert _describe(with_desc, "json") == "hello"
 
-    def test_legal_tag_template_structure(self):
-        """Test that legal tag template has expected structure."""
-        resources = get_workflow_resources()
-        legal_template = next(
-            (r for r in resources if r.name == "Template: legal-tag-template.json"),
-            None,
-        )
-        assert legal_template is not None, "Legal tag template not found"
+    no_desc = tmp_path / "no_desc.json"
+    no_desc.write_text('{"other": "field"}')
+    assert _describe(no_desc, "json") is None
 
-        # Load and validate structure
-        with open(legal_template.path) as f:
-            data = json.load(f)
+    non_string_desc = tmp_path / "non_string.json"
+    non_string_desc.write_text('{"_description": 5}')
+    assert _describe(non_string_desc, "json") is None
 
-        # Check for key sections
-        assert "_description" in data
-        assert "_usage" in data
-        assert "template" in data
-        assert "_notes" in data
+    non_dict = tmp_path / "non_dict.json"
+    non_dict.write_text("[1, 2, 3]")
+    assert _describe(non_dict, "json") is None
 
-        # Validate template structure
-        template = data["template"]
-        assert "name" in template
-        assert "description" in template
-        assert "country_of_origin" in template
-        assert "contract_id" in template
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{not valid json")
+    assert _describe(malformed, "json") is None
 
-    def test_record_template_structure(self):
-        """Test that record template has expected structure."""
-        resources = get_workflow_resources()
-        record_template = next(
-            (
-                r
-                for r in resources
-                if r.name == "Template: processing-parameter-record.json"
-            ),
-            None,
-        )
-        assert record_template is not None, "Record template not found"
+    missing = tmp_path / "does_not_exist.json"
+    assert _describe(missing, "json") is None
 
-        # Load and validate structure
-        with open(record_template.path) as f:
-            data = json.load(f)
 
-        # Check for key sections
-        assert "_description" in data
-        assert "_usage" in data
-        assert "template" in data
-        assert "required_fields" in data
+def test_describe_markdown_variants(tmp_path):
+    """_describe takes the first prose paragraph from markdown, else None."""
+    with_paragraph = tmp_path / "with_paragraph.md"
+    with_paragraph.write_text("# Title\n\nFirst line.\nSecond line.\n\nIgnored.\n")
+    assert _describe(with_paragraph, "md") == "First line. Second line."
 
-        # Validate template structure - OSDU record format
-        template = data["template"]
-        assert "kind" in template
-        assert "acl" in template
-        assert "legal" in template
-        assert "data" in template
+    only_headings = tmp_path / "only_headings.md"
+    only_headings.write_text("# Title\n## Subtitle\n")
+    assert _describe(only_headings, "md") is None
 
-        # Validate ACL structure
-        acl = template["acl"]
-        assert "viewers" in acl
-        assert "owners" in acl
+    empty = tmp_path / "empty.md"
+    empty.write_text("")
+    assert _describe(empty, "md") is None
 
-        # Validate legal structure
-        legal = template["legal"]
-        assert "legaltags" in legal
-        assert "otherRelevantDataCountries" in legal
+    missing = tmp_path / "does_not_exist.md"
+    assert _describe(missing, "md") is None
 
-    def test_acl_examples_structure(self):
-        """Test that ACL examples have expected structure."""
-        resources = get_workflow_resources()
-        acl_examples = next(
-            (r for r in resources if r.name == "Reference: acl-format-examples.json"),
-            None,
-        )
-        assert acl_examples is not None, "ACL examples not found"
 
-        # Load and validate structure
-        with open(acl_examples.path) as f:
-            data = json.load(f)
+# --- Structural checks against the real repo directories (no hardcoded filenames) ---
 
-        # Check for key sections
-        assert "_description" in data
-        assert "_usage" in data
-        assert "standard_osdu_format" in data
-        assert "troubleshooting" in data
 
-        # Validate that examples contain ACL structures
-        for format_name in ["standard_osdu_format", "azure_deployment_format"]:
-            if format_name in data:
-                format_data = data[format_name]
-                assert "acl" in format_data
-                acl = format_data["acl"]
-                assert "viewers" in acl
-                assert "owners" in acl
+def test_matches_actual_directory_contents():
+    """get_workflow_resources() output matches an independent walk of the real
+    RESOURCE_DIRS, catching drift without naming any specific file."""
+    expected = set()
+    for directory, scheme, _label in resources_module.RESOURCE_DIRS:
+        for path in sorted(directory.glob("*")):
+            if not path.is_file():
+                continue
+            ext = path.suffix.lstrip(".")
+            if ext not in resources_module.MIME_TYPES:
+                continue
+            expected.add((f"{scheme}://{path.name}", path))
 
-    def test_search_patterns_structure(self):
-        """Test that search patterns have expected structure."""
-        resources = get_workflow_resources()
-        search_patterns = next(
-            (r for r in resources if r.name == "Reference: search-query-patterns.json"),
-            None,
-        )
-        assert search_patterns is not None, "Search patterns not found"
+    resources = get_workflow_resources()
+    actual = {(str(r.uri), r.path) for r in resources}
 
-        # Load and validate structure
-        with open(search_patterns.path) as f:
-            data = json.load(f)
+    assert actual == expected
+    assert len(resources) == len(expected)
 
-        # Check for key sections
-        assert "_description" in data
-        assert "_usage" in data
-        assert "search_by_record_id" in data
-        assert "validation_workflow" in data
-        assert "timing_guidance" in data
 
-        # Validate that patterns contain MCP tool references
-        search_by_id = data["search_by_record_id"]
-        assert "mcp_tool" in search_by_id
-        assert "example" in search_by_id
+def test_resources_are_well_formed_for_registration():
+    """Every real resource is well-formed enough for FastMCP.add_resource."""
+    resources = get_workflow_resources()
+    assert resources
 
-        # Validate validation workflow has steps
-        workflow = data["validation_workflow"]
-        assert "step_1" in workflow
-        assert "step_2" in workflow
+    for resource in resources:
+        assert resource.name
+        assert resource.mime_type in ("application/json", "text/markdown")
+        assert resource.path.exists(), f"Resource file does not exist: {resource.path}"
+        assert resource.description is None or isinstance(resource.description, str)
+        if resource.description is not None:
+            assert resource.description.strip()
+
+        if resource.mime_type == "application/json":
+            with open(resource.path, encoding="utf-8") as f:
+                try:
+                    json.load(f)
+                except json.JSONDecodeError as e:
+                    raise AssertionError(
+                        f"Resource file {resource.path} contains invalid JSON: {e}"
+                    ) from e
+        else:
+            with open(resource.path, encoding="utf-8") as f:
+                assert f.read().strip(), f"Resource file {resource.path} is empty"

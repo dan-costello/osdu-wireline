@@ -1,82 +1,89 @@
 """MCP Resources for OSDU workflow templates and examples."""
 
+import json
+from collections import namedtuple
 from pathlib import Path
 
 from mcp.server.fastmcp.resources import FileResource
+from pydantic import AnyUrl
+
+ResourceDir = namedtuple("ResourceDir", ["directory", "scheme", "label"])
 
 # Get the resources directory path
 RESOURCES_DIR = Path(__file__).parent
+RESOURCE_DIRS = [
+    ResourceDir(RESOURCES_DIR / "templates", "template", "Template"),
+    ResourceDir(RESOURCES_DIR / "references", "reference", "Reference"),
+]
+
+
+MIME_TYPES = {
+    "json": "application/json",
+    "md": "text/markdown",
+}
+
+
+def _describe(resource_file: Path, ext: str) -> str | None:
+    """Build a resource description from what the file states itself.
+
+    Returns:
+        The file's own description, or None if it has none
+    """
+    if ext == "json":
+        try:
+            with open(resource_file, encoding="utf-8") as f:
+                content = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return None
+
+        if not isinstance(content, dict):
+            return None
+
+        description = content.get("_description")
+        return description if isinstance(description, str) else None
+    if ext == "md":
+        try:
+            text = resource_file.read_text(encoding="utf-8")
+        except OSError:
+            return None
+
+        paragraph: list[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            if not stripped:
+                if paragraph:
+                    break
+                continue
+            paragraph.append(stripped)
+
+        return " ".join(paragraph) or None
+
+    return None
 
 
 def get_workflow_resources() -> list[FileResource]:
     """Get all MCP resources for OSDU workflow templates."""
-    resources = []
+    resources: list[FileResource] = []
 
-    # Template resources
-    template_files = [
-        ("legal-tag-template.json", "Working legal tag template structure"),
-        (
-            "processing-parameter-record.json",
-            "Complete record template for ProcessingParameterType",
-        ),
-    ]
+    for directory, scheme, label in RESOURCE_DIRS:
+        for resource_file in sorted(directory.glob("*")):
+            if not resource_file.is_file():
+                continue
 
-    for filename, description in template_files:
-        file_path = RESOURCES_DIR / "templates" / filename
-        if file_path.exists():
+            ext = resource_file.suffix.lstrip(".")
+            mime_type = MIME_TYPES.get(ext)
+            if mime_type is None:
+                continue
+
             resources.append(
                 FileResource(
-                    uri=f"template://{filename}",
-                    name=f"Template: {filename}",
-                    description=description,
-                    mime_type="application/json",
-                    path=file_path,
-                )
-            )
-
-    # Reference resources
-    reference_files = [
-        (
-            "acl-format-examples.json",
-            "ACL format examples for different OSDU environments",
-        ),
-        (
-            "search-query-patterns.json",
-            "Proven search query patterns for record validation",
-        ),
-    ]
-
-    for filename, description in reference_files:
-        file_path = RESOURCES_DIR / "references" / filename
-        if file_path.exists():
-            resources.append(
-                FileResource(
-                    uri=f"reference://{filename}",
-                    name=f"Reference: {filename}",
-                    description=description,
-                    mime_type="application/json",
-                    path=file_path,
-                )
-            )
-
-    # Documentation resources
-    doc_files = [
-        (
-            "quick-start-workflows.md",
-            "Quick start workflows and operational tips for OSDU operations",
-        ),
-    ]
-
-    for filename, description in doc_files:
-        file_path = RESOURCES_DIR / "references" / filename
-        if file_path.exists():
-            resources.append(
-                FileResource(
-                    uri=f"reference://{filename}",
-                    name=f"Reference: {filename}",
-                    description=description,
-                    mime_type="text/markdown",
-                    path=file_path,
+                    uri=AnyUrl(f"{scheme}://{resource_file.name}"),
+                    name=f"{label}: {resource_file.name}",
+                    description=_describe(resource_file, ext),
+                    mime_type=mime_type,
+                    path=resource_file,
                 )
             )
 
