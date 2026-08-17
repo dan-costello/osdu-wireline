@@ -80,21 +80,22 @@ async def _check_services(
     version_info = {}
 
     for service in services:
+        name = service.name.lower()
         try:
             # Get the correct info endpoint for each service
             endpoint = get_service_info_endpoint(service)
             response = await client.get(endpoint)
 
             # Service is healthy if we get a response
-            health_status[service.value] = "healthy"
+            health_status[name] = "healthy"
 
             # Extract version if requested
             if include_versions and "version" in response:
-                version_info[f"{service.value}_service"] = response["version"]
+                version_info[f"{name}_service"] = response["version"]
 
         except Exception as e:
             # Mark service as unhealthy if request fails
-            health_status[service.value] = f"unhealthy: {e!s}"
+            health_status[name] = f"unhealthy: {e!s}"
             # TODO: Add logging here to debug the actual error
 
     # Add version info to result if collected

@@ -15,7 +15,7 @@ from aiohttp import ClientSession, ClientTimeout
 from ..auth import CredentialProvider, get_auth_provider
 from ..env import get_env_int, require_env
 from ..exceptions import OSMCPAPIError, OSMCPConnectionError
-from ..service_urls import OSMCPService, get_service_base_url
+from ..service_urls import OSMCPService
 
 
 class OsduClient:
@@ -48,7 +48,7 @@ class OsduClient:
         self._base_url: str = require_env("OSDU_MCP_SERVER_URL")
         self._data_partition: str = require_env("OSDU_MCP_SERVER_DATA_PARTITION")
         self._timeout = get_env_int("OSDU_MCP_SERVER_TIMEOUT", 30)
-        self._base_path = get_service_base_url(self.service) if self.service else ""
+        self._base_path = self.service.value if self.service else ""
 
     @property
     def data_partition(self) -> str:
