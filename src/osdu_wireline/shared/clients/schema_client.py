@@ -4,8 +4,8 @@ from typing import Any
 
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
-from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService
+from .base import OsduClient
 
 
 class SchemaId:
@@ -48,9 +48,7 @@ class SchemaId:
             )
         authority, source, entity, version = parts
         version_parts = version.split(".")
-        if len(version_parts) != 3 or not all(
-            part.isdigit() for part in version_parts
-        ):
+        if len(version_parts) != 3 or not all(part.isdigit() for part in version_parts):
             raise OSMCPValidationError(
                 f"Invalid schema ID '{id_str}': version '{version}' must be "
                 "major.minor.patch"

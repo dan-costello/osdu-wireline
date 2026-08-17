@@ -3,8 +3,8 @@
 import logging
 from typing import Any
 
-from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService
+from .base import OsduClient
 
 logger = logging.getLogger(__name__)
 

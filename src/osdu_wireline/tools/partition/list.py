@@ -1,13 +1,11 @@
 """Tool for listing OSDU partitions."""
 
-import json
 import logging
 from datetime import UTC, datetime
 from typing import Any
 
 from ...shared.clients.partition_client import PartitionClient
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
-from ...shared.utils import get_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -39,21 +37,14 @@ async def partition_list(
     Raises:
         OSMCPError: For any errors during the operation
     """
-    trace_id = get_trace_id()
-
-    # Log the operation
     logger.info(
-        json.dumps(
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "trace_id": trace_id,
-                "level": "INFO",
-                "tool": "partition_list",
-                "action": "partition_list_request",
-                "include_count": include_count,
-                "detailed": detailed,
-            }
-        )
+        "Partition list requested",
+        extra={
+            "tool": "partition_list",
+            "action": "partition_list_request",
+            "include_count": include_count,
+            "detailed": detailed,
+        },
     )
 
     try:
@@ -72,23 +63,20 @@ async def partition_list(
 
             if detailed:
                 response["metadata"] = {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
+                    "timestamp": (
+                        datetime.now(UTC).isoformat().replace("+00:00", "") + "Z"
+                    ),
                     "server_url": client.server_url,
                 }
 
             # Log successful response
             logger.info(
-                json.dumps(
-                    {
-                        "timestamp": datetime.now(UTC).isoformat(),
-                        "trace_id": trace_id,
-                        "level": "INFO",
-                        "tool": "partition_list",
-                        "action": "partition_list_success",
-                        "partition_count": len(partitions),
-                    }
-                )
+                "Partition list retrieved",
+                extra={
+                    "tool": "partition_list",
+                    "action": "partition_list_success",
+                    "partition_count": len(partitions),
+                },
             )
 
             return response
@@ -96,17 +84,13 @@ async def partition_list(
     except OSMCPError as e:
         # Log error
         logger.exception(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "ERROR",
-                    "tool": "partition_list",
-                    "action": "partition_list_error",
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                }
-            )
+            "Partition list failed",
+            extra={
+                "tool": "partition_list",
+                "action": "partition_list_error",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
         )
 
         return {

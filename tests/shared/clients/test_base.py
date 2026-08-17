@@ -7,8 +7,8 @@ import aiohttp
 import pytest
 from aioresponses import aioresponses
 
+from osdu_wireline.shared.clients import OsduClient
 from osdu_wireline.shared.exceptions import OSMCPAPIError, OSMCPConnectionError
-from osdu_wireline.shared.osdu_client import OsduClient
 
 CLIENT_ENV = {
     "OSDU_MCP_SERVER_URL": "https://test-osdu.com",
@@ -25,9 +25,9 @@ def client_env():
 
 @pytest.fixture
 def mock_auth():
-    """Auth handler returning a fixed token."""
+    """Credential provider returning a fixed token."""
     auth = AsyncMock()
-    auth.get_access_token.return_value = "test-token"
+    auth.get_token.return_value = "test-token"
     return auth
 
 
@@ -153,7 +153,7 @@ async def test_osdu_client_fails_after_max_retries(mock_auth):
 @pytest.mark.asyncio
 async def test_osdu_client_reuses_session(mock_auth):
     """Test that the client reuses the same session for multiple requests."""
-    with patch("osdu_wireline.shared.osdu_client.ClientSession") as mock_session_class:
+    with patch("osdu_wireline.shared.clients.base.ClientSession") as mock_session_class:
         mock_session = AsyncMock()
         mock_session.closed = False
         mock_session_class.return_value = mock_session
@@ -176,7 +176,7 @@ async def test_osdu_client_reuses_session(mock_auth):
 async def test_osdu_client_correctly_formats_headers(mock_auth):
     """Test that client sets correct headers on requests."""
     # Mock at the session level to capture headers
-    with patch("osdu_wireline.shared.osdu_client.ClientSession") as mock_session_class:
+    with patch("osdu_wireline.shared.clients.base.ClientSession") as mock_session_class:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json.return_value = {"result": "success"}

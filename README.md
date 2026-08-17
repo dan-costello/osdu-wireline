@@ -36,6 +36,16 @@ Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) t
 All configuration is supplied through environment variables, set in your MCP client's `env` block.
 See [Environment Variables](#environment-variables) for the complete reference.
 
+`OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are validated at startup: if either is
+missing the server writes the missing variable name to stderr and exits with status 1, rather than
+starting and failing every tool call. Your MCP client will report the server as failed to start;
+the message is in its server log.
+
+Credentials are deliberately *not* checked at startup, so that re-authenticating (`az login`,
+`gcloud auth application-default login`, `aws sso login`) fixes a running server without
+restarting your MCP client. Use the `health_check` tool to see the current authentication status
+and, when it fails, the reason.
+
 ### Connecting to MCP Clients
 This server currently uses stdio for communication with MCP clients. Below are examples of how to configure the server for different MCP clients:
  - [Claude Code](./docs/mcp-usage/claude_code.md)

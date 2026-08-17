@@ -1,19 +1,15 @@
 """MCP server instance for OSDU platform integration."""
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
 from .prompts import guide_record_lifecycle, guide_search_patterns
 from .resources import get_workflow_resources
-from .shared.app_context import (
-    AppContext,
-    create_app_context,
-    set_app_context,
-)
-from .shared.env import get_env
+from .shared.auth import reset_auth_provider
+from .shared.env import get_env, require_env
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -60,26 +56,43 @@ from .tools.storage import (
 
 
 @asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Construct shared config and auth once per server process.
+async def app_lifespan(server: FastMCP) -> AsyncGenerator[None]:
+    """Release the shared credentials when the server shuts down.
+
+    The provider itself is built lazily on first use, so a process with no
+    credentials configured still starts and reports the error per tool call.
 
     Args:
         server: FastMCP server instance
 
     Yields:
-        Application context shared by all tool invocations
+        Nothing; tools resolve their own dependencies
     """
-    context = create_app_context()
-    set_app_context(context)
-
     try:
-        yield context
+        # Nothing to do on startup; tools resolve their own dependencies
+        yield None
     finally:
-        set_app_context(None)
-        context.close()
+        # Runs on server shutdown
+        reset_auth_provider()
 
 
-SERVER_INSTRUCTIONS = """\
+def verify_startup() -> None:
+    """Fail before serving when required server configuration is missing.
+
+    Credentials are deliberately not checked here. The cloud providers
+    re-acquire on expiry, so a running server heals when the operator
+    re-authenticates; refusing to start would instead force an MCP client
+    restart, and would move the provider's setup guidance out of the tool
+    response and into a log file.
+
+    Raises:
+        OSMCPConfigError: If required server configuration is missing
+    """
+    require_env("OSDU_MCP_SERVER_URL")
+    require_env("OSDU_MCP_SERVER_DATA_PARTITION")
+
+
+SERVER_INSTRUCTIONS = """
 OSDU Wireline bridges AI assistants to OSDU platform services: partitions, entitlements,
 legal tags, schemas, search, and storage.
 

@@ -9,6 +9,7 @@ from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.legal import legaltag_list
+from tests.conftest import AZURE_CREDENTIAL
 
 
 @pytest.mark.asyncio
@@ -56,9 +57,7 @@ async def test_legaltag_list_success():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -113,9 +112,7 @@ async def test_legaltag_list_invalid_only():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -153,9 +150,7 @@ async def test_legaltag_list_empty():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential

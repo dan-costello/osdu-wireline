@@ -39,13 +39,19 @@ async def test_health_check_success(osdu_env):
         assert result["server_url"] == SERVER_URL
         assert result["data_partition"] == "opendes"
         assert result["authentication"]["status"] == "valid"
+        assert result["authentication"]["mode"] == "user_token"
         assert "services" in result
         assert "timestamp" in result
 
 
 @pytest.mark.asyncio
 async def test_health_check_auth_failure(monkeypatch):
-    """Test health check reports invalid authentication for a bad token."""
+    """Health check reports invalid authentication *and* why.
+
+    The reason is the whole value of this tool: a bare "invalid" leaves the
+    operator to guess between an expired token, a wrong client ID, and a
+    network problem.
+    """
     expired_token = jwt.encode(
         {"sub": "test-user", "exp": int(time.time()) - 3600},
         "test-secret",
@@ -61,6 +67,8 @@ async def test_health_check_auth_failure(monkeypatch):
         result = await health_check(include_services=False)
 
         assert result["authentication"]["status"] == "invalid"
+        assert result["authentication"]["mode"] == "user_token"
+        assert "expired" in result["authentication"]["error"]
 
 
 @pytest.mark.asyncio

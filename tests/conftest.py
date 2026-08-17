@@ -1,8 +1,9 @@
 """Shared test fixtures.
 
-Tools now resolve configuration and authentication from a process-wide app
-context, so tests mock at the boundaries (environment + HTTP) per ADR-010
-rather than patching object construction inside tool modules.
+Tools resolve configuration from the environment and authentication from a
+process-wide credential provider, so tests mock at the boundaries
+(environment + HTTP) per ADR-010 rather than patching object construction
+inside tool modules.
 """
 
 import os
@@ -12,7 +13,11 @@ from unittest.mock import patch
 import jwt
 import pytest
 
-from osdu_wireline.shared.app_context import reset_app_context
+from osdu_wireline.shared.auth import reset_auth_provider
+
+# Patch target for Azure tests. The symbol must be patched where it is used,
+# so keep this in one place rather than spelling the path out at every site.
+AZURE_CREDENTIAL = "osdu_wireline.shared.auth.azure.DefaultAzureCredential"
 
 # USER_TOKEN mode validates JWT structure and expiry, so use a real token
 TEST_TOKEN = jwt.encode(
@@ -30,20 +35,20 @@ OSDU_TEST_ENV = {
 
 
 @pytest.fixture(autouse=True)
-def clean_app_context():
-    """Ensure no context leaks between tests.
+def clean_auth_provider():
+    """Ensure no credential provider leaks between tests.
 
-    Without this the lazily built context would cache the first test's
+    Without this the lazily built provider would cache the first test's
     environment and later tests patching os.environ would silently reuse it.
     """
-    reset_app_context()
+    reset_auth_provider()
     yield
-    reset_app_context()
+    reset_auth_provider()
 
 
 @pytest.fixture
 def osdu_env():
-    """Minimal environment for building a real config and auth handler."""
+    """Minimal environment for building a real credential provider."""
     with patch.dict(os.environ, OSDU_TEST_ENV):
         yield
 

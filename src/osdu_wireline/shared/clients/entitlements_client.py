@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService
+from .base import OsduClient
 
 
 class EntitlementsClient(OsduClient):

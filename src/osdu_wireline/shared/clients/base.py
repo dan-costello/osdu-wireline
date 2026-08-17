@@ -12,11 +12,10 @@ from urllib.parse import urljoin
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout
 
-from .app_context import get_app_context
-from .auth_handler import AuthHandler
-from .env import get_env_int, require_env
-from .exceptions import OSMCPAPIError, OSMCPConnectionError
-from .service_urls import OSMCPService, get_service_base_url
+from ..auth import CredentialProvider, get_auth_provider
+from ..env import get_env_int, require_env
+from ..exceptions import OSMCPAPIError, OSMCPConnectionError
+from ..service_urls import OSMCPService, get_service_base_url
 
 
 class OsduClient:
@@ -38,16 +37,13 @@ class OsduClient:
     #: callers pass fully-qualified paths, as tools/health_check.py does.
     service: ClassVar[OSMCPService | None] = None
 
-    def __init__(self, auth_handler: AuthHandler | None = None):
+    def __init__(self, auth: CredentialProvider | None = None):
         """Initialize OSDU client.
 
         Args:
-            auth_handler: Authentication handler, defaults to the shared one
+            auth: Credential provider, defaults to the shared one
         """
-        if auth_handler is None:
-            auth_handler = get_app_context().auth
-
-        self.auth_handler = auth_handler
+        self.auth = auth if auth is not None else get_auth_provider()
         self._session: ClientSession | None = None
         self._base_url: str = require_env("OSDU_MCP_SERVER_URL")
         self._data_partition: str = require_env("OSDU_MCP_SERVER_DATA_PARTITION")
@@ -118,9 +114,7 @@ class OsduClient:
 
         # Set up headers
         headers = kwargs.get("headers", {})
-        headers["Authorization"] = (
-            f"Bearer {await self.auth_handler.get_access_token()}"
-        )
+        headers["Authorization"] = f"Bearer {await self.auth.get_token()}"
         headers["data-partition-id"] = self._data_partition
         headers["Content-Type"] = "application/json"
         kwargs["headers"] = headers
