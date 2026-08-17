@@ -170,6 +170,21 @@ data creation and updates while keeping strict control over destructive operatio
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_MCP_LOG_LEVEL` | No | `INFO` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Applies to this server's own loggers; third-party libraries stay at `INFO`. Logs go to stderr. |
+| `OSDU_MCP_LOG_LEVEL` | No | `INFO` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Applies to this server's own loggers; third-party libraries stay at `INFO`. Logs go to stderr. An unrecognized value falls back to `INFO` rather than failing to start. |
+
+Log lines are plain text on stderr. Operations that carry structured fields print them on an
+indented `key=value` continuation line beneath the message, so a line can be read on its own or
+grepped by field:
+
+```text
+INFO     osdu_wireline.tools.partition.get: Partition get requested
+    tool=partition_get action=partition_get_request partition_id=opendes include_sensitive=False
+
+WARNING  osdu_wireline.shared.clients.storage_client: Deleting record
+    record_id=opendes:doc:123 operation=delete_record destructive=True
+```
+
+Values containing spaces, quotes, or `=` are quoted. For `ERROR` entries the traceback follows the
+fields.
 
 Boolean variables accept `true`, `yes`, or `1` (case-insensitive); anything else is false.

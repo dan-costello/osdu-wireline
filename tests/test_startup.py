@@ -53,7 +53,7 @@ def test_startup_does_not_touch_credentials():
     detect.assert_not_called()
 
 
-def test_main_runs_the_server_when_configuration_is_valid():
+def test_main_runs_the_server_when_configuration_is_valid(restore_package_logger):
     """A valid environment hands off to the MCP server."""
     with patch.dict(os.environ, SERVER_ENV, clear=True):
         with patch("osdu_wireline.main.mcp") as mcp:
@@ -62,7 +62,7 @@ def test_main_runs_the_server_when_configuration_is_valid():
     mcp.run.assert_called_once()
 
 
-def test_main_exits_without_starting_the_server(capsys):
+def test_main_exits_without_starting_the_server(capsys, restore_package_logger):
     """A misconfigured environment exits non-zero and never serves."""
     with patch.dict(os.environ, {}, clear=True):
         with patch("osdu_wireline.main.mcp") as mcp:
@@ -73,7 +73,7 @@ def test_main_exits_without_starting_the_server(capsys):
     mcp.run.assert_not_called()
 
 
-def test_main_writes_diagnostics_to_stderr_only(capsys):
+def test_main_writes_diagnostics_to_stderr_only(capsys, restore_package_logger):
     """Nothing may reach stdout: it carries the MCP protocol on stdio."""
     with patch.dict(os.environ, {}, clear=True):
         with patch("osdu_wireline.main.mcp"):

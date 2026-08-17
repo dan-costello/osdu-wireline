@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   write and delete protection gates and where to start.
 * New `reference://quick-start-workflows.md` resource with common workflows and operational tips,
   carried over from the removed `list_mcp_assets` prompt.
+* Log lines now render the structured fields their call sites pass via `extra=`, as an indented
+  `key=value` continuation line beneath the message (with the traceback after it, for errors).
+  Around sixty log calls across the tools and service clients already carried fields such as
+  `tool`, `action`, `partition_id`, `record_id`, `operation`, and `destructive`; the standard
+  library's default formatting discarded every one of them, so the detail existed in the code but
+  never reached stderr. This is deliberately **not** a return to the removed JSON format — output
+  stays plain text meant to be read in an MCP client's server log. It covers every module that
+  logs, and each line is emitted once. Configured by `configure_logging()` in
+  `shared/logging_config.py`, called from `main()`.
 
 ### Fixed
 

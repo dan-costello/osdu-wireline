@@ -6,6 +6,7 @@ process-wide credential provider, so tests mock at the boundaries
 inside tool modules.
 """
 
+import logging
 import os
 import time
 from unittest.mock import patch
@@ -44,6 +45,27 @@ def clean_auth_provider():
     reset_auth_provider()
     yield
     reset_auth_provider()
+
+
+@pytest.fixture
+def restore_package_logger():
+    """Undo configure_logging()'s effect on the package-root logger.
+
+    configure_logging() installs a handler and sets propagate=False on the
+    process-wide `osdu_wireline` logger. Left in place that would hide records
+    from pytest's caplog, which captures by propagation to the root logger, so
+    any test that configures logging must hand the logger back as it found it.
+    """
+    logger = logging.getLogger("osdu_wireline")
+    handlers = logger.handlers[:]
+    level = logger.level
+    propagate = logger.propagate
+
+    yield logger
+
+    logger.handlers[:] = handlers
+    logger.setLevel(level)
+    logger.propagate = propagate
 
 
 @pytest.fixture

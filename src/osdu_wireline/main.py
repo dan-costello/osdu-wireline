@@ -4,10 +4,13 @@ import sys
 
 from .server import mcp, verify_startup
 from .shared.exceptions import OSMCPError
+from .shared.logging_config import configure_logging
 
 
 def main() -> None:
-    """Validate the environment, then run the MCP server."""
+    """Configure logging, validate the environment, then run the MCP server."""
+    configure_logging()
+
     try:
         verify_startup()
     except OSMCPError as e:
