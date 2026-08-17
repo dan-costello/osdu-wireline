@@ -14,6 +14,7 @@ from osdu_wireline.tools.storage.get_record_version import storage_get_record_ve
 from osdu_wireline.tools.storage.list_record_versions import (
     storage_list_record_versions,
 )
+from tests.conftest import AZURE_CREDENTIAL
 
 
 @pytest.mark.asyncio
@@ -44,9 +45,7 @@ async def test_storage_get_record_success():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -89,9 +88,7 @@ async def test_storage_get_record_with_attributes():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -137,9 +134,7 @@ async def test_storage_get_record_version_success():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -178,9 +173,7 @@ async def test_storage_list_record_versions_success():
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential

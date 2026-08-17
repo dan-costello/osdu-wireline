@@ -106,7 +106,7 @@ lint.ignore = [
 
 lint.mccabe.max-complexity = 10
 # Tests assert, build fake credentials, and pin naive timestamps by design.
-lint.per-file-ignores."tests/**" = ["S101", "S105", "S106", "DTZ005"]
+lint.per-file-ignores."tests/**" = ["S101", "S105", "S106", "S107", "DTZ005"]
 format.docstring-code-format = true
 
 [tool.ty]
@@ -125,7 +125,6 @@ filterwarnings = [
 [tool.coverage]
 run.branch = true
 run.source = ["osdu_wireline"]
-run.omit = ["*/main.py"]
 report.exclude_lines = [
     "pragma: no cover",
     "def __repr__",

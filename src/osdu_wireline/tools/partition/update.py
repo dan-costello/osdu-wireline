@@ -1,14 +1,11 @@
 """Tool for updating OSDU partitions."""
 
-import json
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from ...shared.clients.partition_client import PartitionClient
 from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
-from ...shared.utils import get_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -45,42 +42,32 @@ async def partition_update(
     Raises:
         OSMCPError: For any errors during the operation
     """
-    trace_id = get_trace_id()
-
     # Check write permissions first
     write_enabled = get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE")
 
     # Log the operation
     logger.info(
-        json.dumps(
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "trace_id": trace_id,
-                "level": "INFO",
-                "tool": "partition_update",
-                "action": "partition_update_request",
-                "partition_id": partition_id,
-                "write_enabled": write_enabled,
-                "dry_run": dry_run,
-                "property_count": len(properties),
-            }
-        )
+        "Partition update requested",
+        extra={
+            "tool": "partition_update",
+            "action": "partition_update_request",
+            "partition_id": partition_id,
+            "write_enabled": write_enabled,
+            "dry_run": dry_run,
+            "property_count": len(properties),
+        },
     )
 
     # Check write permissions before proceeding
     if not write_enabled:
         error_msg = "Write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable partition updates."
         logger.warning(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "WARN",
-                    "tool": "partition_update",
-                    "action": "write_operation_blocked",
-                    "partition_id": partition_id,
-                }
-            )
+            "Write operation blocked",
+            extra={
+                "tool": "partition_update",
+                "action": "write_operation_blocked",
+                "partition_id": partition_id,
+            },
         )
 
         return {
@@ -95,16 +82,12 @@ async def partition_update(
     if dry_run:
         # Simulate the operation
         logger.info(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "INFO",
-                    "tool": "partition_update",
-                    "action": "partition_update_dry_run",
-                    "partition_id": partition_id,
-                }
-            )
+            "Partition update dry run",
+            extra={
+                "tool": "partition_update",
+                "action": "partition_update_dry_run",
+                "partition_id": partition_id,
+            },
         )
 
         return {
@@ -123,16 +106,12 @@ async def partition_update(
 
             # Log successful update
             logger.info(
-                json.dumps(
-                    {
-                        "timestamp": datetime.now(UTC).isoformat(),
-                        "trace_id": trace_id,
-                        "level": "INFO",
-                        "tool": "partition_update",
-                        "action": "partition_update_success",
-                        "partition_id": partition_id,
-                    }
-                )
+                "Partition updated",
+                extra={
+                    "tool": "partition_update",
+                    "action": "partition_update_success",
+                    "partition_id": partition_id,
+                },
             )
 
             return {
@@ -146,18 +125,14 @@ async def partition_update(
     except OSMCPError as e:
         # Log error
         logger.exception(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "ERROR",
-                    "tool": "partition_update",
-                    "action": "partition_update_error",
-                    "partition_id": partition_id,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                }
-            )
+            "Partition update failed",
+            extra={
+                "tool": "partition_update",
+                "action": "partition_update_error",
+                "partition_id": partition_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
         )
 
         return {

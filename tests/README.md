@@ -48,9 +48,9 @@ graph TD
 
 | Component | Test File | Test Coverage | Purpose |
 |-----------|-----------|---------------|---------|
-| Authentication | `test_auth.py` | 7 tests | Validates Azure authentication behavior, token management, and error handling |
-| Configuration | `test_config.py` | 10 tests | Tests configuration priority hierarchy, value parsing, and error scenarios |
-| HTTP Client | `test_osdu_client.py` | 7 tests | Verifies HTTP operations, retry logic, and error handling |
+| Authentication | `shared/auth/` | 6 files | One file per provider (`test_azure.py`, `test_aws.py`, `test_gcp.py`, `test_user_token.py`) plus mode detection (`test_detect.py`) and the shared provider lifecycle (`test_registry.py`) |
+| Configuration | `test_env.py` | 8 tests | Tests environment variable reading, value parsing, and error scenarios |
+| HTTP Client | `shared/clients/test_base.py` | 7 tests | Verifies HTTP operations, retry logic, and error handling |
 | Exceptions | `test_exceptions.py` | 9 tests | Tests exception hierarchy and MCP error transformation |
 | Utilities | `test_utils.py` | 6 tests | Validates timestamp formatting and dictionary operations |
 
@@ -68,11 +68,15 @@ graph TD
 
 ## Test Scenarios by Category
 
-### Authentication Tests (`test_auth.py`)
+### Authentication Tests (`shared/auth/`)
+
+Each authentication mode has its own provider module and its own test file, so a
+cloud's behavior can be read and changed in one place. `test_detect.py` covers the
+precedence between modes; `test_registry.py` covers the process-wide provider.
 
 ```mermaid
 graph LR
-    A[AuthHandler] --> B[Token Retrieval]
+    A[CredentialProvider] --> B[Token Retrieval]
     A --> C[Token Caching]
     A --> D[Token Refresh]
     A --> E[Error Handling]
@@ -120,7 +124,7 @@ the accessors in `shared/env.py`:
 | Boolean truth table | Only true/yes/1 enable a flag | Parametrized env values |
 | Numeric parsing | Parse ints, fall back when unparseable | Set numeric and garbage values |
 
-### HTTP Client Tests (`test_osdu_client.py`)
+### HTTP Client Tests (`shared/clients/test_base.py`)
 
 | Test Scenario | Purpose | Method |
 |---------------|---------|--------|
@@ -164,7 +168,7 @@ uv run pytest
 uv run pytest --cov=osdu_wireline --cov-report=html
 
 # Run specific test file
-uv run pytest tests/shared/test_auth.py
+uv run pytest tests/shared/auth/test_azure.py
 
 # Run with verbose output
 uv run pytest -v
@@ -208,7 +212,7 @@ async def test_client_retries_on_temporary_failure():
         mocked.get("https://osdu.com/api/test", status=500)
         mocked.get("https://osdu.com/api/test", payload={"result": "success"})
 
-        client = OsduClient(config, auth)
+        client = OsduClient(auth)
         result = await client.get("/api/test")
 
         assert result["result"] == "success"

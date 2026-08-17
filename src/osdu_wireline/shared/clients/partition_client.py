@@ -5,8 +5,8 @@ from typing import Any
 
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
-from ..osdu_client import OsduClient
 from ..service_urls import OSMCPService
+from .base import OsduClient
 
 logger = logging.getLogger(__name__)
 

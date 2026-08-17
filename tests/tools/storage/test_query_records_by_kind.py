@@ -11,6 +11,7 @@ from azure.core.credentials import AccessToken
 from osdu_wireline.tools.storage.query_records_by_kind import (
     storage_query_records_by_kind,
 )
+from tests.conftest import AZURE_CREDENTIAL
 
 
 @pytest.mark.asyncio
@@ -29,9 +30,7 @@ async def test_storage_query_records_by_kind_success():
             "AZURE_CLIENT_ID": "test-client-id",
         },
     ):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential:
+        with patch(AZURE_CREDENTIAL) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",
                 int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
@@ -70,9 +69,7 @@ async def test_storage_query_records_by_kind_with_cursor():
             "AZURE_CLIENT_ID": "test-client-id",
         },
     ):
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential:
+        with patch(AZURE_CREDENTIAL) as mock_credential:
             mock_token = AccessToken(
                 "fake_token",
                 int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),

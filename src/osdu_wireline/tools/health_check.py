@@ -3,13 +3,13 @@
 This module implements the health check tool as defined in ADR-007.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
-from ..shared.app_context import get_app_context
+from ..shared.auth import check_credentials, get_auth_provider
+from ..shared.clients import OsduClient
 from ..shared.exceptions import handle_osdu_exceptions
-from ..shared.osdu_client import OsduClient
 from ..shared.service_urls import OSMCPService, get_service_info_endpoint
-from ..shared.utils import get_timestamp
 
 
 @handle_osdu_exceptions
@@ -28,26 +28,23 @@ async def health_check(
     Returns:
         Health status of OSDU connection and services
     """
-    # The auth handler is shared for the life of the server, so it is only
-    # borrowed here - closing it would clear the token cache for every
-    # subsequent tool call.
-    auth_handler = get_app_context().auth
+    # The provider is shared for the life of the server, so it is only borrowed
+    # here - closing it would clear the token cache for every subsequent tool
+    # call.
+    auth = get_auth_provider()
 
     async with OsduClient() as client:
         result: dict[str, Any] = {
             "connectivity": "pending",
             "server_url": client.server_url,
             "data_partition": client.data_partition,
-            "timestamp": get_timestamp(),
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "") + "Z",
         }
 
         try:
             # Check authentication if requested
             if include_auth:
-                auth_valid = await auth_handler.validate_token()
-                result["authentication"] = {
-                    "status": "valid" if auth_valid else "invalid"
-                }
+                result["authentication"] = await check_credentials(auth)
 
             # Check services if requested
             if include_services:

@@ -1,14 +1,11 @@
 """Tool for deleting OSDU partitions."""
 
-import json
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from ...shared.clients.partition_client import PartitionClient
 from ...shared.env import get_env_bool
 from ...shared.exceptions import OSMCPError, handle_osdu_exceptions
-from ...shared.utils import get_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -46,42 +43,32 @@ async def partition_delete(
     Raises:
         OSMCPError: For any errors during the operation
     """
-    trace_id = get_trace_id()
-
     # Check write permissions first
     write_enabled = get_env_bool("OSDU_MCP_ENABLE_WRITE_MODE")
 
     # Log the operation
     logger.info(
-        json.dumps(
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "trace_id": trace_id,
-                "level": "INFO",
-                "tool": "partition_delete",
-                "action": "partition_delete_request",
-                "partition_id": partition_id,
-                "write_enabled": write_enabled,
-                "confirmed": confirm,
-                "dry_run": dry_run,
-            }
-        )
+        "Partition delete requested",
+        extra={
+            "tool": "partition_delete",
+            "action": "partition_delete_request",
+            "partition_id": partition_id,
+            "write_enabled": write_enabled,
+            "confirmed": confirm,
+            "dry_run": dry_run,
+        },
     )
 
     # Check write permissions before proceeding
     if not write_enabled:
         error_msg = "Write operations are disabled. Set OSDU_MCP_ENABLE_WRITE_MODE=true to enable partition deletion."
         logger.warning(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "WARN",
-                    "tool": "partition_delete",
-                    "action": "write_operation_blocked",
-                    "partition_id": partition_id,
-                }
-            )
+            "Write operation blocked",
+            extra={
+                "tool": "partition_delete",
+                "action": "write_operation_blocked",
+                "partition_id": partition_id,
+            },
         )
 
         return {
@@ -98,16 +85,12 @@ async def partition_delete(
     if not confirm and not dry_run:
         error_msg = "Deletion requires explicit confirmation. Set confirm=True to proceed with deletion."
         logger.warning(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "WARN",
-                    "tool": "partition_delete",
-                    "action": "delete_not_confirmed",
-                    "partition_id": partition_id,
-                }
-            )
+            "Partition delete not confirmed",
+            extra={
+                "tool": "partition_delete",
+                "action": "delete_not_confirmed",
+                "partition_id": partition_id,
+            },
         )
 
         return {
@@ -123,16 +106,12 @@ async def partition_delete(
     if dry_run:
         # Simulate the operation
         logger.info(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "INFO",
-                    "tool": "partition_delete",
-                    "action": "partition_delete_dry_run",
-                    "partition_id": partition_id,
-                }
-            )
+            "Partition delete dry run",
+            extra={
+                "tool": "partition_delete",
+                "action": "partition_delete_dry_run",
+                "partition_id": partition_id,
+            },
         )
 
         return {
@@ -152,17 +131,13 @@ async def partition_delete(
 
             # Log successful deletion
             logger.warning(
-                json.dumps(
-                    {
-                        "timestamp": datetime.now(UTC).isoformat(),
-                        "trace_id": trace_id,
-                        "level": "WARN",
-                        "tool": "partition_delete",
-                        "action": "partition_delete_success",
-                        "partition_id": partition_id,
-                        "user": "unknown",
-                    }
-                )
+                "Partition deleted",
+                extra={
+                    "tool": "partition_delete",
+                    "action": "partition_delete_success",
+                    "partition_id": partition_id,
+                    "user": "unknown",
+                },
             )
 
             return {
@@ -177,18 +152,14 @@ async def partition_delete(
     except OSMCPError as e:
         # Log error
         logger.exception(
-            json.dumps(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "trace_id": trace_id,
-                    "level": "ERROR",
-                    "tool": "partition_delete",
-                    "action": "partition_delete_error",
-                    "partition_id": partition_id,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                }
-            )
+            "Partition delete failed",
+            extra={
+                "tool": "partition_delete",
+                "action": "partition_delete_error",
+                "partition_id": partition_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
         )
 
         return {

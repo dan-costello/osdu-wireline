@@ -9,6 +9,7 @@ from aioresponses import aioresponses
 from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.entitlements import entitlements_mine
+from tests.conftest import AZURE_CREDENTIAL
 
 
 @pytest.mark.asyncio
@@ -44,9 +45,7 @@ async def test_entitlements_mine_success():
 
     with patch.dict(os.environ, test_env):
         # Mock the Azure credential to avoid real authentication
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
@@ -91,9 +90,7 @@ async def test_entitlements_mine_empty():
 
     with patch.dict(os.environ, test_env):
         # Mock the Azure credential to avoid real authentication
-        with patch(
-            "osdu_wireline.shared.auth_handler.DefaultAzureCredential"
-        ) as mock_credential_class:
+        with patch(AZURE_CREDENTIAL) as mock_credential_class:
             mock_credential = MagicMock()
             mock_credential.get_token.return_value = mock_token
             mock_credential_class.return_value = mock_credential
