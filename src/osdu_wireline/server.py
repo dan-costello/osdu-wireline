@@ -37,11 +37,7 @@ from .tools.schema import (
     schema_search,
     schema_update,
 )
-from .tools.search import (
-    search_by_id,
-    search_by_kind,
-    search_query,
-)
+from .tools.search import query_well_trajectories, query_wellbores, query_wells
 from .tools.storage import (
     storage_create_update_records,
     storage_delete_record,
@@ -147,9 +143,9 @@ mcp.tool()(schema_create)
 mcp.tool()(schema_update)
 
 # Register search tools
-mcp.tool()(search_query)
-mcp.tool()(search_by_id)
-mcp.tool()(search_by_kind)
+mcp.tool()(query_wells)
+mcp.tool()(query_well_trajectories)
+mcp.tool()(query_wellbores)
 
 # Register storage tools
 mcp.tool()(storage_create_update_records)

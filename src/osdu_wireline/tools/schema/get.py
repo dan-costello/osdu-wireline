@@ -93,20 +93,17 @@ async def schema_get(id: str) -> dict[str, Any]:
         # Enhance response to provide more context about the schema
         if "schemaInfo" in response:
             schema_info = response["schemaInfo"]
-            identity = schema_info.get("schemaIdentity", {})
-
-            # Log status and scope for informational purposes
-            status = schema_info.get("status", "UNKNOWN")
-            scope = schema_info.get("scope", "UNKNOWN")
 
             logger.info(
                 "Retrieved schema successfully",
                 extra={
                     "schema_id": id,
                     "partition": partition,
-                    "authority": identity.get("authority"),
-                    "status": status,
-                    "scope": scope,
+                    "authority": schema_info.get("schemaIdentity", {}).get(
+                        "authority", "UNKNOWN"
+                    ),
+                    "status": schema_info.get("status", "UNKNOWN"),
+                    "scope": schema_info.get("scope", "UNKNOWN"),
                 },
             )
         else:

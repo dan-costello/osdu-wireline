@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 # Refresh this far ahead of expiry so a token cannot lapse mid-request.
 _EXPIRY_BUFFER = timedelta(minutes=5)
 
+# TODO: I think this is a mistake, as the AzureProvider class is not used anywhere in the codebase. It should be removed if not needed.
+# Or maybe it's just that i'm using Azure with different auth method - but in that case, the user should not be errored with message that they
+# need to run az login, as they are using a different auth method. So maybe the error message should be more generic, like "Authentication failed. Please check your Azure credentials"
 _CLI_LOGIN_MESSAGE = (
     "Authentication failed. Please run 'az login' before using OSDU Wireline"
 )
