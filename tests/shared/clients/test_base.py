@@ -11,8 +11,8 @@ from osdu_wireline.shared.clients import OsduClient
 from osdu_wireline.shared.exceptions import OSMCPAPIError, OSMCPConnectionError
 
 CLIENT_ENV = {
-    "OSDU_MCP_SERVER_URL": "https://test-osdu.com",
-    "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
+    "OSDU_SERVER_URL": "https://test-osdu.com",
+    "OSDU_DATA_PARTITION": "test-partition",
 }
 
 
@@ -271,4 +271,4 @@ async def test_osdu_client_requires_server_url(mock_auth):
         with pytest.raises(OSMCPConfigError) as exc_info:
             OsduClient(mock_auth)
 
-        assert "OSDU_MCP_SERVER_URL" in str(exc_info.value)
+        assert "OSDU_SERVER_URL" in str(exc_info.value)

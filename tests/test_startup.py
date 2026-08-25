@@ -15,8 +15,8 @@ from osdu_wireline.server import verify_startup
 from osdu_wireline.shared.exceptions import OSMCPConfigError
 
 SERVER_ENV = {
-    "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-    "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+    "OSDU_SERVER_URL": "https://test.osdu.com",
+    "OSDU_DATA_PARTITION": "opendes",
 }
 
 
@@ -28,7 +28,7 @@ def test_verify_startup_passes_with_server_config():
 
 @pytest.mark.parametrize(
     "missing",
-    ["OSDU_MCP_SERVER_URL", "OSDU_MCP_SERVER_DATA_PARTITION"],
+    ["OSDU_SERVER_URL", "OSDU_DATA_PARTITION"],
 )
 def test_verify_startup_names_the_missing_variable(missing):
     """A missing variable is reported by name, not as a generic failure."""
@@ -82,5 +82,5 @@ def test_main_writes_diagnostics_to_stderr_only(capsys, restore_package_logger):
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "OSDU_MCP_SERVER_URL" in captured.err
+    assert "OSDU_SERVER_URL" in captured.err
     assert "Configuration error" in captured.err

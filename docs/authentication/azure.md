@@ -12,8 +12,8 @@
 ```bash
 az login
 claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
+  -e "OSDU_SERVER_URL=https://your-osdu.com" \
+  -e "OSDU_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-osdu-app-id" \
   -e "AZURE_TENANT_ID=your-tenant-id"
 ```
@@ -25,13 +25,13 @@ claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wirel
   - `AZURE_CLIENT_ID`: Service principal ID
   - `AZURE_CLIENT_SECRET`: Service principal secret
   - `AZURE_TENANT_ID`: Your Azure tenant ID
-  - `OSDU_MCP_AUTH_SCOPE`: (Optional) Custom OAuth scope for v1.0 token environments (this variable has a different meaning on GCP — see [GCP Authentication](./gcp.md))
+  - `OSDU_AUTH_SCOPE`: (Optional) Custom OAuth scope for v1.0 token environments
 
 **Example:**
 ```bash
 claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
+  -e "OSDU_SERVER_URL=https://your-osdu.com" \
+  -e "OSDU_DATA_PARTITION=your-partition" \
   -e "AZURE_CLIENT_ID=your-service-principal-id" \
   -e "AZURE_CLIENT_SECRET=your-service-principal-secret" \
   -e "AZURE_TENANT_ID=your-tenant-id"

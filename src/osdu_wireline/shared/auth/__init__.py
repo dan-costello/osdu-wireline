@@ -1,11 +1,13 @@
-"""Multi-cloud authentication for OSDU Wireline.
+"""Authentication for OSDU Wireline.
 
 One provider module per mode, selected by `detect_provider`:
 
-- `user_token`: manual OAuth Bearer token via OSDU_MCP_USER_TOKEN
+- `user_token`: manual OAuth Bearer token via OSDU_USER_TOKEN
 - `azure`: DefaultAzureCredential
-- `aws`: boto3 SDK credentials
-- `gcp`: Application Default Credentials
+
+AWS and GCP providers were removed: the AWS one returned an STS session token
+and sent it as an `Authorization: Bearer` header, which OSDU on AWS does not
+accept, and neither was ever exercised against a live platform.
 """
 
 from .base import AuthenticationMode, CredentialProvider, check_credentials

@@ -18,7 +18,7 @@ async def test_returns_token_from_environment():
     """A valid token is handed back unchanged, without a Bearer prefix."""
     token = make_jwt(exp=time.time() + 7200)
 
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": token}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": token}):
         provider = UserTokenProvider()
 
         assert await provider.get_token() == token
@@ -27,7 +27,7 @@ async def test_returns_token_from_environment():
 
 async def test_rejects_expired_token():
     """An expired token fails rather than being sent to OSDU."""
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": make_jwt(time.time() - 3600)}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": make_jwt(time.time() - 3600)}):
         provider = UserTokenProvider()
 
         with pytest.raises(OSMCPAuthError, match="expired"):
@@ -36,7 +36,7 @@ async def test_rejects_expired_token():
 
 async def test_rejects_malformed_token():
     """A string that is not a JWT fails with a format error."""
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": "not-a-valid-jwt"}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": "not-a-valid-jwt"}):
         provider = UserTokenProvider()
 
         with pytest.raises(OSMCPAuthError, match="Invalid JWT token format"):
@@ -47,7 +47,7 @@ async def test_token_expiring_soon_still_works_but_warns(caplog):
     """A token close to expiry is accepted, with a warning for the operator."""
     token = make_jwt(exp=time.time() + 120)
 
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": token}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": token}):
         provider = UserTokenProvider()
 
         with caplog.at_level(logging.WARNING):
@@ -62,7 +62,7 @@ async def test_token_without_expiry_is_accepted():
 
     token = jwt_lib.encode({"sub": "test-user"}, "secret", algorithm="HS256")
 
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": token}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": token}):
         provider = UserTokenProvider()
 
         assert await provider.get_token() == token
@@ -73,15 +73,15 @@ async def test_missing_token_is_an_error():
 
     The token is re-read on every call so it can be rotated at runtime.
     """
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": make_jwt()}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": make_jwt()}):
         provider = UserTokenProvider()
 
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(OSMCPAuthError, match="OSDU_MCP_USER_TOKEN not set"):
+        with pytest.raises(OSMCPAuthError, match="OSDU_USER_TOKEN not set"):
             await provider.get_token()
 
 
 def test_close_is_a_noop():
     """Closing releases nothing and never raises."""
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": make_jwt()}):
+    with patch.dict(os.environ, {"OSDU_USER_TOKEN": make_jwt()}):
         UserTokenProvider().close()

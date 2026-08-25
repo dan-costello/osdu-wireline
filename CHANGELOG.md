@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Removed
+
+* **AWS and GCP authentication.** The AWS provider returned an STS session token from
+  `sts.get_session_token()` and the HTTP client sent it as an `Authorization: Bearer`
+  header. An STS session token is one part of a temporary AWS key triple meant for SigV4
+  request signing, not a bearer credential; OSDU on AWS issues Cognito JWTs. That path
+  could not have authenticated against any deployment. The GCP provider was plausible but
+  had never been exercised against a live platform. Neither had integration coverage —
+  the tests mocked the cloud SDKs end to end. Azure is now the only supported provider,
+  alongside the manual token. `boto3` and `google-auth` are no longer dependencies, and
+  `docs/authentication/aws.md` and `gcp.md` are gone.
+
+### Changed
+
+* Renamed the connection and credential environment variables to drop the `OSDU_MCP_`
+  prefix: `OSDU_SERVER_URL`, `OSDU_DATA_PARTITION`, `OSDU_TIMEOUT`, `OSDU_USER_TOKEN`,
+  `OSDU_AUTH_SCOPE`. **The old spellings are still read as a fallback**, so existing
+  configurations keep working; where both are set the unprefixed name wins. These five are
+  now shared with DGI's `dgimcp` OSDU import server, which reads the same variables so it
+  can resolve its own credentials instead of accepting a token as a tool argument.
+  Server-only settings (`OSDU_MCP_ENABLE_WRITE_MODE`, `OSDU_MCP_ENABLE_DELETE_MODE`,
+  `OSDU_MCP_LOG_LEVEL`) keep the prefix — they configure this server, not the connection.
+
 ## 0.1.0
 
 ### Changed

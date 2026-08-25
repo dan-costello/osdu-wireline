@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 from .prompts import guide_record_lifecycle, guide_search_patterns
 from .resources import get_workflow_resources
 from .shared.auth import reset_auth_provider
-from .shared.env import require_env
+from .shared.env import require_setting
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -37,11 +37,7 @@ from .tools.schema import (
     schema_search,
     schema_update,
 )
-from .tools.search import (
-    search_by_id,
-    search_by_kind,
-    search_query,
-)
+from .tools.search import query_well_trajectories, query_wellbores, query_wells
 from .tools.storage import (
     storage_create_update_records,
     storage_delete_record,
@@ -87,8 +83,8 @@ def verify_startup() -> None:
     Raises:
         OSMCPConfigError: If required server configuration is missing
     """
-    require_env("OSDU_MCP_SERVER_URL")
-    require_env("OSDU_MCP_SERVER_DATA_PARTITION")
+    require_setting("OSDU_SERVER_URL")
+    require_setting("OSDU_DATA_PARTITION")
 
 
 SERVER_INSTRUCTIONS = """
@@ -147,9 +143,9 @@ mcp.tool()(schema_create)
 mcp.tool()(schema_update)
 
 # Register search tools
-mcp.tool()(search_query)
-mcp.tool()(search_by_id)
-mcp.tool()(search_by_kind)
+mcp.tool()(query_wells)
+mcp.tool()(query_well_trajectories)
+mcp.tool()(query_wellbores)
 
 # Register storage tools
 mcp.tool()(storage_create_update_records)

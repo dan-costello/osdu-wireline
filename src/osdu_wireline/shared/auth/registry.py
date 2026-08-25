@@ -6,27 +6,19 @@ cache survives across calls.
 
 import threading
 
-from ..env import get_env
+from ..env import get_env, get_setting
 from ..exceptions import OSMCPAuthError
-from .aws import AwsProvider
 from .azure import AzureProvider
 from .base import CredentialProvider
-from .gcp import GcpProvider
 from .user_token import UserTokenProvider
 
 _NO_CREDENTIALS_MESSAGE = (
     "No authentication credentials configured. Set up one of:\n\n"
     "  Manual Token (Highest Priority):\n"
-    "    export OSDU_MCP_USER_TOKEN=your-bearer-token\n\n"
-    "  Azure (Automatic):\n"
+    "    export OSDU_USER_TOKEN=your-bearer-token\n\n"
+    "  Azure:\n"
     "    az login\n"
     "    OR export AZURE_CLIENT_ID=... AZURE_TENANT_ID=...\n\n"
-    "  AWS (Automatic):\n"
-    "    aws sso login\n"
-    "    OR export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...\n\n"
-    "  GCP (Automatic):\n"
-    "    gcloud auth application-default login\n"
-    "    OR export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json\n\n"
     "  See: https://github.com/dan-costello/osdu-wireline#authentication"
 )
 
@@ -34,8 +26,8 @@ _NO_CREDENTIALS_MESSAGE = (
 def detect_provider() -> CredentialProvider:
     """Select a credential provider by precedence.
 
-    Explicitly configured credentials always win over auto-discovery, and a
-    manually supplied token wins over everything.
+    A manually supplied token wins over the Azure credential chain, so an
+    operator can override whatever `az login` would resolve without logging out.
 
     Returns:
         Provider for the detected authentication mode
@@ -43,23 +35,11 @@ def detect_provider() -> CredentialProvider:
     Raises:
         OSMCPAuthError: If no authentication credentials are found
     """
-    if get_env("OSDU_MCP_USER_TOKEN"):
+    if get_setting("OSDU_USER_TOKEN"):
         return UserTokenProvider()
 
     if get_env("AZURE_CLIENT_ID") or get_env("AZURE_TENANT_ID"):
         return AzureProvider()
-
-    if get_env("AWS_ACCESS_KEY_ID") or get_env("AWS_PROFILE"):
-        return AwsProvider()
-
-    if get_env("GOOGLE_APPLICATION_CREDENTIALS"):
-        return GcpProvider()
-
-    if AwsProvider.is_discoverable():
-        return AwsProvider()
-
-    if GcpProvider.is_discoverable():
-        return GcpProvider()
 
     raise OSMCPAuthError(_NO_CREDENTIALS_MESSAGE)
 

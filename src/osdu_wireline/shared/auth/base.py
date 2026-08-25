@@ -15,8 +15,6 @@ class AuthenticationMode(Enum):
 
     USER_TOKEN = "user_token"  # noqa: S105 - enum value, not a credential
     AZURE = "azure"  # Azure DefaultAzureCredential
-    AWS = "aws"  # AWS boto3 SDK credentials
-    GCP = "gcp"  # GCP Application Default Credentials
 
 
 @runtime_checkable

@@ -13,7 +13,7 @@ import aiohttp
 from aiohttp import ClientSession, ClientTimeout
 
 from ..auth import CredentialProvider, get_auth_provider
-from ..env import get_env_int, require_env
+from ..env import get_setting_int, require_setting
 from ..exceptions import OSMCPAPIError, OSMCPConnectionError
 from ..service_urls import OSMCPService
 
@@ -45,9 +45,9 @@ class OsduClient:
         """
         self.auth = auth if auth is not None else get_auth_provider()
         self._session: ClientSession | None = None
-        self._base_url: str = require_env("OSDU_MCP_SERVER_URL")
-        self._data_partition: str = require_env("OSDU_MCP_SERVER_DATA_PARTITION")
-        self._timeout = get_env_int("OSDU_MCP_SERVER_TIMEOUT", 30)
+        self._base_url: str = require_setting("OSDU_SERVER_URL")
+        self._data_partition: str = require_setting("OSDU_DATA_PARTITION")
+        self._timeout = get_setting_int("OSDU_TIMEOUT", 30)
         self._base_path = self.service.value if self.service else ""
 
     @property
