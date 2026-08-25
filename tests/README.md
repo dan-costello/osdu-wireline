@@ -48,7 +48,7 @@ graph TD
 
 | Component | Test File | Test Coverage | Purpose |
 |-----------|-----------|---------------|---------|
-| Authentication | `shared/auth/` | 6 files | One file per provider (`test_azure.py`, `test_aws.py`, `test_gcp.py`, `test_user_token.py`) plus mode detection (`test_detect.py`) and the shared provider lifecycle (`test_registry.py`) |
+| Authentication | `shared/auth/` | 4 files | One file per provider (`test_azure.py`, `test_user_token.py`) plus mode detection (`test_detect.py`) and the shared provider lifecycle (`test_registry.py`) |
 | Configuration | `test_env.py` | 8 tests | Tests environment variable reading, value parsing, and error scenarios |
 | HTTP Client | `shared/clients/test_base.py` | 7 tests | Verifies HTTP operations, retry logic, and error handling |
 | Exceptions | `test_exceptions.py` | 9 tests | Tests exception hierarchy and MCP error transformation |
@@ -71,8 +71,9 @@ graph TD
 ### Authentication Tests (`shared/auth/`)
 
 Each authentication mode has its own provider module and its own test file, so a
-cloud's behavior can be read and changed in one place. `test_detect.py` covers the
-precedence between modes; `test_registry.py` covers the process-wide provider.
+mode's behavior can be read and changed in one place. `test_detect.py` covers the
+precedence between modes and asserts that the removed AWS and GCP variables no
+longer select anything; `test_registry.py` covers the process-wide provider.
 
 ```mermaid
 graph LR

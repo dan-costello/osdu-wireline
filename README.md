@@ -41,9 +41,8 @@ missing the server writes the missing variable name to stderr and exits with sta
 starting and failing every tool call. Your MCP client will report the server as failed to start;
 the message is in its server log.
 
-Credentials are deliberately *not* checked at startup, so that re-authenticating (`az login`,
-`gcloud auth application-default login`, `aws sso login`) fixes a running server without
-restarting your MCP client. Use the `health_check` tool to see the current authentication status
+Credentials are deliberately *not* checked at startup, so that re-authenticating (`az login`)
+fixes a running server without restarting your MCP client. Use the `health_check` tool to see the current authentication status
 and, when it fails, the reason.
 
 ### Connecting to MCP Clients
@@ -54,21 +53,28 @@ This server currently uses stdio for communication with MCP clients. Below are e
 
 ## Authentication
 
+The server never accepts a token or a server URL as a tool argument. Both come from its own
+environment, so neither passes through the assistant's context, where prompt injection could read
+a token or point it at another host.
+
 ### Authentication Priority
 
-The server automatically detects your authentication provider in this priority order:
+The server detects your authentication provider in this priority order:
 
-1. **Manual Token** (highest priority) - `OSDU_MCP_USER_TOKEN`
+1. **Manual Token** (highest priority) - `OSDU_USER_TOKEN`
 2. **Azure** - `AZURE_CLIENT_ID` or `AZURE_TENANT_ID`
-3. **AWS** (explicit) - `AWS_ACCESS_KEY_ID` or `AWS_PROFILE`
-4. **GCP** (explicit) - `GOOGLE_APPLICATION_CREDENTIALS`
-5. **AWS** (auto-discovery) - IAM roles, SSO
-6. **GCP** (auto-discovery) - gcloud, metadata service
+
+Azure uses `DefaultAzureCredential`, which covers `az login`, service principal environment
+variables, and managed identity. Interactive browser sign-in is excluded: this server speaks
+JSON-RPC over stdio, so a credential that wants to print to the console or open a browser cannot
+run here.
+
+**AWS and GCP are not supported.** Both providers were removed rather than left in place: the AWS
+one returned an STS session token and sent it as an `Authorization: Bearer` header, which OSDU on
+AWS does not accept, and neither had ever been exercised against a live platform.
 
 ### Authentication Methods
  - [Azure](./docs/authentication/azure.md)
- - [AWS](./docs/authentication/aws.md)
- - [GCP](./docs/authentication/gcp.md)
  - [Manual OAuth Token](./docs/authentication/manual_oauth.md)  
  - [Domain Configuration (all providers)](./docs/authentication/domain.md)
 
@@ -139,23 +145,28 @@ raises a configuration error on the first tool call without them.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_MCP_SERVER_URL` | Yes | — | Base URL of the OSDU platform, e.g. `https://osdu.contoso.com` |
-| `OSDU_MCP_SERVER_DATA_PARTITION` | Yes | — | Data partition ID, e.g. `opendes` |
-| `OSDU_MCP_SERVER_TIMEOUT` | No | `30` | HTTP request timeout in seconds |
+| `OSDU_SERVER_URL` | Yes | — | Base URL of the OSDU platform, e.g. `https://osdu.contoso.com` |
+| `OSDU_DATA_PARTITION` | Yes | — | Data partition ID, e.g. `opendes` |
+| `OSDU_TIMEOUT` | No | `30` | HTTP request timeout in seconds |
 
-**Authentication** — the provider is auto-detected from whichever of these is set; see
+These five connection and credential variables were previously prefixed `OSDU_MCP_`
+(`OSDU_MCP_SERVER_URL`, `OSDU_MCP_SERVER_DATA_PARTITION`, `OSDU_MCP_SERVER_TIMEOUT`,
+`OSDU_MCP_USER_TOKEN`, `OSDU_MCP_AUTH_SCOPE`). Those spellings are still accepted, so an
+existing configuration keeps working; where both are set the unprefixed name wins. They are
+shared with DGI's `dgimcp` OSDU import server, which reads the same variables so that it too
+resolves its own credentials. Settings that configure *this server* rather than the connection
+(the write and delete gates, the log level) keep the `OSDU_MCP_` prefix.
+
+**Authentication** — the provider is detected from whichever of these is set; see
 [Authentication](#authentication) for the priority order and per-provider guides.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_MCP_USER_TOKEN` | No | — | OAuth bearer token; selects manual-token mode, which takes priority over all cloud providers |
+| `OSDU_USER_TOKEN` | No | — | OAuth bearer token; selects manual-token mode, which takes priority over Azure |
 | `AZURE_CLIENT_ID` | No | — | Azure app registration client ID; required once Azure mode is selected |
 | `AZURE_TENANT_ID` | No | — | Azure tenant ID; setting either Azure variable selects Azure mode |
 | `AZURE_CLIENT_SECRET` | No | — | Azure client secret, for service principal authentication |
-| `AWS_ACCESS_KEY_ID` | No | — | Selects AWS mode explicitly; IAM roles and SSO are also auto-discovered |
-| `AWS_PROFILE` | No | — | Named AWS CLI profile; also selects AWS mode |
-| `GOOGLE_APPLICATION_CREDENTIALS` | No | — | Path to a GCP service account key; selects GCP mode |
-| `OSDU_MCP_AUTH_SCOPE` | No | Provider default | Overrides the OAuth scope. Azure defaults to `{AZURE_CLIENT_ID}/.default`; GCP accepts a comma-separated list |
+| `OSDU_AUTH_SCOPE` | No | `{AZURE_CLIENT_ID}/.default` | Overrides the OAuth scope requested from Azure |
 
 **Write and delete protection** — the tools marked write-protected and delete-protected above are
 disabled by default and must be enabled explicitly. The two gates are separate, so you can allow

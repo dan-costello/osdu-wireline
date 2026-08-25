@@ -1,4 +1,4 @@
-"""Manual OAuth Bearer token supplied through OSDU_MCP_USER_TOKEN."""
+"""Manual OAuth Bearer token supplied through OSDU_USER_TOKEN."""
 
 import logging
 import time
@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import jwt
 
-from ..env import get_env
+from ..env import get_setting
 from ..exceptions import OSMCPAuthError
 from .base import AuthenticationMode
 
@@ -39,9 +39,9 @@ class UserTokenProvider:
         Raises:
             OSMCPAuthError: If the token is unset, malformed, or expired
         """
-        token = get_env("OSDU_MCP_USER_TOKEN")
+        token = get_setting("OSDU_USER_TOKEN")
         if not token:
-            raise OSMCPAuthError("USER_TOKEN mode but OSDU_MCP_USER_TOKEN not set")
+            raise OSMCPAuthError("USER_TOKEN mode but OSDU_USER_TOKEN not set")
 
         _validate_jwt_token(token)
         return token

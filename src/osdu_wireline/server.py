@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 from .prompts import guide_record_lifecycle, guide_search_patterns
 from .resources import get_workflow_resources
 from .shared.auth import reset_auth_provider
-from .shared.env import require_env
+from .shared.env import require_setting
 from .tools.entitlements import (
     entitlements_mine,
 )
@@ -83,8 +83,8 @@ def verify_startup() -> None:
     Raises:
         OSMCPConfigError: If required server configuration is missing
     """
-    require_env("OSDU_MCP_SERVER_URL")
-    require_env("OSDU_MCP_SERVER_DATA_PARTITION")
+    require_setting("OSDU_SERVER_URL")
+    require_setting("OSDU_DATA_PARTITION")
 
 
 SERVER_INSTRUCTIONS = """

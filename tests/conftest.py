@@ -27,11 +27,11 @@ TEST_TOKEN = jwt.encode(
     algorithm="HS256",
 )
 
-# OSDU_MCP_USER_TOKEN selects USER_TOKEN auth mode, which needs no cloud SDKs
+# OSDU_USER_TOKEN selects USER_TOKEN auth mode, which needs no cloud SDKs
 OSDU_TEST_ENV = {
-    "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-    "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-    "OSDU_MCP_USER_TOKEN": TEST_TOKEN,
+    "OSDU_SERVER_URL": "https://test.osdu.com",
+    "OSDU_DATA_PARTITION": "opendes",
+    "OSDU_USER_TOKEN": TEST_TOKEN,
 }
 
 

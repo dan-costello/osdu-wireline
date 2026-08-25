@@ -49,14 +49,14 @@ async def test_token_scope_derived_from_client_id(credential):
 
 
 async def test_explicit_scope_is_passed_through_verbatim(credential):
-    """OSDU_MCP_AUTH_SCOPE is a single scope string for Azure, not a list."""
+    """OSDU_AUTH_SCOPE is a single scope string for Azure, not a list."""
     credential.get_token.return_value = azure_token("azure-token")
 
     with patch.dict(
         os.environ,
         {
             "AZURE_CLIENT_ID": "azure-id",
-            "OSDU_MCP_AUTH_SCOPE": "api://azure-id/.default",
+            "OSDU_AUTH_SCOPE": "api://azure-id/.default",
         },
         clear=True,
     ):

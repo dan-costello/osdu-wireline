@@ -15,7 +15,7 @@ async def query_wells(
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """Search the OSDDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)"""
+    """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)"""
     # Validate parameters
 
     clauses: list[str] = []
@@ -58,7 +58,7 @@ async def query_wells(
 async def query_wellbores(
     well_ids: list[str],
 ) -> dict[str, Any]:
-    """Search the OSDDU instance for wellbores, based on a list of well IDs. The Well ids are retreived using the query_wells function. This is not to be called directly, but by query_trajectories and other tools."""
+    """Search the OSDU instance for wellbores, based on a list of well IDs. The Well ids are retreived using the query_wells function. This is not to be called directly, but by query_trajectories and other tools."""
 
     # TODO: Consider adding arguments for field_id, technical_assurance_type_id, schema versions (other?)
 
@@ -91,7 +91,7 @@ async def query_wellbores(
 async def query_well_trajectories(
     well_ids: list[str],
 ) -> dict[str, Any]:
-    """Search the OSDDU instance for trajectories, based on a list of well IDs."""
+    """Search the OSDU instance for trajectories, based on a list of well IDs."""
 
     # TODO: Consider adding arguments for technical_assurance_type_id, schema versions (other?)
 

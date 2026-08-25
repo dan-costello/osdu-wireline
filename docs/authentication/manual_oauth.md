@@ -4,7 +4,7 @@
 
 - **Setup**: Obtain OAuth Bearer token from your provider
 - **Environment Variables**:
-  - `OSDU_MCP_USER_TOKEN`: Your OAuth Bearer token (JWT format)
+  - `OSDU_USER_TOKEN`: Your OAuth Bearer token (JWT format)
   - **Priority**: This method ALWAYS takes precedence over all others
 
 **Example:**
@@ -13,9 +13,9 @@
 TOKEN=$(your-oauth-command)
 
 claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wireline@main" \
-  -e "OSDU_MCP_SERVER_URL=https://your-osdu.com" \
-  -e "OSDU_MCP_SERVER_DATA_PARTITION=your-partition" \
-  -e "OSDU_MCP_USER_TOKEN=$TOKEN"
+  -e "OSDU_SERVER_URL=https://your-osdu.com" \
+  -e "OSDU_DATA_PARTITION=your-partition" \
+  -e "OSDU_USER_TOKEN=$TOKEN"
 ```
 
 **Token Requirements:**

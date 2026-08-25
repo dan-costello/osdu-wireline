@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
 
-from ..env import get_env
+from ..env import get_env, get_setting
 from ..exceptions import OSMCPAuthError
 from .base import AuthenticationMode
 
@@ -19,9 +19,11 @@ logger = logging.getLogger(__name__)
 # Refresh this far ahead of expiry so a token cannot lapse mid-request.
 _EXPIRY_BUFFER = timedelta(minutes=5)
 
-# TODO: I think this is a mistake, as the AzureProvider class is not used anywhere in the codebase. It should be removed if not needed.
-# Or maybe it's just that i'm using Azure with different auth method - but in that case, the user should not be errored with message that they
-# need to run az login, as they are using a different auth method. So maybe the error message should be more generic, like "Authentication failed. Please check your Azure credentials"
+# OPEN QUESTION: these messages name `az login` specifically, but
+# DefaultAzureCredential also covers managed identity, environment variables,
+# and Azure PowerShell. A managed-identity failure currently tells the operator
+# to run a CLI command that is not the fix. Consider whether the guidance should
+# name the credential the chain actually attempted, or stay generic.
 _CLI_LOGIN_MESSAGE = (
     "Authentication failed. Please run 'az login' before using OSDU Wireline"
 )
@@ -73,7 +75,7 @@ class AzureProvider:
                 "AZURE_CLIENT_ID environment variable is required for Azure authentication"
             )
 
-        scope = get_env("OSDU_MCP_AUTH_SCOPE") or f"{client_id}/.default"
+        scope = get_setting("OSDU_AUTH_SCOPE") or f"{client_id}/.default"
         try:
             self._cached_token = self._credential.get_token(scope)
         except ClientAuthenticationError as e:

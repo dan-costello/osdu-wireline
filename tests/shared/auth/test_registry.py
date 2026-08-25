@@ -18,9 +18,9 @@ from .conftest import make_jwt
 
 # USER_TOKEN has the highest priority and needs no cloud SDK calls
 TEST_ENV = {
-    "OSDU_MCP_SERVER_URL": "https://test-osdu.com",
-    "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
-    "OSDU_MCP_USER_TOKEN": make_jwt(),
+    "OSDU_SERVER_URL": "https://test-osdu.com",
+    "OSDU_DATA_PARTITION": "test-partition",
+    "OSDU_USER_TOKEN": make_jwt(),
 }
 
 
@@ -124,11 +124,9 @@ async def test_server_starts_without_any_credentials():
     from osdu_wireline.server import app_lifespan, mcp
 
     with patch.dict(os.environ, {}, clear=True):
-        with patch("boto3.Session", side_effect=Exception("No AWS")):
-            with patch("google.auth.default", side_effect=Exception("No GCP")):
-                async with app_lifespan(mcp):
-                    with pytest.raises(OSMCPAuthError):
-                        get_auth_provider()
+        async with app_lifespan(mcp):
+            with pytest.raises(OSMCPAuthError):
+                get_auth_provider()
 
 
 async def test_lifespan_releases_the_provider_on_shutdown():
