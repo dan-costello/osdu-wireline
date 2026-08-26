@@ -151,11 +151,9 @@ async def query_seismic_datasets(
     async with SearchClient() as client:
         response = await client.search_query(
             query=query,
-            # The authority segment must be literal: a wildcard there matches
-            # nothing on the index, verified against a record known to exist.
             kind=[
-                "osdu:wks:dataset--FileCollection.Bluware.OpenVDS:*",
-                "osdu:wks:dataset--FileCollection.SEGY:*",
+                "*:wks:dataset--FileCollection.Bluware.OpenVDS:*",
+                "*:wks:dataset--FileCollection.SEGY:*",
             ],
             limit=min(1000, max(limit, len(ids))),
             offset=offset,
