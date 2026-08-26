@@ -43,8 +43,8 @@ class SearchClient(OsduClient):
 
     async def search_query(
         self,
-        query: str,
-        kind: str = "*:*:*:*",
+        query: str = "",
+        kind: str | list[str] = "*:*:*:*",
         limit: int = 50,
         offset: int = 0,
         bounding_box: BoundingBox | None = None,

@@ -37,7 +37,14 @@ from .tools.schema import (
     schema_search,
     schema_update,
 )
-from .tools.search import query_well_trajectories, query_wellbores, query_wells
+from .tools.search import (
+    query_seismic_datasets,
+    query_seismic_trace_data,
+    query_well_logs,
+    query_well_marker_sets,
+    query_well_trajectories,
+    query_wells,
+)
 from .tools.storage import (
     storage_create_update_records,
     storage_delete_record,
@@ -145,7 +152,10 @@ mcp.tool()(schema_update)
 # Register search tools
 mcp.tool()(query_wells)
 mcp.tool()(query_well_trajectories)
-mcp.tool()(query_wellbores)
+mcp.tool()(query_well_logs)
+mcp.tool()(query_well_marker_sets)
+mcp.tool()(query_seismic_trace_data)
+mcp.tool()(query_seismic_datasets)
 
 # Register storage tools
 mcp.tool()(storage_create_update_records)

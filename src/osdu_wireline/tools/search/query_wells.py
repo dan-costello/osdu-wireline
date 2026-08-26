@@ -16,7 +16,6 @@ async def query_wells(
     offset: int = 0,
 ) -> dict[str, Any]:
     """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)"""
-    # Validate parameters
 
     clauses: list[str] = []
     if country_id:
@@ -30,17 +29,11 @@ async def query_wells(
 
     query = " AND ".join(clauses) if clauses else ""
 
-    if limit > 1000:
-        limit = 1000
-
-    # Consider adding an optional argument for kind to allow different well schema versions to be searched.
-    kind = "*:wks:master-data--Well:*"
-
     async with SearchClient() as client:
         return await client.search_query(
             query=query,
-            kind=kind,
-            limit=limit,
+            kind="*:wks:master-data--Well:*",
+            limit=min(1000, limit),
             offset=offset,
             bounding_box=bounding_box,
             returnedFields=[
@@ -54,24 +47,27 @@ async def query_wells(
         )
 
 
-@handle_osdu_exceptions
-async def query_wellbores(
-    well_ids: list[str],
-) -> dict[str, Any]:
-    """Search the OSDU instance for wellbores, based on a list of well IDs. The Well ids are retreived using the query_wells function. This is not to be called directly, but by query_trajectories and other tools."""
+# Default fields returned for work-product-components hanging off a wellbore.
+_WELLBORE_CHILD_FIELDS = [
+    "id",
+    "data.Name",
+    "data.WellboreID",
+    "data.TechnicalAssurances",
+]
 
+
+async def _resolve_wellbore_ids(well_ids: list[str]) -> list[str]:
+    """Resolve a list of well IDs to their wellbore IDs."""
+
+    # Internal helper - not decorated, so the caller's handle_osdu_exceptions wraps once.
     # TODO: Consider adding arguments for field_id, technical_assurance_type_id, schema versions (other?)
-
-    query = f'data.WellID: ("${('" OR "').join(well_ids)}")'
-    kind = "*:wks:master-data--Wellbore:*"
 
     async with SearchClient() as client:
         res = await client.search_query(
-            query=query,
-            kind=kind,
+            query=f'data.WellID: ("{('" OR "').join(well_ids)}")',
+            kind="*:wks:master-data--Wellbore:*",
             limit=250,
             returnedFields=[
-                "id",
                 "id",
                 "data.FacilityName",
                 "data.GeoContexts",
@@ -80,11 +76,33 @@ async def query_wellbores(
             ],
         )
 
-        if res.get("success") and len(res.get("results", [])) > 0:
-            # return list of wellbore IDs
-            wellbore_ids = [result["id"] for result in res["results"]]
-            return {"success": True, "wellbore_ids": wellbore_ids}
+    if res.get("success") and res.get("results"):
+        return [result["id"] for result in res["results"]]
+
     raise ValueError("No wellbores found for the provided well IDs.")
+
+
+async def _query_wellbore_children(
+    well_ids: list[str],
+    kind: str,
+    returned_fields: list[str] | None = None,
+    limit: int = 250,
+) -> dict[str, Any]:
+    """Search for work-product-components attached to the wellbores of the given wells.
+
+    Internal helper shared by the trajectory, well log and marker set tools.
+    """
+    # TODO: Consider adding arguments for technical_assurance_type_id, schema versions (other?)
+
+    wellbore_ids = await _resolve_wellbore_ids(well_ids)
+
+    async with SearchClient() as client:
+        return await client.search_query(
+            query=f'data.WellboreID: ("{('" OR "').join(wellbore_ids)}")',
+            kind=kind,
+            limit=limit,
+            returnedFields=returned_fields or _WELLBORE_CHILD_FIELDS,
+        )
 
 
 @handle_osdu_exceptions
@@ -93,23 +111,28 @@ async def query_well_trajectories(
 ) -> dict[str, Any]:
     """Search the OSDU instance for trajectories, based on a list of well IDs."""
 
-    # TODO: Consider adding arguments for technical_assurance_type_id, schema versions (other?)
+    return await _query_wellbore_children(
+        well_ids, kind="*:wks:work-product-component--WellboreTrajectory:*"
+    )
 
-    wellbore_ids_result = await query_wellbores(well_ids)
-    wellbore_ids = wellbore_ids_result.get("wellbore_ids", [])
 
-    if not wellbore_ids:
-        raise ValueError("No wellbores found for the provided well IDs.")
+@handle_osdu_exceptions
+async def query_well_logs(
+    well_ids: list[str],
+) -> dict[str, Any]:
+    """Search the OSDU instance for well logs, based on a list of well IDs."""
 
-    async with SearchClient() as client:
-        return await client.search_query(
-            query=f'data.WellboreID: ("${('" OR "').join(wellbore_ids)}")',
-            kind="*:wks:work-product-component--WellboreTrajectory:*",
-            limit=250,
-            returnedFields=[
-                "id",
-                "data.Name",
-                "data.WellboreID",
-                "data.TechnicalAssurances",
-            ],
-        )
+    return await _query_wellbore_children(
+        well_ids, kind="*:wks:work-product-component--WellLog:*"
+    )
+
+
+@handle_osdu_exceptions
+async def query_well_marker_sets(
+    well_ids: list[str],
+) -> dict[str, Any]:
+    """Search the OSDU instance for marker sets (well top picks), based on a list of well IDs."""
+
+    return await _query_wellbore_children(
+        well_ids, kind="*:wks:work-product-component--WellboreMarkerSet:*"
+    )
