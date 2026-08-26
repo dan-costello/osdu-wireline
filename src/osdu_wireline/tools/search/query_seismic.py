@@ -1,11 +1,38 @@
 """Search OSDU Instance for seismic trace data and the datasets backing it."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
+from ._models import OsduData
+from ._query import normalize_record_id, quoted, wildcard_contains
+
+
+class SeismicTraceDataFields(OsduData):
+    """The fields query_seismic_trace_data reads off a SeismicTraceData record."""
+
+    spatial_field_name: ClassVar[str | None] = "spatial_area"
+
+    artefacts: Any = Field(default=None, alias="Artefacts")
+    crossline_min: float | None = Field(default=None, alias="CrosslineMin")
+    crossline_max: float | None = Field(default=None, alias="CrosslineMax")
+    inline_min: float | None = Field(default=None, alias="InlineMin")
+    inline_max: float | None = Field(default=None, alias="InlineMax")
+    datasets: list[str] = Field(default_factory=list, alias="Datasets")
+    geo_contexts: Any = Field(default=None, alias="GeoContexts")
+    name: str | None = Field(default=None, alias="Name")
+    principal_acquisition_project_id: str | None = Field(
+        default=None, alias="PrincipalAcquisitionProjectID"
+    )
+    seismic_domain_type_id: str | None = Field(
+        default=None, alias="SeismicDomainTypeID"
+    )
+    source: str | None = Field(default=None, alias="Source")
+    spatial_area: Any = Field(default=None, alias="SpatialArea.Wgs84Coordinates")
+    technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
+    trace_domain_uom: str | None = Field(default=None, alias="TraceDomainUOM")
 
 
 class FileSourceInfo(BaseModel):
@@ -19,14 +46,8 @@ class FileSourceInfo(BaseModel):
     domain: str | None = Field(default=None, alias="Domain")
 
 
-class SeismicDatasetData(BaseModel):
-    """The `data` block of a dataset--FileCollection.* record.
-
-    OSDU flattens nested properties into dotted keys when returnedFields is used,
-    so the aliases here carry the dots rather than nesting further.
-    """
-
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+class SeismicDatasetFields(OsduData):
+    """The fields query_seismic_datasets reads off a FileCollection record."""
 
     collection_path: str | None = Field(
         default=None, alias="DatasetProperties.FileCollectionPath"
@@ -35,31 +56,31 @@ class SeismicDatasetData(BaseModel):
         default_factory=list, alias="DatasetProperties.FileSourceInfos"
     )
 
-
-class SeismicDataset(BaseModel):
-    """A single search result for a seismic dataset."""
-
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
-
-    id: str | None = None
-    data: SeismicDatasetData = Field(default_factory=SeismicDatasetData)
-
-    def resolved_files(self) -> list[dict[str, Any]]:
+    def resolved_files(self, record_id: str | None) -> list[dict[str, Any]]:
         """Yield each file with its FileSource resolved against the collection path."""
 
         files: list[dict[str, Any]] = []
-        for info in self.data.file_source_infos:
+        for info in self.file_source_infos:
             if not info.file_source:
                 continue
 
             file_source = info.file_source
-            collection_path = self.data.collection_path
-            if collection_path and not file_source.startswith(collection_path):
+            if self.collection_path and not file_source.startswith(
+                self.collection_path
+            ):
                 file_source = (
-                    collection_path.rstrip("/") + "/" + file_source.lstrip("/")
+                    self.collection_path.rstrip("/") + "/" + file_source.lstrip("/")
                 )
 
-            files.append({"id": self.id, "file_source": file_source, "name": info.name})
+            files.append(
+                {
+                    "id": record_id,
+                    "file_source": file_source,
+                    "name": info.name,
+                    "file_size": info.file_size,
+                    "domain": info.domain,
+                }
+            )
 
         return files
 
@@ -79,37 +100,39 @@ async def query_seismic_trace_data(
     clauses: list[str] = []
     if country_id:
         clauses.append(
-            f'nested(data.GeoContexts, (GeoPoliticalEntityID:"{country_id}"))'
+            f"nested(data.GeoContexts, (GeoPoliticalEntityID:{quoted(country_id)}))"
         )
     if basin_id:
-        clauses.append(f'nested(data.GeoContexts, (BasinID:"{basin_id}"))')
+        clauses.append(f"nested(data.GeoContexts, (BasinID:{quoted(basin_id)}))")
     if source:
-        clauses.append(f'data.Source:"{source}"')
+        clauses.append(f"data.Source:{quoted(source)}")
     if name:
-        clauses.append(f'data.Name:"*{name}*"')  # Use wildcard search for name
+        # Unquoted: a quoted value is a phrase, in which * is a literal asterisk.
+        clauses.append(f"data.Name:({wildcard_contains(name)})")
 
     query = " AND ".join(clauses) if clauses else ""
 
     async with SearchClient() as client:
-        search_results = await client.search_query(
+        response = await client.search_query(
             query=query,
-            kind="*:wks:work-product-component--SeismicTraceData:*",
+            kind="osdu:wks:work-product-component--SeismicTraceData:*",
             limit=min(1000, limit),
             offset=offset,
             bounding_box=bounding_box,
-            returnedFields=["id", "data.Datasets", "data.Name", "data.Source"],
+            spatial_field=SeismicTraceDataFields.spatial_field(),
+            returned_fields=SeismicTraceDataFields.returned_fields(),
         )
 
-        results = []
-        for result in search_results.get("results", []):
-            item = {
-                "id": result.get("id"),
-                "name": result.get("data", {}).get("Name"),
-                "source": result.get("data", {}).get("Source"),
-                "datasets": result.get("data", {}).get("Datasets", []),
-            }
-            results.append(item)
-        return {"results": results, "total_count": search_results.get("total_count", 0)}
+    results = [
+        {
+            "id": result.get("id"),
+            **SeismicTraceDataFields.model_validate(
+                result.get("data", {})
+            ).model_dump(),
+        }
+        for result in response.get("results", [])
+    ]
+    return {"trace_data": results, "totalCount": response.get("totalCount", 0)}
 
 
 @handle_osdu_exceptions
@@ -120,26 +143,30 @@ async def query_seismic_datasets(
 ) -> dict[str, Any]:
     """Search the OSDU instance for seismic datasets, based on a list of dataset IDs."""
 
-    query = "id:(" + " OR ".join(f'"{dataset_id}"' for dataset_id in dataset_ids) + ")"
+    if not dataset_ids:
+        raise ValueError("dataset_ids must contain at least one dataset ID")
+
+    ids = [normalize_record_id(i) for i in dataset_ids]
+    query = "id:(" + " OR ".join(quoted(i) for i in ids) + ")"
     async with SearchClient() as client:
-        search_results = await client.search_query(
+        response = await client.search_query(
             query=query,
+            # The authority segment must be literal: a wildcard there matches
+            # nothing on the index, verified against a record known to exist.
             kind=[
                 "osdu:wks:dataset--FileCollection.Bluware.OpenVDS:*",
                 "osdu:wks:dataset--FileCollection.SEGY:*",
             ],
-            limit=min(1000, limit),
+            limit=min(1000, max(limit, len(ids))),
             offset=offset,
-            returnedFields=[
-                "id",
-                "data.DatasetProperties.FileCollectionPath",
-                "data.DatasetProperties.FileSourceInfos",
-            ],
+            returned_fields=SeismicDatasetFields.returned_fields(),
         )
 
     datasets = [
         file
-        for result in search_results.get("results", [])
-        for file in SeismicDataset.model_validate(result).resolved_files()
+        for result in response.get("results", [])
+        for file in SeismicDatasetFields.model_validate(
+            result.get("data", {})
+        ).resolved_files(result.get("id"))
     ]
-    return {"datasets": datasets}
+    return {"datasets": datasets, "totalCount": response.get("totalCount", 0)}

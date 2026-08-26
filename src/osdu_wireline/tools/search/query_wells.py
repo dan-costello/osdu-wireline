@@ -1,9 +1,55 @@
 """Search OSDU Instance for wells based on various criteria (geographic bounding boxes, country_id, basin_id)."""
 
-from typing import Any
+from typing import Any, ClassVar
+
+from pydantic import Field
 
 from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
+from ._models import OsduData
+from ._query import normalize_record_id, quoted
+
+
+class WellFields(OsduData):
+    """The fields query_wells reads off a master-data--Well record."""
+
+    spatial_field_name: ClassVar[str | None] = "spatial_location"
+
+    facility_name: str | None = Field(default=None, alias="FacilityName")
+    spatial_location: Any = Field(
+        default=None, alias="SpatialLocation.Wgs84Coordinates"
+    )
+    source: str | None = Field(default=None, alias="Source")
+    geo_contexts: Any = Field(default=None, alias="GeoContexts")
+    technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
+
+
+class WellboreFields(OsduData):
+    """The fields the wellbore lookup reads off a master-data--Wellbore record."""
+
+    facility_name: str | None = Field(default=None, alias="FacilityName")
+    geo_contexts: Any = Field(default=None, alias="GeoContexts")
+    well_id: str | None = Field(default=None, alias="WellID")
+    technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
+
+
+class WellboreChildFields(OsduData):
+    """The fields read off a work-product-component hanging off a wellbore."""
+
+    name: str | None = Field(default=None, alias="Name")
+    wellbore_id: str | None = Field(default=None, alias="WellboreID")
+    technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
+
+
+def _project(response: dict[str, Any], model: type[OsduData]) -> list[dict[str, Any]]:
+    """Map an OSDU response onto the given model, keeping the record id."""
+    return [
+        {
+            "id": result.get("id"),
+            **model.model_validate(result.get("data", {})).model_dump(),
+        }
+        for result in response.get("results", [])
+    ]
 
 
 @handle_osdu_exceptions
@@ -20,40 +66,30 @@ async def query_wells(
     clauses: list[str] = []
     if country_id:
         clauses.append(
-            f'nested(data.GeoContexts, (GeoPoliticalEntityID:"{country_id}"))'
+            f"nested(data.GeoContexts, (GeoPoliticalEntityID:{quoted(country_id)}))"
         )
     if basin_id:
-        clauses.append(f'nested(data.GeoContexts, (BasinID:"{basin_id}"))')
+        clauses.append(f"nested(data.GeoContexts, (BasinID:{quoted(basin_id)}))")
     if source:
-        clauses.append(f'data.Source:"{source}"')
+        clauses.append(f"data.Source:{quoted(source)}")
 
     query = " AND ".join(clauses) if clauses else ""
 
     async with SearchClient() as client:
-        return await client.search_query(
+        response = await client.search_query(
             query=query,
-            kind="*:wks:master-data--Well:*",
+            kind="osdu:wks:master-data--Well:*",
             limit=min(1000, limit),
             offset=offset,
             bounding_box=bounding_box,
-            returnedFields=[
-                "id",
-                "data.FacilityName",
-                "data.SpatialLocation.Wgs84Coordinates",
-                "data.Source",
-                "data.GeoContexts",
-                "data.TechnicalAssurances",
-            ],
+            spatial_field=WellFields.spatial_field(),
+            returned_fields=WellFields.returned_fields(),
         )
 
-
-# Default fields returned for work-product-components hanging off a wellbore.
-_WELLBORE_CHILD_FIELDS = [
-    "id",
-    "data.Name",
-    "data.WellboreID",
-    "data.TechnicalAssurances",
-]
+    return {
+        "wells": _project(response, WellFields),
+        "totalCount": response.get("totalCount", 0),
+    }
 
 
 async def _resolve_wellbore_ids(well_ids: list[str]) -> list[str]:
@@ -63,29 +99,25 @@ async def _resolve_wellbore_ids(well_ids: list[str]) -> list[str]:
     # TODO: Consider adding arguments for field_id, technical_assurance_type_id, schema versions (other?)
 
     async with SearchClient() as client:
-        res = await client.search_query(
-            query=f'data.WellID: ("{('" OR "').join(well_ids)}")',
-            kind="*:wks:master-data--Wellbore:*",
+        response = await client.search_query(
+            query=f"data.WellID: ({' OR '.join(quoted(normalize_record_id(i)) for i in well_ids)})",
+            kind="osdu:wks:master-data--Wellbore:*",
             limit=250,
-            returnedFields=[
-                "id",
-                "data.FacilityName",
-                "data.GeoContexts",
-                "data.WellID",
-                "data.TechnicalAssurances",
-            ],
+            returned_fields=WellboreFields.returned_fields(),
         )
 
-    if res.get("success") and res.get("results"):
-        return [result["id"] for result in res["results"]]
+    wellbore_ids = [
+        result["id"] for result in response.get("results", []) if result.get("id")
+    ]
+    if not wellbore_ids:
+        raise ValueError("No wellbores found for the provided well IDs.")
 
-    raise ValueError("No wellbores found for the provided well IDs.")
+    return wellbore_ids
 
 
 async def _query_wellbore_children(
     well_ids: list[str],
     kind: str,
-    returned_fields: list[str] | None = None,
     limit: int = 250,
 ) -> dict[str, Any]:
     """Search for work-product-components attached to the wellbores of the given wells.
@@ -97,12 +129,17 @@ async def _query_wellbore_children(
     wellbore_ids = await _resolve_wellbore_ids(well_ids)
 
     async with SearchClient() as client:
-        return await client.search_query(
-            query=f'data.WellboreID: ("{('" OR "').join(wellbore_ids)}")',
+        response = await client.search_query(
+            query=f"data.WellboreID: ({' OR '.join(quoted(i) for i in wellbore_ids)})",
             kind=kind,
             limit=limit,
-            returnedFields=returned_fields or _WELLBORE_CHILD_FIELDS,
+            returned_fields=WellboreChildFields.returned_fields(),
         )
+
+    return {
+        "results": _project(response, WellboreChildFields),
+        "totalCount": response.get("totalCount", 0),
+    }
 
 
 @handle_osdu_exceptions
@@ -112,7 +149,7 @@ async def query_well_trajectories(
     """Search the OSDU instance for trajectories, based on a list of well IDs."""
 
     return await _query_wellbore_children(
-        well_ids, kind="*:wks:work-product-component--WellboreTrajectory:*"
+        well_ids, kind="osdu:wks:work-product-component--WellboreTrajectory:*"
     )
 
 
@@ -123,7 +160,7 @@ async def query_well_logs(
     """Search the OSDU instance for well logs, based on a list of well IDs."""
 
     return await _query_wellbore_children(
-        well_ids, kind="*:wks:work-product-component--WellLog:*"
+        well_ids, kind="osdu:wks:work-product-component--WellLog:*"
     )
 
 
@@ -134,5 +171,5 @@ async def query_well_marker_sets(
     """Search the OSDU instance for marker sets (well top picks), based on a list of well IDs."""
 
     return await _query_wellbore_children(
-        well_ids, kind="*:wks:work-product-component--WellboreMarkerSet:*"
+        well_ids, kind="osdu:wks:work-product-component--WellboreMarkerSet:*"
     )
