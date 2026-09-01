@@ -16,23 +16,14 @@ class SeismicTraceDataFields(OsduData):
     spatial_field_name: ClassVar[str | None] = "spatial_area"
 
     artefacts: Any = Field(default=None, alias="Artefacts")
-    crossline_min: float | None = Field(default=None, alias="CrosslineMin")
-    crossline_max: float | None = Field(default=None, alias="CrosslineMax")
-    inline_min: float | None = Field(default=None, alias="InlineMin")
-    inline_max: float | None = Field(default=None, alias="InlineMax")
     datasets: list[str] = Field(default_factory=list, alias="Datasets")
     geo_contexts: Any = Field(default=None, alias="GeoContexts")
     name: str | None = Field(default=None, alias="Name")
-    principal_acquisition_project_id: str | None = Field(
-        default=None, alias="PrincipalAcquisitionProjectID"
-    )
     seismic_domain_type_id: str | None = Field(
         default=None, alias="SeismicDomainTypeID"
     )
     source: str | None = Field(default=None, alias="Source")
     spatial_area: Any = Field(default=None, alias="SpatialArea.Wgs84Coordinates")
-    technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
-    trace_domain_uom: str | None = Field(default=None, alias="TraceDomainUOM")
 
 
 class FileSourceInfo(BaseModel):
@@ -152,8 +143,8 @@ async def query_seismic_datasets(
         response = await client.search_query(
             query=query,
             kind=[
-                "*:wks:dataset--FileCollection.Bluware.OpenVDS:*",
-                "*:wks:dataset--FileCollection.SEGY:*",
+                "osdu:wks:dataset--FileCollection.Bluware.OpenVDS:*",
+                "osdu:wks:dataset--FileCollection.SEGY:*",
             ],
             limit=min(1000, max(limit, len(ids))),
             offset=offset,

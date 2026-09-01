@@ -61,7 +61,16 @@ async def query_wells(
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)"""
+    """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)
+
+    Args:
+        bounding_box (BoundingBox | None): A geographic bounding box to filter wells by location.
+        country_id (str | None): A country ID to filter wells by.
+        basin_id (str | None): A basin ID to filter wells by.
+        source (str | None): A source to filter wells by.
+        limit (int): The maximum number of wells to return (default: 50).
+        offset (int): The number of wells to skip before starting to collect the result set (default: 0).
+    """
 
     clauses: list[str] = []
     if country_id:
