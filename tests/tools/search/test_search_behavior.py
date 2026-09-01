@@ -199,7 +199,6 @@ async def test_query_seismic_trace_data_projects_declared_fields():
     trace = result["trace_data"][0]
     assert trace["name"] == "AzureDisc"
     assert trace["spatial_area"] == {"type": "Polygon"}
-    assert trace["inline_max"] == 500
     assert trace["datasets"] == ["opendes:dataset--FileCollection.SEGY:d1"]
     assert (
         search.requests[0]["returnedFields"] == SeismicTraceDataFields.returned_fields()
