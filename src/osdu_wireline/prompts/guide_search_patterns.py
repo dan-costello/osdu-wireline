@@ -18,13 +18,13 @@ OSDU kind and returns a fixed, documented set of fields - there is no generic
 query tool, so you do not compose Elasticsearch syntax by hand.
 
 ### Wells
-- **query_wells**: Find wells by bounding box, country, basin or source
+- **query_wells**: Find wells by bounding box, country, basin, field or source
 - **query_well_trajectories**: Trajectories for a list of well IDs
 - **query_well_logs**: Well logs for a list of well IDs
 - **query_well_marker_sets**: Marker sets (top picks) for a list of well IDs
 
 ### Seismic
-- **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, source or name
+- **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, field, source or name
 - **query_seismic_datasets**: Resolve dataset IDs to their file locations
 
 ## Quick Start Examples
@@ -41,14 +41,31 @@ query_wells(
 ```
 
 ### Find Wells by Geopolitical Context
+`country`, `basin` and `field` take the name, not the ID - the tool resolves it
+against the instance, matching case, aliases, and partial names. Pass a record
+ID instead when you already hold one.
 ```python
-query_wells(country_id="opendes:master-data--GeoPoliticalEntity:USA:")
-query_wells(basin_id="opendes:master-data--Basin:GulfOfMexico:", source="Public")
+query_wells(country="United States")
+query_wells(basin="Gulf of Mexico", source="Public")
+query_wells(country="Norway", field="Sleipner")
+query_wells(basin="opendes:master-data--Basin:GulfOfMexico:")
+```
+
+A name that matches nothing, or more than one record, comes back as
+`resolved_country`, `resolved_basin` or `resolved_field` with the candidates to
+choose between, and no wells - retry with one of them.
+```python
+{"wells": [], "totalCount": 0,
+ "resolved_field": {"status": "ambiguous", "input": "Sleipner",
+                    "candidates": [{"name": "Sleipner Ost", "id": "opendes:..."}],
+                    "candidate_count": 1}}
 ```
 
 ### Find Seismic Trace Data by Name
+`query_seismic_trace_data` resolves `country`, `basin` and `field` the same way.
 ```python
 query_seismic_trace_data(name="AzureDisc", limit=10)
+query_seismic_trace_data(basin="Gulf of Mexico", source="Public")
 ```
 
 ## Multi-Step Workflows
@@ -59,7 +76,7 @@ input to the next.
 ### Wells to Logs
 ```python
 # Step 1: Find wells in an area of interest
-wells = query_wells(country_id="opendes:master-data--GeoPoliticalEntity:USA:")
+wells = query_wells(country="United States")
 
 # Step 2: Fetch the logs hanging off those wells
 # (wellbore resolution happens inside the tool)

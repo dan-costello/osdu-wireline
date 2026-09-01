@@ -59,8 +59,13 @@ async def test_guide_search_patterns_includes_domain_examples():
     content = result[0]["content"]
 
     assert "bounding_box" in content
-    assert "country_id" in content
-    assert "basin_id" in content
+    # The reference filters take names, so the examples must call them by the
+    # parameter names the tool actually exposes.
+    assert 'query_wells(country="' in content
+    assert 'basin="' in content
+    assert 'field="' in content
+    assert "country_id" not in content
+    assert "basin_id" not in content
     assert "well_ids" in content
     assert "dataset_ids" in content
 

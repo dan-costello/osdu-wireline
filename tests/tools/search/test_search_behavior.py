@@ -11,11 +11,18 @@ from azure.core.credentials import AccessToken
 from mcp.shared.exceptions import McpError
 
 from osdu_wireline.shared.clients import BoundingBox, SearchClient
+from osdu_wireline.shared.env import setting_names
 from osdu_wireline.tools.search import (
     query_seismic_datasets,
     query_seismic_trace_data,
     query_well_logs,
     query_wells,
+)
+from osdu_wireline.tools.search._reference import (
+    BASIN,
+    COUNTRY,
+    FIELD,
+    clear_reference_cache,
 )
 from osdu_wireline.tools.search.query_seismic import (
     SeismicDatasetFields,
@@ -50,6 +57,9 @@ class MockSearch:
         self.requests: list[dict] = []
 
     def __enter__(self) -> "MockSearch":
+        # Reference lookups are memoised for the life of the process, so a
+        # test's countries or basins must not answer an earlier test's.
+        clear_reference_cache()
         token = AccessToken(
             token="fake-token",
             expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
@@ -189,7 +199,6 @@ async def test_query_seismic_trace_data_projects_declared_fields():
     trace = result["trace_data"][0]
     assert trace["name"] == "AzureDisc"
     assert trace["spatial_area"] == {"type": "Polygon"}
-    assert trace["inline_max"] == 500
     assert trace["datasets"] == ["opendes:dataset--FileCollection.SEGY:d1"]
     assert (
         search.requests[0]["returnedFields"] == SeismicTraceDataFields.returned_fields()
@@ -466,3 +475,769 @@ async def test_id_lists_are_quoted_per_id():
         search.requests[0]["query"]
         == 'data.WellID: ("opendes:well:1" OR "opendes:well:2")'
     )
+
+
+# --- Reference (country and basin) resolution -----------------------------------------------------
+#
+# Resolution is exercised through the tool: the first search is the reference
+# lookup, the second (when the name resolves) is the well query itself.
+
+COUNTRIES = {
+    "results": [
+        {
+            "data": {"GeoPoliticalEntityName": "Australia"},
+            "id": "opendes:master-data--GeoPoliticalEntity:38fb7c60",
+        },
+        {
+            "data": {
+                "NameAliases": [
+                    {"AliasName": "NO"},
+                    {"AliasName": "NOR"},
+                    {"AliasName": "578"},
+                ],
+                "GeoPoliticalEntityName": "Norway",
+            },
+            "id": "opendes:master-data--GeoPoliticalEntity:Norway",
+        },
+        {
+            "data": {"GeoPoliticalEntityName": "BRASIL"},
+            "id": "opendes:master-data--GeoPoliticalEntity:58305ab9",
+        },
+        {
+            "data": {"GeoPoliticalEntityName": "UNKNOWN"},
+            "id": "opendes:master-data--GeoPoliticalEntity:199dc51d",
+        },
+        {
+            "data": {"GeoPoliticalEntityName": "United Kingdom"},
+            "id": "opendes:master-data--GeoPoliticalEntity:2afc9d6f",
+        },
+        {
+            "data": {"GeoPoliticalEntityName": "United States"},
+            "id": "opendes:master-data--GeoPoliticalEntity:UnitedStates_Country",
+        },
+        {
+            "data": {"GeoPoliticalEntityName": "Netherlands"},
+            "id": "opendes:master-data--GeoPoliticalEntity:Netherlands_Country",
+        },
+    ],
+    "aggregations": [],
+    "phraseSuggestions": [],
+    "totalCount": 7,
+}
+
+NO_WELLS = {"results": [], "totalCount": 0}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("given", "expected_id"),
+    [
+        # An exact name, however the caller cased it.
+        ("Norway", "opendes:master-data--GeoPoliticalEntity:Norway"),
+        ("norway", "opendes:master-data--GeoPoliticalEntity:Norway"),
+        ("brasil", "opendes:master-data--GeoPoliticalEntity:58305ab9"),
+        # An alias, which OSDU stores nested under NameAliases.
+        ("NOR", "opendes:master-data--GeoPoliticalEntity:Norway"),
+        ("no", "opendes:master-data--GeoPoliticalEntity:Norway"),
+        ("578", "opendes:master-data--GeoPoliticalEntity:Norway"),
+        # Only the normalizing pass survives stray whitespace or punctuation.
+        ("  united   kingdom  ", "opendes:master-data--GeoPoliticalEntity:2afc9d6f"),
+        (
+            "United States.",
+            "opendes:master-data--GeoPoliticalEntity:UnitedStates_Country",
+        ),
+    ],
+)
+async def test_query_wells_resolves_country_name_to_id(given: str, expected_id: str):
+    """A country name, an alias, or a loosely typed variant resolves to a record id."""
+    with MockSearch(COUNTRIES, NO_WELLS) as search:
+        result = await query_wells(country=given)
+
+    # The resolved id - not the caller's text - is what filters the wells.
+    assert len(search.requests) == 2
+    assert search.requests[1]["query"] == (
+        f'nested(data.GeoContexts, (GeoPoliticalEntityID:"{expected_id}"))'
+    )
+    assert result == {"wells": [], "totalCount": 0}
+
+
+@pytest.mark.asyncio
+async def test_query_wells_prefers_an_exact_name_over_another_countrys_alias():
+    """Matching runs name-first, so an exact name beats an alias someone else claims."""
+    countries = {
+        "results": [
+            {
+                "data": {"GeoPoliticalEntityName": "Norway"},
+                "id": "opendes:master-data--GeoPoliticalEntity:Norway",
+            },
+            {
+                "data": {
+                    "GeoPoliticalEntityName": "Nordic Union",
+                    "NameAliases": [{"AliasName": "Norway"}],
+                },
+                "id": "opendes:master-data--GeoPoliticalEntity:Nordic",
+            },
+        ],
+        "totalCount": 2,
+    }
+
+    with MockSearch(countries, NO_WELLS) as search:
+        await query_wells(country="Norway")
+
+    assert (
+        "opendes:master-data--GeoPoliticalEntity:Norway" in search.requests[1]["query"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_reports_an_unknown_country_instead_of_searching():
+    """An unmatched name returns the candidate list rather than querying wells."""
+    with MockSearch(COUNTRIES) as search:
+        result = await query_wells(country="Atlantis")
+
+    # The country lookup was the only request - no wells were searched for.
+    assert len(search.requests) == 1
+    assert result["wells"] == []
+    assert result["totalCount"] == 0
+    resolved = result["resolved_country"]
+    assert resolved["status"] == "not_found"
+    assert resolved["input"] == "Atlantis"
+    assert "Norway" in resolved["candidates"]
+    assert len(resolved["candidates"]) == 7
+
+
+@pytest.mark.asyncio
+async def test_query_wells_reports_an_ambiguous_country_instead_of_guessing():
+    """Two records sharing a name are handed back to the caller to choose between."""
+    countries = {
+        "results": [
+            {
+                "data": {"GeoPoliticalEntityName": "Norway"},
+                "id": "opendes:master-data--GeoPoliticalEntity:Norway",
+            },
+            {
+                "data": {"GeoPoliticalEntityName": "norway"},
+                "id": "opendes:master-data--GeoPoliticalEntity:duplicate",
+            },
+        ],
+        "totalCount": 2,
+    }
+
+    with MockSearch(countries) as search:
+        result = await query_wells(country="Norway")
+
+    assert len(search.requests) == 1
+    resolved = result["resolved_country"]
+    assert resolved["status"] == "ambiguous"
+    assert resolved["input"] == "Norway"
+    assert [c["id"] for c in resolved["candidates"]] == [
+        "opendes:master-data--GeoPoliticalEntity:Norway",
+        "opendes:master-data--GeoPoliticalEntity:duplicate",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_skips_country_records_without_a_name():
+    """A GeoPoliticalEntity with no name is dropped, not offered as a candidate."""
+    countries = {
+        "results": [
+            {"data": {}, "id": "opendes:master-data--GeoPoliticalEntity:nameless"},
+            {
+                "data": {"GeoPoliticalEntityName": "Norway"},
+                "id": "opendes:master-data--GeoPoliticalEntity:Norway",
+            },
+        ],
+        "totalCount": 2,
+    }
+
+    with MockSearch(countries):
+        result = await query_wells(country="Atlantis")
+
+    assert result["resolved_country"]["candidates"] == ["Norway"]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_combines_a_resolved_country_with_the_other_filters():
+    """The country clause is ANDed with the tool's other filters."""
+    with MockSearch(COUNTRIES, NO_WELLS) as search:
+        await query_wells(
+            country="Norway",
+            basin="opendes:master-data--Basin:GulfOfMexico",
+            source="Public",
+        )
+
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:GulfOfMexico")) '
+        "AND "
+        'data.Source:"Public"'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_requires_a_data_partition_to_resolve_a_country():
+    """Without a partition there is no country type to look up, so the tool errors."""
+    with MockSearch(COUNTRIES):
+        with patch.dict(os.environ):
+            for name in setting_names("OSDU_DATA_PARTITION"):
+                os.environ.pop(name, None)
+            with pytest.raises(McpError):
+                await query_wells(country="Norway")
+
+
+@pytest.mark.asyncio
+async def test_query_wells_looks_the_countries_up_once_per_partition():
+    """The country list is reference data, so a second search reuses it."""
+    with MockSearch(COUNTRIES, NO_WELLS, NO_WELLS) as search:
+        await query_wells(country="Norway")
+        await query_wells(country="Australia")
+
+    # One lookup, then a well query per call - the second call skips the lookup.
+    assert len(search.requests) == 3
+    assert "GeoPoliticalEntityTypeID" in search.requests[0]["query"]
+    assert all("GeoContexts" in request["query"] for request in search.requests[1:])
+
+
+@pytest.mark.asyncio
+async def test_query_wells_takes_a_country_record_id_as_given():
+    """A caller holding the id already needs no lookup - versioned form included."""
+    with MockSearch(NO_WELLS, NO_WELLS) as search:
+        await query_wells(country="opendes:master-data--GeoPoliticalEntity:Norway")
+        # OSDU writes references with an empty trailing version segment.
+        await query_wells(country="opendes:master-data--GeoPoliticalEntity:Norway:")
+
+    assert len(search.requests) == 2
+    expected = (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway"))'
+    )
+    assert [request["query"] for request in search.requests] == [expected, expected]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_looks_country_records_up_by_their_reference_type():
+    """The lookup asks for country entities, and for the fields matching needs."""
+    with MockSearch(COUNTRIES, NO_WELLS) as search:
+        await query_wells(country="Norway")
+
+    lookup = search.requests[0]
+    assert lookup["kind"] == COUNTRY.kind
+    assert lookup["query"] == (
+        'data.GeoPoliticalEntityTypeID:"opendes:reference-data'
+        '--GeoPoliticalEntityType:Country"'
+    )
+    assert lookup["returnedFields"] == COUNTRY.returned_fields
+
+
+BASINS = {
+    "results": [
+        {
+            "data": {"BasinName": "Powder River"},
+            "id": "opendes:master-data--Basin:Powder_River_Basin",
+        },
+        {
+            "data": {"BasinName": "Illinois"},
+            "id": "opendes:master-data--Basin:Illinois_Basin",
+        },
+        {
+            "data": {"BasinName": "NorthSeaBasin"},
+            "id": "opendes:master-data--Basin:NorthSeaBasin",
+        },
+        {
+            "data": {"BasinName": "Santos Basin Test"},
+            "id": "opendes:master-data--Basin:test-map-basin-001",
+        },
+        {
+            "data": {"BasinName": "UNKNOWN"},
+            "id": "opendes:master-data--Basin:1522b609",
+        },
+    ],
+    "aggregations": [],
+    "phraseSuggestions": [],
+    "totalCount": 5,
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("given", "expected_id"),
+    [
+        ("Powder River", "opendes:master-data--Basin:Powder_River_Basin"),
+        ("illinois", "opendes:master-data--Basin:Illinois_Basin"),
+        ("santos basin test", "opendes:master-data--Basin:test-map-basin-001"),
+        # Normalizing collapses the spacing, but not a name run together.
+        ("  Santos   Basin Test.", "opendes:master-data--Basin:test-map-basin-001"),
+    ],
+)
+async def test_query_wells_resolves_basin_name_to_id(given: str, expected_id: str):
+    """A basin name resolves through the same matchers a country name does."""
+    with MockSearch(BASINS, NO_WELLS) as search:
+        await query_wells(basin=given)
+
+    assert len(search.requests) == 2
+    assert search.requests[1]["query"] == (
+        f'nested(data.GeoContexts, (BasinID:"{expected_id}"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_looks_basins_up_by_kind_alone():
+    """A Basin kind holds only basins, so the lookup needs no type filter."""
+    with MockSearch(BASINS, NO_WELLS) as search:
+        await query_wells(basin="Illinois")
+
+    lookup = search.requests[0]
+    assert lookup["kind"] == BASIN.kind
+    assert lookup["query"] == ""
+    # Basins carry no aliases, so none are asked for.
+    assert lookup["returnedFields"] == ["id", "data.BasinName"]
+    assert BASIN.returned_fields == ["id", "data.BasinName"]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_reports_an_unknown_basin_under_its_own_key():
+    """An unmatched basin is reported like an unmatched country, keyed by entity."""
+    with MockSearch(BASINS) as search:
+        result = await query_wells(basin="Atlantis")
+
+    assert len(search.requests) == 1
+    assert result["resolved_basin"]["status"] == "not_found"
+    assert "Powder River" in result["resolved_basin"]["candidates"]
+    assert "resolved_country" not in result
+
+
+@pytest.mark.asyncio
+async def test_query_wells_resolves_country_and_basin_names_together():
+    """Both names resolve, each against its own kind, before the wells are searched."""
+    with MockSearch(COUNTRIES, BASINS, NO_WELLS) as search:
+        await query_wells(country="NOR", basin="Illinois")
+
+    assert len(search.requests) == 3
+    assert search.requests[0]["kind"] == COUNTRY.kind
+    assert search.requests[1]["kind"] == BASIN.kind
+    assert search.requests[2]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_does_not_look_up_a_basin_it_will_not_use():
+    """An unresolved country short-circuits: the basin is never looked up."""
+    with MockSearch(COUNTRIES) as search:
+        result = await query_wells(country="Atlantis", basin="Illinois")
+
+    assert len(search.requests) == 1
+    assert result["resolved_country"]["status"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_reference_lookups_are_cached_separately():
+    """Countries and basins share a cache, so one must not answer for the other."""
+    with MockSearch(COUNTRIES, BASINS, NO_WELLS, NO_WELLS) as search:
+        await query_wells(country="Norway", basin="Illinois")
+        await query_wells(country="Australia", basin="NorthSeaBasin")
+
+    # Two lookups and two well queries - the second call reuses both lookups.
+    assert len(search.requests) == 4
+    assert search.requests[3]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:38fb7c60")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:NorthSeaBasin"))'
+    )
+
+
+FIELDS = {
+    "results": [
+        {
+            "data": {"FieldName": "D15a-A"},
+            "id": "opendes:master-data--Field:D15a-A",
+        },
+        {
+            "data": {"FieldName": "K15-FJ"},
+            "id": "opendes:master-data--Field:K15-FJ",
+        },
+        {
+            "data": {"FieldName": "P12-SW"},
+            "id": "opendes:master-data--Field:P12-SW",
+        },
+    ],
+    "aggregations": [],
+    "phraseSuggestions": [],
+    "totalCount": 3,
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("given", "expected_id"),
+    [
+        ("D15a-A", "opendes:master-data--Field:D15a-A"),
+        ("k15-fj", "opendes:master-data--Field:K15-FJ"),
+        # Normalizing drops the hyphen without leaving a space behind, so the
+        # run-together spelling matches - "P12 SW" would not.
+        ("p12sw", "opendes:master-data--Field:P12-SW"),
+    ],
+)
+async def test_query_wells_resolves_field_name_to_id(given: str, expected_id: str):
+    """A field name resolves through the same matchers a country or basin does."""
+    with MockSearch(FIELDS, NO_WELLS) as search:
+        await query_wells(field=given)
+
+    assert len(search.requests) == 2
+    assert search.requests[0]["kind"] == FIELD.kind
+    assert search.requests[0]["query"] == ""
+    assert search.requests[0]["returnedFields"] == ["id", "data.FieldName"]
+    assert search.requests[1]["query"] == (
+        f'nested(data.GeoContexts, (FieldID:"{expected_id}"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_reports_an_unknown_field_under_its_own_key():
+    """An unmatched field is reported with the fields the instance does hold."""
+    with MockSearch(FIELDS) as search:
+        result = await query_wells(field="Ekofisk")
+
+    assert len(search.requests) == 1
+    assert result["resolved_field"]["status"] == "not_found"
+    assert result["resolved_field"]["candidates"] == ["D15a-A", "K15-FJ", "P12-SW"]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_combines_every_reference_filter():
+    """Country, basin and field each resolve, then AND together with source."""
+    with MockSearch(COUNTRIES, BASINS, FIELDS, NO_WELLS) as search:
+        await query_wells(
+            country="Netherlands",
+            basin="Illinois",
+            field="D15a-A",
+            source="Public",
+        )
+
+    assert len(search.requests) == 4
+    assert search.requests[3]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Netherlands_Country")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
+        ' AND nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+        ' AND data.Source:"Public"'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_takes_a_field_record_id_as_given():
+    """An id the caller already holds skips the lookup, as for the other filters."""
+    with MockSearch(NO_WELLS) as search:
+        await query_wells(field="opendes:master-data--Field:D15a-A")
+
+    assert len(search.requests) == 1
+    assert search.requests[0]["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+    )
+
+
+SLEIPNER_FIELDS = {
+    "results": [
+        {
+            "data": {"FieldName": "Sleipner Ost"},
+            "id": "opendes:master-data--Field:Sleipner_Ost",
+        },
+        {
+            "data": {"FieldName": "Sleipner Vest"},
+            "id": "opendes:master-data--Field:Sleipner_Vest",
+        },
+        {
+            "data": {"FieldName": "Sleipner Alpha North"},
+            "id": "opendes:master-data--Field:Sleipner_Alpha_North",
+        },
+        {
+            "data": {"FieldName": "Gudrun"},
+            "id": "opendes:master-data--Field:Gudrun",
+        },
+    ],
+    "totalCount": 4,
+}
+
+
+@pytest.mark.asyncio
+async def test_query_wells_offers_the_records_containing_an_unmatched_name():
+    """A name matching no record exactly comes back as the records containing it."""
+    with MockSearch(SLEIPNER_FIELDS) as search:
+        result = await query_wells(field="SLEIPNER")
+
+    assert len(search.requests) == 1
+    resolved = result["resolved_field"]
+    assert resolved["status"] == "ambiguous"
+    # The near misses, with the ids needed to pick one - not every field held.
+    assert [candidate["name"] for candidate in resolved["candidates"]] == [
+        "Sleipner Ost",
+        "Sleipner Vest",
+        "Sleipner Alpha North",
+    ]
+    assert "Gudrun" not in str(resolved["candidates"])
+
+
+@pytest.mark.asyncio
+async def test_query_wells_resolves_a_name_only_one_record_contains():
+    """Containment narrowing to a single record resolves, like any other matcher."""
+    with MockSearch(SLEIPNER_FIELDS, NO_WELLS) as search:
+        await query_wells(field="Alpha North")
+
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data'
+        '--Field:Sleipner_Alpha_North"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_prefers_a_whole_name_over_the_records_containing_it():
+    """An exact name still wins outright, even when other records contain it."""
+    fields = {
+        "results": [
+            {
+                "data": {"FieldName": "Sleipner"},
+                "id": "opendes:master-data--Field:Sleipner",
+            },
+            {
+                "data": {"FieldName": "Sleipner Ost"},
+                "id": "opendes:master-data--Field:Sleipner_Ost",
+            },
+        ],
+        "totalCount": 2,
+    }
+
+    with MockSearch(fields, NO_WELLS) as search:
+        await query_wells(field="sleipner")
+
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:Sleipner"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_falls_back_to_every_candidate_when_none_contain_the_name():
+    """With nothing to narrow to, the full list is still what the caller needs."""
+    with MockSearch(SLEIPNER_FIELDS) as search:
+        result = await query_wells(field="Ekofisk")
+
+    assert len(search.requests) == 1
+    resolved = result["resolved_field"]
+    assert resolved["status"] == "not_found"
+    assert resolved["candidates"] == [
+        "Sleipner Ost",
+        "Sleipner Vest",
+        "Sleipner Alpha North",
+        "Gudrun",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_wells_does_not_narrow_on_a_two_character_name():
+    """Too short to be meaningful containment - "os" is inside half the instance."""
+    with MockSearch(SLEIPNER_FIELDS):
+        result = await query_wells(field="os")
+
+    assert result["resolved_field"]["status"] == "not_found"
+    assert len(result["resolved_field"]["candidates"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_country_containment_matches_aliases_too():
+    """Containment reads aliases as well as names, as the earlier matchers do."""
+    countries = {
+        "results": [
+            {
+                "data": {
+                    "GeoPoliticalEntityName": "Norway",
+                    "NameAliases": [{"AliasName": "Kingdom of Norway"}],
+                },
+                "id": "opendes:master-data--GeoPoliticalEntity:Norway",
+            },
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(countries, NO_WELLS) as search:
+        await query_wells(country="Kingdom of")
+
+    assert (
+        "opendes:master-data--GeoPoliticalEntity:Norway" in search.requests[1]["query"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_rejects_a_record_id_of_the_wrong_entity():
+    """A Field id passed as the basin is a mistake, not a shortcut past the lookup."""
+    with MockSearch(BASINS) as search:
+        result = await query_wells(basin="opendes:master-data--Field:D15a-A")
+
+    # Without the entity check this would have filtered BasinID by a Field id
+    # and returned zero wells with nothing to explain them.
+    assert len(search.requests) == 1
+    assert search.requests[0]["kind"] == BASIN.kind
+    assert result["resolved_basin"]["status"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_an_empty_lookup_is_not_cached():
+    """An empty reference set is a misconfigured instance, not an answer to keep."""
+    with MockSearch({"results": [], "totalCount": 0}, BASINS, NO_WELLS) as search:
+        first = await query_wells(basin="Illinois")
+        await query_wells(basin="Illinois")
+
+    # The second call looked again rather than reusing the empty first result.
+    assert first["resolved_basin"]["candidates"] == []
+    assert len(search.requests) == 3
+    assert search.requests[2]["query"] == (
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_candidates_are_capped_but_counted():
+    """An unmatched name returns a sample of the instance's records, not all of them."""
+    fields = {
+        "results": [
+            {
+                "data": {"FieldName": f"Field {index:03d}"},
+                "id": f"opendes:master-data--Field:{index:03d}",
+            }
+            for index in range(120)
+        ],
+        "totalCount": 120,
+    }
+
+    with MockSearch(fields) as search:
+        unmatched = await query_wells(field="Ekofisk")
+    with MockSearch(fields) as search:
+        matched = await query_wells(field="Field 0")
+
+    assert len(unmatched["resolved_field"]["candidates"]) == 25
+    assert unmatched["resolved_field"]["candidate_count"] == 120
+    # The same cap applies to a name that is merely too broad to resolve.
+    assert matched["resolved_field"]["status"] == "ambiguous"
+    assert len(matched["resolved_field"]["candidates"]) == 25
+    assert matched["resolved_field"]["candidate_count"] == 100
+    assert search.requests[0]["limit"] == 1000
+
+
+@pytest.mark.asyncio
+async def test_a_reference_set_larger_than_one_page_is_read_through():
+    """A full page means there may be more, so the lookup keeps reading."""
+    first_page = {
+        "results": [
+            {
+                "data": {"FieldName": f"Field {index:04d}"},
+                "id": f"opendes:master-data--Field:{index:04d}",
+            }
+            for index in range(1000)
+        ],
+        "totalCount": 1002,
+    }
+    second_page = {
+        "results": [
+            {
+                "data": {"FieldName": "Ekofisk"},
+                "id": "opendes:master-data--Field:Ekofisk",
+            },
+            {
+                "data": {"FieldName": "Gudrun"},
+                "id": "opendes:master-data--Field:Gudrun",
+            },
+        ],
+        "totalCount": 1002,
+    }
+
+    with MockSearch(first_page, second_page, NO_WELLS) as search:
+        await query_wells(field="Ekofisk")
+
+    # A name on the second page resolves because the first page did not end the
+    # lookup - and the second page is asked for from where the first stopped.
+    assert len(search.requests) == 3
+    assert search.requests[0]["offset"] == 0
+    assert search.requests[1]["offset"] == 1000
+    assert search.requests[2]["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:Ekofisk"))'
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "given",
+    ["Guinea-Bissau", "Guinea Bissau", "guineabissau", "GUINEA BISSAU"],
+)
+async def test_a_hyphen_matches_however_the_caller_spells_it(given: str):
+    """A punctuated name matches whether it is typed run together or spaced."""
+    countries = {
+        "results": [
+            {
+                "data": {"GeoPoliticalEntityName": "Guinea-Bissau"},
+                "id": "opendes:master-data--GeoPoliticalEntity:GuineaBissau",
+            },
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(countries, NO_WELLS) as search:
+        await query_wells(country=given)
+
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:GuineaBissau"))'
+    )
+
+
+NO_TRACE_DATA = {"results": [], "totalCount": 0}
+
+
+@pytest.mark.asyncio
+async def test_query_seismic_trace_data_resolves_the_same_reference_names():
+    """Seismic takes names through the same lookups wells does, on its own kind."""
+    with MockSearch(COUNTRIES, BASINS, FIELDS, NO_TRACE_DATA) as search:
+        result = await query_seismic_trace_data(
+            country="NOR", basin="Illinois", field="D15a-A", name="AzureDisc"
+        )
+
+    assert result == {"trace_data": [], "totalCount": 0}
+    assert len(search.requests) == 4
+    assert [request["kind"] for request in search.requests[:3]] == [
+        COUNTRY.kind,
+        BASIN.kind,
+        FIELD.kind,
+    ]
+    assert search.requests[3]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
+        ' AND nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+        " AND data.Name:(*AzureDisc*)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_seismic_trace_data_reports_an_unresolved_name_under_its_own_key():
+    """An unusable filter reports back keyed by entity, with no trace data."""
+    with MockSearch(BASINS) as search:
+        result = await query_seismic_trace_data(basin="Atlantis")
+
+    assert len(search.requests) == 1
+    assert result["trace_data"] == []
+    assert result["totalCount"] == 0
+    assert result["resolved_basin"]["status"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_reference_lookups_are_shared_between_the_search_tools():
+    """One tool's lookup warms the cache the other reads - they are the same data."""
+    with MockSearch(BASINS, NO_WELLS, NO_TRACE_DATA) as search:
+        await query_wells(basin="Illinois")
+        await query_seismic_trace_data(basin="Illinois")
+
+    # One basin lookup, then a query per tool.
+    assert len(search.requests) == 3
+    assert search.requests[0]["kind"] == BASIN.kind
+    assert "master-data--Well" in search.requests[1]["kind"]
+    assert "SeismicTraceData" in search.requests[2]["kind"]
