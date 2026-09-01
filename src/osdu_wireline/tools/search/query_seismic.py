@@ -8,6 +8,7 @@ from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
 from ._models import OsduData
 from ._query import normalize_record_id, quoted, wildcard_contains
+from ._reference import resolve_geo_context_filters, unresolved_result
 
 
 class SeismicTraceDataFields(OsduData):
@@ -79,22 +80,34 @@ class SeismicDatasetFields(OsduData):
 @handle_osdu_exceptions
 async def query_seismic_trace_data(
     bounding_box: BoundingBox | None = None,
-    country_id: str | None = None,
-    basin_id: str | None = None,
+    country: str | None = None,
+    basin: str | None = None,
+    field: str | None = None,
     source: str | None = None,
     name: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """Search the OSDU instance for seismic trace data, based on a number of criteria (geographic bounding boxes, country_id, basin_id, name)"""
+    """Search the OSDU instance for seismic trace data, based on a number of criteria (geographic bounding boxes, country, basin, field, name)
 
-    clauses: list[str] = []
-    if country_id:
-        clauses.append(
-            f"nested(data.GeoContexts, (GeoPoliticalEntityID:{quoted(country_id)}))"
-        )
-    if basin_id:
-        clauses.append(f"nested(data.GeoContexts, (BasinID:{quoted(basin_id)}))")
+    Args:
+        bounding_box (BoundingBox | None): A geographic bounding box to filter trace data by location.
+        country (str | None): A country name, alias, or record id to filter trace data by.
+        basin (str | None): A basin name or record id to filter trace data by.
+        field (str | None): A field name or record id to filter trace data by.
+        source (str | None): A source to filter trace data by.
+        name (str | None): A substring of the trace data name.
+        limit (int): The maximum number of records to return (default: 50).
+        offset (int): The number of records to skip before starting to collect the result set (default: 0).
+
+    A name that matches no record, or more than one, is reported back under
+    `resolved_country`, `resolved_basin` or `resolved_field` with the candidates
+    to choose from, rather than being searched for as typed.
+    """
+
+    clauses, unresolved = await resolve_geo_context_filters(country, basin, field)
+    if unresolved:
+        return unresolved_result("trace_data", *unresolved)
     if source:
         clauses.append(f"data.Source:{quoted(source)}")
     if name:

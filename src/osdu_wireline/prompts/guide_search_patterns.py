@@ -24,7 +24,7 @@ query tool, so you do not compose Elasticsearch syntax by hand.
 - **query_well_marker_sets**: Marker sets (top picks) for a list of well IDs
 
 ### Seismic
-- **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, source or name
+- **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, field, source or name
 - **query_seismic_datasets**: Resolve dataset IDs to their file locations
 
 ## Quick Start Examples
@@ -62,8 +62,10 @@ choose between, and no wells - retry with one of them.
 ```
 
 ### Find Seismic Trace Data by Name
+`query_seismic_trace_data` resolves `country`, `basin` and `field` the same way.
 ```python
 query_seismic_trace_data(name="AzureDisc", limit=10)
+query_seismic_trace_data(basin="Gulf of Mexico", source="Public")
 ```
 
 ## Multi-Step Workflows

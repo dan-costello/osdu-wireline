@@ -366,3 +366,36 @@ async def resolve_field_id(field_name: str) -> Ambiguous | NotFound | Resolved:
 def geo_context_clause(lookup: ReferenceLookup, record_id: str) -> str:
     """Build the nested GeoContexts clause matching records against `record_id`."""
     return f"nested(data.GeoContexts, ({lookup.context_field}:{quoted(record_id)}))"
+
+
+async def resolve_geo_context_filters(
+    country: str | None = None,
+    basin: str | None = None,
+    field: str | None = None,
+) -> tuple[list[str], tuple[ReferenceLookup, Ambiguous | NotFound] | None]:
+    """Turn the names a caller gave into GeoContexts clauses.
+
+    Returns the clauses, and the first name that did not resolve - a tool has
+    nothing to search for once one filter is unusable, so it reports that name
+    back instead of returning wells or traces the caller did not ask for.
+    """
+    clauses: list[str] = []
+    for lookup, given in ((COUNTRY, country), (BASIN, basin), (FIELD, field)):
+        if not given:
+            continue
+        resolved = await resolve_reference_id(lookup, given)
+        if not isinstance(resolved, Resolved):
+            return clauses, (lookup, resolved)
+        clauses.append(geo_context_clause(lookup, resolved.id))
+    return clauses, None
+
+
+def unresolved_result(
+    results_key: str, lookup: ReferenceLookup, resolved: Ambiguous | NotFound
+) -> dict[str, Any]:
+    """Report a name the caller has to disambiguate, in place of search results."""
+    return {
+        results_key: [],
+        "totalCount": 0,
+        f"resolved_{lookup.label}": resolved.model_dump(),
+    }

@@ -1189,3 +1189,56 @@ async def test_a_hyphen_matches_however_the_caller_spells_it(given: str):
         'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
         '--GeoPoliticalEntity:GuineaBissau"))'
     )
+
+
+NO_TRACE_DATA = {"results": [], "totalCount": 0}
+
+
+@pytest.mark.asyncio
+async def test_query_seismic_trace_data_resolves_the_same_reference_names():
+    """Seismic takes names through the same lookups wells does, on its own kind."""
+    with MockSearch(COUNTRIES, BASINS, FIELDS, NO_TRACE_DATA) as search:
+        result = await query_seismic_trace_data(
+            country="NOR", basin="Illinois", field="D15a-A", name="AzureDisc"
+        )
+
+    assert result == {"trace_data": [], "totalCount": 0}
+    assert len(search.requests) == 4
+    assert [request["kind"] for request in search.requests[:3]] == [
+        COUNTRY.kind,
+        BASIN.kind,
+        FIELD.kind,
+    ]
+    assert search.requests[3]["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway")) AND '
+        'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
+        ' AND nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+        " AND data.Name:(*AzureDisc*)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_seismic_trace_data_reports_an_unresolved_name_under_its_own_key():
+    """An unusable filter reports back keyed by entity, with no trace data."""
+    with MockSearch(BASINS) as search:
+        result = await query_seismic_trace_data(basin="Atlantis")
+
+    assert len(search.requests) == 1
+    assert result["trace_data"] == []
+    assert result["totalCount"] == 0
+    assert result["resolved_basin"]["status"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_reference_lookups_are_shared_between_the_search_tools():
+    """One tool's lookup warms the cache the other reads - they are the same data."""
+    with MockSearch(BASINS, NO_WELLS, NO_TRACE_DATA) as search:
+        await query_wells(basin="Illinois")
+        await query_seismic_trace_data(basin="Illinois")
+
+    # One basin lookup, then a query per tool.
+    assert len(search.requests) == 3
+    assert search.requests[0]["kind"] == BASIN.kind
+    assert "master-data--Well" in search.requests[1]["kind"]
+    assert "SeismicTraceData" in search.requests[2]["kind"]

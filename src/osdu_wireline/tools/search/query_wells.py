@@ -8,17 +8,7 @@ from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
 from ._models import OsduData
 from ._query import normalize_record_id, quoted
-from ._reference import (
-    BASIN,
-    COUNTRY,
-    FIELD,
-    Ambiguous,
-    NotFound,
-    ReferenceLookup,
-    Resolved,
-    geo_context_clause,
-    resolve_reference_id,
-)
+from ._reference import resolve_geo_context_filters, unresolved_result
 
 #: Wellbores read when resolving a well's children. A well with more wellbores
 #: than this cannot be resolved from a single page, so the tool refuses rather
@@ -68,17 +58,6 @@ def _project(response: dict[str, Any], model: type[OsduData]) -> list[dict[str, 
     ]
 
 
-def _unresolved(
-    lookup: ReferenceLookup, resolved: Ambiguous | NotFound
-) -> dict[str, Any]:
-    """Report a name the caller has to disambiguate, in place of a well search."""
-    return {
-        "wells": [],
-        "totalCount": 0,
-        f"resolved_{lookup.label}": resolved.model_dump(),
-    }
-
-
 @handle_osdu_exceptions
 async def query_wells(
     bounding_box: BoundingBox | None = None,
@@ -105,14 +84,9 @@ async def query_wells(
     to choose from, rather than being searched for as typed.
     """
 
-    clauses: list[str] = []
-    for lookup, given in ((COUNTRY, country), (BASIN, basin), (FIELD, field)):
-        if not given:
-            continue
-        resolved = await resolve_reference_id(lookup, given)
-        if not isinstance(resolved, Resolved):
-            return _unresolved(lookup, resolved)
-        clauses.append(geo_context_clause(lookup, resolved.id))
+    clauses, unresolved = await resolve_geo_context_filters(country, basin, field)
+    if unresolved:
+        return unresolved_result("wells", *unresolved)
     if source:
         clauses.append(f"data.Source:{quoted(source)}")
 
