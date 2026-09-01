@@ -34,6 +34,16 @@ def normalize_record_id(record_id: str) -> str:
     return record_id
 
 
+def is_record_id(value: str) -> bool:
+    """Report whether a caller-supplied value is already an OSDU record id.
+
+    Used to let a tool that normally takes a human-readable name accept the id
+    it would have resolved to. The version-qualified form counts, so that an id
+    read off another record is recognised as readily as one typed by hand.
+    """
+    return len(normalize_record_id(value).split(":")) == _RECORD_ID_SEGMENTS
+
+
 def quoted(value: str) -> str:
     """Render a term as a quoted Lucene phrase.
 

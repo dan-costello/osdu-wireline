@@ -1,4 +1,4 @@
-"""Search OSDU Instance for wells based on various criteria (geographic bounding boxes, country_id, basin_id)."""
+"""Search OSDU Instance for wells based on various criteria (geographic bounding boxes, country, basin, field)."""
 
 from typing import Any, ClassVar
 
@@ -8,6 +8,22 @@ from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
 from ._models import OsduData
 from ._query import normalize_record_id, quoted
+from ._reference import (
+    BASIN,
+    COUNTRY,
+    FIELD,
+    Ambiguous,
+    NotFound,
+    ReferenceLookup,
+    Resolved,
+    geo_context_clause,
+    resolve_reference_id,
+)
+
+#: Wellbores read when resolving a well's children. A well with more wellbores
+#: than this cannot be resolved from a single page, so the tool refuses rather
+#: than answering from part of it.
+_WELLBORE_LIMIT = 250
 
 
 class WellFields(OsduData):
@@ -52,33 +68,51 @@ def _project(response: dict[str, Any], model: type[OsduData]) -> list[dict[str, 
     ]
 
 
+def _unresolved(
+    lookup: ReferenceLookup, resolved: Ambiguous | NotFound
+) -> dict[str, Any]:
+    """Report a name the caller has to disambiguate, in place of a well search."""
+    return {
+        "wells": [],
+        "totalCount": 0,
+        f"resolved_{lookup.label}": resolved.model_dump(),
+    }
+
+
 @handle_osdu_exceptions
 async def query_wells(
     bounding_box: BoundingBox | None = None,
-    country_id: str | None = None,
-    basin_id: str | None = None,
+    country: str | None = None,
+    basin: str | None = None,
+    field: str | None = None,
     source: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country_id, basin_id)
+    """Search the OSDU instance for wells, based on a number of criteria (geographic bounding boxes, country, basin, field, source)
 
     Args:
         bounding_box (BoundingBox | None): A geographic bounding box to filter wells by location.
-        country_id (str | None): A country ID to filter wells by.
-        basin_id (str | None): A basin ID to filter wells by.
+        country (str | None): A country name, alias, or record id to filter wells by.
+        basin (str | None): A basin name or record id to filter wells by.
+        field (str | None): A field name or record id to filter wells by.
         source (str | None): A source to filter wells by.
         limit (int): The maximum number of wells to return (default: 50).
         offset (int): The number of wells to skip before starting to collect the result set (default: 0).
+
+    A name that matches no record, or more than one, is reported back under
+    `resolved_country`, `resolved_basin` or `resolved_field` with the candidates
+    to choose from, rather than being searched for as typed.
     """
 
     clauses: list[str] = []
-    if country_id:
-        clauses.append(
-            f"nested(data.GeoContexts, (GeoPoliticalEntityID:{quoted(country_id)}))"
-        )
-    if basin_id:
-        clauses.append(f"nested(data.GeoContexts, (BasinID:{quoted(basin_id)}))")
+    for lookup, given in ((COUNTRY, country), (BASIN, basin), (FIELD, field)):
+        if not given:
+            continue
+        resolved = await resolve_reference_id(lookup, given)
+        if not isinstance(resolved, Resolved):
+            return _unresolved(lookup, resolved)
+        clauses.append(geo_context_clause(lookup, resolved.id))
     if source:
         clauses.append(f"data.Source:{quoted(source)}")
 
@@ -111,7 +145,7 @@ async def _resolve_wellbore_ids(well_ids: list[str]) -> list[str]:
         response = await client.search_query(
             query=f"data.WellID: ({' OR '.join(quoted(normalize_record_id(i)) for i in well_ids)})",
             kind="osdu:wks:master-data--Wellbore:*",
-            limit=250,
+            limit=_WELLBORE_LIMIT,
             returned_fields=WellboreFields.returned_fields(),
         )
 
@@ -121,6 +155,15 @@ async def _resolve_wellbore_ids(well_ids: list[str]) -> list[str]:
     if not wellbore_ids:
         raise ValueError("No wellbores found for the provided well IDs.")
 
+    # The search caps the page at _WELLBORE_LIMIT, so a larger total means the
+    # children below would be resolved from an arbitrary subset of the
+    # wellbores. Say so rather than return a quietly partial answer.
+    total = response.get("totalCount", len(wellbore_ids))
+    if total > _WELLBORE_LIMIT:
+        raise ValueError(
+            f"Too many wellbores found for the provided well IDs: {total}. "
+            f"Limit is {_WELLBORE_LIMIT}. Narrow the well IDs and try again."
+        )
     return wellbore_ids
 
 
