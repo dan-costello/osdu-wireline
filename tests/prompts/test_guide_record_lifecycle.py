@@ -86,8 +86,8 @@ async def test_guide_record_lifecycle_includes_all_relevant_tools():
     assert "storage_list_record_versions" in content
     assert "storage_delete_record" in content
 
-    # Verify search service tools
-    assert "search_query" in content
+    # Verify search-index validation now goes through storage tools
+    assert "storage_query_records_by_kind" in content
 
     # Verify foundation tools
     assert "health_check" in content

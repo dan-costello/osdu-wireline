@@ -25,10 +25,16 @@ class BoundingBox(BaseModel):
             raise ValueError("min_longitude must be <= max_longitude")
         return self
 
-    def to_spatial_filter(self) -> dict[str, Any]:
-        """Convert the bounding box to a spatial filter dictionary for OSDU Search API."""
+    def to_spatial_filter(self, field: str) -> dict[str, Any]:
+        """Convert the bounding box to a spatial filter dictionary for OSDU Search API.
+
+        `field` is required: geometry lives at a different path per kind
+        (`data.SpatialLocation.Wgs84Coordinates` on a well,
+        `data.SpatialArea.Wgs84Coordinates` on seismic trace data), and a default
+        here would silently filter one kind on another kind's field.
+        """
         return {
-            "field": "data.SpatialLocation.Wgs84Coordinates",
+            "field": field,
             "byBoundingBox": {
                 "topLeft": {"lat": self.max_latitude, "lon": self.min_longitude},
                 "bottomRight": {"lat": self.min_latitude, "lon": self.max_longitude},
@@ -37,25 +43,48 @@ class BoundingBox(BaseModel):
 
 
 class SearchClient(OsduClient):
-    """Client for OSDU Search service operations."""
+    """Client for OSDU Search service operations.
+
+    This client is deliberately a thin transport: it returns the OSDU response
+    unchanged. Deciding which fields to ask for and how to shape them is the job
+    of the individual MCP tool, which owns a typed model for the kind it queries.
+    """
 
     service = OSMCPService.SEARCH
 
     async def search_query(
         self,
-        query: str,
-        kind: str = "*:*:*:*",
+        *,
+        kind: str | list[str],
+        returned_fields: list[str],
+        query: str = "",
         limit: int = 50,
         offset: int = 0,
         bounding_box: BoundingBox | None = None,
-        returnedFields: list[str] | None = None,
+        spatial_field: str | None = None,
     ) -> dict[str, Any]:
-        """Execute general search query."""
-        payload = {"kind": kind, "query": query, "limit": limit, "offset": offset}
-        if returnedFields:
-            payload["returnedFields"] = returnedFields
-        if bounding_box:
-            payload["spatialFilter"] = bounding_box.to_spatial_filter()
+        """Execute a search query and return the OSDU response unchanged.
+
+        Arguments are keyword-only so that no caller can search without stating
+        both the kind it expects and the fields it intends to read. A
+        `bounding_box` must be accompanied by the `spatial_field` its kind stores
+        geometry in.
+        """
+        if not returned_fields:
+            returned_fields = []
+
+        if bounding_box and not spatial_field:
+            raise ValueError("spatial_field is required when filtering by bounding_box")
+
+        payload: dict[str, Any] = {
+            "kind": kind,
+            "query": query,
+            "limit": limit,
+            "offset": offset,
+            "returnedFields": returned_fields,
+        }
+        if bounding_box and spatial_field:
+            payload["spatialFilter"] = bounding_box.to_spatial_filter(spatial_field)
 
         logger.info(
             f"Executing search query: {query}",
@@ -70,85 +99,4 @@ class SearchClient(OsduClient):
         response = await self.post("/query", json=payload)
 
         logger.debug(f"Search query response: {response}")
-        return self._standardize_response(response, query, returnedFields)
-
-    async def search_by_id(self, record_id: str, limit: int = 10) -> dict[str, Any]:
-        """Execute ID-specific search."""
-        query = f'id:("{record_id}")'
-        payload = {"kind": "*:*:*:*", "query": query, "limit": limit}
-
-        logger.info(
-            f"Executing ID search: {record_id}",
-            extra={"record_id": record_id, "operation": "search_by_id"},
-        )
-
-        response = await self.post("/query", json=payload)
-        return self._standardize_response(response, query)
-
-    async def search_by_kind(
-        self,
-        kind: str,
-        limit: int = 100,
-        offset: int = 0,
-        returnedFields: list[str] | None = None,
-    ) -> dict[str, Any]:
-        """Execute kind-specific search."""
-        payload = {"kind": kind, "query": "", "limit": limit, "offset": offset}
-        if returnedFields:
-            payload["returnedFields"] = returnedFields
-
-        logger.info(
-            f"Executing kind search: {kind}", {**payload, "operation": "search_by_kind"}
-        )
-
-        response = await self.post("/query", json=payload)
-        return self._standardize_response(response, f"kind:{kind}", returnedFields)
-
-    def _standardize_response(
-        self,
-        osdu_response: dict[str, Any],
-        query: str,
-        returned_fields: list[str] | None = None,
-    ) -> dict[str, Any]:
-        """Convert OSDU Search API response to MCP format."""
-        returned_fields_set = set(returned_fields or [])
-
-        def _project_result(result: dict[str, Any]) -> dict[str, Any]:
-            if not returned_fields_set:
-                simplified_result: dict[str, Any] = {
-                    "id": result.get("id"),
-                    "kind": result.get("kind"),
-                    "data": result.get("data", {}),
-                    "createTime": result.get("createTime"),
-                }
-                if "version" in result:
-                    simplified_result["version"] = result["version"]
-                return simplified_result
-
-            simplified_result = {}
-            for field_name in returned_fields_set:
-                if field_name in result:
-                    simplified_result[field_name] = result[field_name]
-                elif field_name == "data" and "data" in result:
-                    simplified_result["data"] = result["data"]
-
-            if "id" in result and "id" not in simplified_result:
-                simplified_result["id"] = result["id"]
-
-            return simplified_result
-
-        # Filter OSDU response to include only essential fields for AI consumption
-        simplified_results = [
-            _project_result(result) for result in osdu_response.get("results", [])
-        ]
-
-        return {
-            "success": True,
-            "results": simplified_results,
-            "totalCount": osdu_response.get("totalCount", 0),
-            "searchMeta": {
-                "query_executed": query,
-                "execution_time_ms": osdu_response.get("took", 0),
-            },
-            "partition": self._data_partition,
-        }
+        return response

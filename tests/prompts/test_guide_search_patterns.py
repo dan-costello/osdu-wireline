@@ -3,6 +3,7 @@
 import pytest
 
 from osdu_wireline.prompts import guide_search_patterns
+from osdu_wireline.tools import search as search_tools
 
 
 @pytest.mark.asyncio
@@ -23,53 +24,57 @@ async def test_guide_search_patterns_contains_key_sections():
     result = await guide_search_patterns()
     content = result[0]["content"]
 
-    # Check for main sections
     assert "Available Search Tools" in content
     assert "Quick Start Examples" in content
-    assert "Common Query Patterns" in content
     assert "Multi-Step Workflows" in content
+    assert "Response Shapes" in content
     assert "Performance Tips" in content
 
-    # Check for tool names
-    assert "search_query" in content
-    assert "search_by_id" in content
-    assert "search_by_kind" in content
-
-    # Check for example patterns
-    assert "Boolean Operators" in content
-    assert "Wildcards" in content
-    assert "Range Queries" in content
-
 
 @pytest.mark.asyncio
-async def test_guide_search_patterns_includes_elasticsearch_examples():
-    """Test that the prompt includes Elasticsearch query examples."""
+async def test_guide_search_patterns_documents_every_registered_tool():
+    """The prompt must describe each search tool the package actually exports."""
     result = await guide_search_patterns()
     content = result[0]["content"]
 
-    # Check for Elasticsearch syntax examples
-    assert "data.UWI" in content
-    assert "AND" in content
-    assert "OR" in content
-    assert "well*" in content
-    assert "[2020-01-01 TO 2023-12-31]" in content
+    for tool in search_tools.__all__:
+        assert tool in content, f"{tool} is exported but undocumented in the prompt"
 
 
 @pytest.mark.asyncio
-async def test_guide_search_patterns_includes_osdu_patterns():
-    """Test that the prompt includes OSDU-specific patterns."""
+async def test_guide_search_patterns_omits_removed_generic_tools():
+    """The generic query tools were removed; the prompt must not advertise them."""
     result = await guide_search_patterns()
     content = result[0]["content"]
 
-    # Check for OSDU kind patterns
-    assert "*:osdu:well:*" in content
-    assert "*:*:*:*" in content
-    assert "opendes:osdu:wellbore:1.0.0" in content
+    assert "search_query(" not in content
+    assert "search_by_id(" not in content
+    assert "search_by_kind(" not in content
 
-    # Check for common OSDU fields
-    assert "data.Name" in content
-    assert "data.SpudDate" in content
-    assert "createTime" in content
+
+@pytest.mark.asyncio
+async def test_guide_search_patterns_includes_domain_examples():
+    """Test that the prompt includes runnable examples of the typed tools."""
+    result = await guide_search_patterns()
+    content = result[0]["content"]
+
+    assert "bounding_box" in content
+    assert "country_id" in content
+    assert "basin_id" in content
+    assert "well_ids" in content
+    assert "dataset_ids" in content
+
+
+@pytest.mark.asyncio
+async def test_guide_search_patterns_documents_response_shapes():
+    """Test that the prompt states what each tool returns."""
+    result = await guide_search_patterns()
+    content = result[0]["content"]
+
+    assert "totalCount" in content
+    assert '"wells"' in content
+    assert '"trace_data"' in content
+    assert '"datasets"' in content
 
 
 @pytest.mark.asyncio
@@ -78,12 +83,6 @@ async def test_guide_search_patterns_includes_workflows():
     result = await guide_search_patterns()
     content = result[0]["content"]
 
-    # Check for workflow steps
-    assert "Explore Data" in content
-    assert "Focus Search" in content
-    assert "Field Discovery" in content
-    assert "Refine Query" in content
-
-    # Check for discovery workflow examples
-    assert "search_by_kind(kind=" in content
+    assert "Wells to Logs" in content
+    assert "Seismic Trace Data to Files" in content
     assert "limit=" in content

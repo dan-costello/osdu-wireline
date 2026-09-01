@@ -429,21 +429,25 @@ storage_create_update_records(
 
 **Wait Period**: Allow 30-60 seconds for search indexing to complete
 
-1. **Search by Record ID**
-   **MCP Tool**: `search_by_id`
+1. **Retrieve the Record by ID**
+   **MCP Tool**: `storage_get_record`
    ```
-   search_by_id(id="[record-id-from-step-3]")
+   storage_get_record(id="[record-id-from-step-3]")
    ```
 
-2. **Search by Data Content**
-   **MCP Tool**: `search_query`
+2. **List Records of the Same Kind**
+   **MCP Tool**: `storage_query_records_by_kind`
    ```
-   search_query(
-     query="data.ID:(\"qatest-lifecycle-20241219\")",
+   storage_query_records_by_kind(
      kind="osdu:wks:reference-data--ProcessingParameterType:1.0.0",
      limit=10
    )
    ```
+
+**Note**: This server exposes only typed, domain-specific search tools (wells and
+seismic), so an arbitrary record cannot be validated through the search index.
+Storage retrieval confirms the record exists; index visibility is only observable
+for the kinds those domain tools cover.
 
 3. **Update Asset Dashboard with Search Status**
 
@@ -492,17 +496,14 @@ storage_create_update_records(
    - Record size/content matches your test data
 
 2. **Check Legal Tag Usage** (Critical for Shared Resources)
-   **MCP Tool**: `search_query`
+   **MCP Tool**: `legaltag_get`
    ```
-   search_query(
-     query="legal.legaltags:([your-legal-tag-name])",
-     kind="*:*:*:*",
-     limit=50
-   )
+   legaltag_get(name="[your-legal-tag-name]")
    ```
-   **Verify**: How many records use this legal tag?
-   - If > 1 result: Legal tag is shared, DO NOT DELETE
-   - If = 1 result: Only your test record uses it, safe to delete
+   **⚠️ Verify manually**: There is no generic cross-kind search tool on this
+   server, so usage of a legal tag cannot be counted directly. Treat any legal
+   tag you did not create in this session as shared and DO NOT DELETE it. Only
+   delete a legal tag you created for this workflow.
 
 3. **Review Asset Summary** (From Step 4 Dashboard)
    Review your complete asset dashboard before proceeding

@@ -37,7 +37,14 @@ from .tools.schema import (
     schema_search,
     schema_update,
 )
-from .tools.search import query_well_trajectories, query_wellbores, query_wells
+from .tools.search import (
+    query_seismic_datasets,
+    query_seismic_trace_data,
+    query_well_logs,
+    query_well_marker_sets,
+    query_well_trajectories,
+    query_wells,
+)
 from .tools.storage import (
     storage_create_update_records,
     storage_delete_record,
@@ -116,43 +123,46 @@ mcp.prompt()(guide_record_lifecycle)
 mcp.tool()(health_check)
 
 # Register partition tools
-mcp.tool()(partition_list)
-mcp.tool()(partition_get)
-mcp.tool()(partition_create)
-mcp.tool()(partition_update)
-mcp.tool()(partition_delete)
+# mcp.tool()(partition_list)
+# mcp.tool()(partition_get)
+# mcp.tool()(partition_create)
+# mcp.tool()(partition_update)
+# mcp.tool()(partition_delete)
 
 # Register entitlements tools
-mcp.tool()(entitlements_mine)
+# mcp.tool()(entitlements_mine)
 
 # Register legal tools
-mcp.tool()(legaltag_list)
-mcp.tool()(legaltag_get)
-mcp.tool()(legaltag_get_properties)
-mcp.tool()(legaltag_search)
-mcp.tool()(legaltag_batch_retrieve)
-mcp.tool()(legaltag_create)
-mcp.tool()(legaltag_update)
-mcp.tool()(legaltag_delete)
+# mcp.tool()(legaltag_list)
+# mcp.tool()(legaltag_get)
+# mcp.tool()(legaltag_get_properties)
+# mcp.tool()(legaltag_search)
+# mcp.tool()(legaltag_batch_retrieve)
+# mcp.tool()(legaltag_create)
+# mcp.tool()(legaltag_update)
+# mcp.tool()(legaltag_delete)
 
 # Register schema tools
-mcp.tool()(schema_list)
-mcp.tool()(schema_get)
-mcp.tool()(schema_search)
-mcp.tool()(schema_create)
-mcp.tool()(schema_update)
+# mcp.tool()(schema_list)
+# mcp.tool()(schema_get)
+# mcp.tool()(schema_search)
+# mcp.tool()(schema_create)
+# mcp.tool()(schema_update)
 
 # Register search tools
 mcp.tool()(query_wells)
 mcp.tool()(query_well_trajectories)
-mcp.tool()(query_wellbores)
+mcp.tool()(query_well_logs)
+mcp.tool()(query_well_marker_sets)
+mcp.tool()(query_seismic_trace_data)
+mcp.tool()(query_seismic_datasets)
 
 # Register storage tools
-mcp.tool()(storage_create_update_records)
-mcp.tool()(storage_get_record)
-mcp.tool()(storage_get_record_version)
-mcp.tool()(storage_list_record_versions)
-mcp.tool()(storage_query_records_by_kind)
-mcp.tool()(storage_fetch_records)
-mcp.tool()(storage_delete_record)
-mcp.tool()(storage_purge_record)
+# mcp.tool()(storage_create_update_records)
+# mcp.tool()(storage_get_record)
+# mcp.tool()(storage_get_record_version)
+# mcp.tool()(storage_list_record_versions)
+# mcp.tool()(storage_query_records_by_kind)
+# mcp.tool()(storage_fetch_records)
+# mcp.tool()(storage_delete_record)
+# mcp.tool()(storage_purge_record)
