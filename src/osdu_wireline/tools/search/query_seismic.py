@@ -105,9 +105,16 @@ async def query_seismic_trace_data(
     to choose from, rather than being searched for as typed.
     """
 
-    clauses, unresolved = await resolve_geo_context_filters(country, basin, field)
-    if unresolved:
-        return unresolved_result("trace_data", *unresolved)
+    # UNVERIFIED: `field` is filtered here as a GeoContexts property of the
+    # trace data itself. On the well hierarchy FieldID turned out to be recorded
+    # only on master-data--Wellbore, which is why query_wells resolves it
+    # through a wellbore search. Whether SeismicTraceData carries FieldID has
+    # not been checked against real data; if `field` returns nothing here, this
+    # is the same bug.
+    filters = await resolve_geo_context_filters(country, basin, field)
+    if filters.unresolved:
+        return unresolved_result("trace_data", *filters.unresolved)
+    clauses = filters.clauses
     if source:
         clauses.append(f"data.Source:{quoted(source)}")
     if name:
@@ -136,7 +143,11 @@ async def query_seismic_trace_data(
         }
         for result in response.get("results", [])
     ]
-    return {"trace_data": results, "totalCount": response.get("totalCount", 0)}
+    return {
+        "trace_data": results,
+        "totalCount": response.get("totalCount", 0),
+        **filters.reports,
+    }
 
 
 @handle_osdu_exceptions

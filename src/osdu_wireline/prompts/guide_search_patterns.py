@@ -19,9 +19,9 @@ query tool, so you do not compose Elasticsearch syntax by hand.
 
 ### Wells
 - **query_wells**: Find wells by bounding box, country, basin, field or source
-- **query_well_trajectories**: Trajectories for a list of well IDs
-- **query_well_logs**: Well logs for a list of well IDs
-- **query_well_marker_sets**: Marker sets for a list of well IDs, with the top picks themselves
+- **query_well_trajectories**: Trajectories for a list of well IDs, a field, or both
+- **query_well_logs**: Well logs for a list of well IDs, a field, or both
+- **query_well_marker_sets**: Marker sets for a list of well IDs, a field, or both, with the top picks themselves
 
 ### Seismic
 - **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, field, source or name
@@ -51,15 +51,38 @@ query_wells(country="Norway", field="Sleipner")
 query_wells(basin="opendes:master-data--Basin:GulfOfMexico:")
 ```
 
-A name that matches nothing, or more than one record, comes back as
-`resolved_country`, `resolved_basin` or `resolved_field` with the candidates to
-choose between, and no wells - retry with one of them.
+`country` and `basin` are recorded on the well itself. `field` is not - it is
+recorded on the wellbore, so the tool resolves it by finding the wellbores in
+that field and returning the wells they hang off. This is transparent, but it
+means a field filter costs an extra search and cannot be combined with a very
+large result set.
+
+A name matching more than one record is handled two ways, and `resolved_country`,
+`resolved_basin` or `resolved_field` tells you which.
+
+**Five candidates or fewer: all of them are searched**, and the results are the
+union. The candidates come back alongside real results so you can see what was
+covered - do not re-run the search per candidate, it has already been done.
+```python
+query_wells(field="Sleipner")
+{"wells": [...], "totalCount": 42,
+ "resolved_field": {"status": "ambiguous", "input": "Sleipner",
+                    "candidates": [{"name": "Sleipner Ost", "id": "opendes:..."},
+                                   {"name": "Sleipner Vest", "id": "opendes:..."}],
+                    "candidate_count": 2}}
+```
+
+**More than five, or no match at all: nothing is searched.** The candidates come
+back with an empty result - retry with one of them, or with a longer name.
 ```python
 {"wells": [], "totalCount": 0,
- "resolved_field": {"status": "ambiguous", "input": "Sleipner",
-                    "candidates": [{"name": "Sleipner Ost", "id": "opendes:..."}],
-                    "candidate_count": 1}}
+ "resolved_field": {"status": "not_found", "input": "Atlantis",
+                    "candidates": ["Sleipner Ost", "Gudrun"],
+                    "candidate_count": 2}}
 ```
+
+Read `totalCount` to tell the two apart: an ambiguous name that was searched has
+results, one that was not is empty.
 
 ### Find Seismic Trace Data by Name
 `query_seismic_trace_data` resolves `country`, `basin` and `field` the same way.
@@ -81,6 +104,15 @@ wells = query_wells(country="United States")
 # Step 2: Fetch the logs hanging off those wells
 # (wellbore resolution happens inside the tool)
 query_well_logs(well_ids=[well["id"] for well in wells["wells"]])
+```
+
+### A Whole Field in One Call
+The wellbore-child tools take `field` directly, so there is no need to fetch
+the wells first. Give both to narrow to the wellbores that are in the field
+*and* hang off those wells.
+```python
+query_well_marker_sets(field="Sleipner Ost")
+query_well_logs(field="Sleipner Ost", well_ids=["opendes:master-data--Well:123"])
 ```
 
 ### Seismic Trace Data to Files

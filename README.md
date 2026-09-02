@@ -127,9 +127,9 @@ AWS does not accept, and neither had ever been exercised against a live platform
 Typed, domain-specific tools. Each targets a single OSDU kind and returns a
 declared set of fields.
 - **query_wells**: Find wells by bounding box, country, basin or source
-- **query_well_trajectories**: Trajectories for a list of well IDs
-- **query_well_logs**: Well logs for a list of well IDs
-- **query_well_marker_sets**: Marker sets for a list of well IDs, including the top picks themselves
+- **query_well_trajectories**: Trajectories for a list of well IDs, a field, or both
+- **query_well_logs**: Well logs for a list of well IDs, a field, or both
+- **query_well_marker_sets**: Marker sets for a list of well IDs, a field, or both, including the top picks themselves
 - **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, source or name
 - **query_seismic_datasets**: Resolve dataset IDs to their file locations
 

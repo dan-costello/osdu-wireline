@@ -17,6 +17,7 @@ from osdu_wireline.tools.search import (
     query_seismic_trace_data,
     query_well_logs,
     query_well_marker_sets,
+    query_well_trajectories,
     query_wells,
 )
 from osdu_wireline.tools.search._reference import (
@@ -32,6 +33,7 @@ from osdu_wireline.tools.search.query_seismic import (
 from osdu_wireline.tools.search.query_wells import (
     MarkerSetFields,
     WellboreChildFields,
+    WellboreRefFields,
     WellFields,
 )
 from tests.conftest import AZURE_CREDENTIAL
@@ -44,6 +46,23 @@ GULF_OF_MEXICO = BoundingBox(
 )
 
 SEARCH_URL = "https://test.osdu.com/api/search/v2/query"
+
+WELLBORE_KIND = "osdu:wks:master-data--Wellbore:*"
+
+
+def wellbores(*well_ids: str, total: int | None = None) -> dict:
+    """A wellbore search response: one wellbore hanging off each well id."""
+    return {
+        "results": [
+            {
+                "id": f"opendes:master-data--Wellbore:wb{index}",
+                "data": {"WellID": well_id},
+            }
+            for index, well_id in enumerate(well_ids)
+        ],
+        "totalCount": len(well_ids) if total is None else total,
+    }
+
 
 TEST_ENV = {
     "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
@@ -291,6 +310,90 @@ async def test_query_well_logs_errors_when_no_wellbores():
     with MockSearch({"results": [], "totalCount": 0}):
         with pytest.raises(McpError):
             await query_well_logs(well_ids=["opendes:master-data--Well:123"])
+
+
+@pytest.mark.asyncio
+async def test_a_child_tool_takes_a_field_instead_of_well_ids():
+    """A field selects the wellbores directly - no well IDs needed to get there."""
+    found = wellbores("opendes:master-data--Well:1")
+    marker_sets = {
+        "results": [
+            {
+                "id": "opendes:work-product-component--WellboreMarkerSet:m1",
+                "data": {"Markers": [{"MarkerName": "B1"}]},
+            }
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(FIELDS, found, marker_sets) as search:
+        result = await query_well_marker_sets(field="D15a-A")
+
+    assert result["results"][0]["markers"][0]["marker_name"] == "B1"
+    assert len(search.requests) == 3
+
+    # The field narrows the wellbores; no well IDs were given, so none are asked for.
+    wellbore_search = search.requests[1]
+    assert wellbore_search["kind"] == WELLBORE_KIND
+    assert wellbore_search["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+    )
+    assert "data.WellID" not in wellbore_search["query"]
+
+    # The components carry no field of their own, so they are found by wellbore.
+    assert search.requests[2]["query"] == (
+        'data.WellboreID: ("opendes:master-data--Wellbore:wb0")'
+    )
+
+
+@pytest.mark.asyncio
+async def test_well_ids_and_a_field_narrow_to_the_wellbores_that_are_both():
+    """Given both, the wellbore search ANDs them rather than picking one."""
+    found = wellbores("opendes:master-data--Well:1")
+
+    with MockSearch(FIELDS, found, {"results": [], "totalCount": 0}) as search:
+        await query_well_logs(well_ids=["opendes:master-data--Well:1"], field="D15a-A")
+
+    assert search.requests[1]["query"] == (
+        'data.WellID: ("opendes:master-data--Well:1") AND '
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_child_tool_given_neither_filter_is_an_error():
+    """An unfiltered child search would return an arbitrary slice of the instance."""
+    with pytest.raises(McpError):
+        await query_well_trajectories()
+
+
+@pytest.mark.asyncio
+async def test_a_child_tool_merges_a_short_candidate_list_too():
+    """The child tools resolve a field through the same merge the well search does."""
+    found = wellbores("opendes:master-data--Well:1")
+
+    with MockSearch(SLEIPNER_FIELDS, found, {"results": [], "totalCount": 0}) as search:
+        result = await query_well_logs(field="SLEIPNER")
+
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (FieldID:("opendes:master-data--Field:Sleipner_Ost"'
+        ' OR "opendes:master-data--Field:Sleipner_Vest"'
+        ' OR "opendes:master-data--Field:Sleipner_Alpha_North")))'
+    )
+    assert result["resolved_field"]["status"] == "ambiguous"
+
+
+@pytest.mark.asyncio
+async def test_a_child_tool_reports_an_unresolved_field_instead_of_searching():
+    """An unusable field is handed back the way query_wells hands one back."""
+    with MockSearch(FIELDS) as search:
+        result = await query_well_marker_sets(field="Ekofisk")
+
+    # The lookup was the only request - no wellbores, no marker sets.
+    assert len(search.requests) == 1
+    assert result["results"] == []
+    assert result["totalCount"] == 0
+    assert result["resolved_field"]["status"] == "not_found"
 
 
 @pytest.mark.asyncio
@@ -727,8 +830,13 @@ async def test_query_wells_reports_an_unknown_country_instead_of_searching():
 
 
 @pytest.mark.asyncio
-async def test_query_wells_reports_an_ambiguous_country_instead_of_guessing():
-    """Two records sharing a name are handed back to the caller to choose between."""
+async def test_a_short_candidate_list_is_searched_rather_than_handed_back():
+    """Two records sharing a name are searched together, and reported as both.
+
+    A caller given the pair just runs both and merges, so the search does that
+    itself - the candidates still come back, so the caller can see what it
+    covered.
+    """
     countries = {
         "results": [
             {
@@ -742,11 +850,24 @@ async def test_query_wells_reports_an_ambiguous_country_instead_of_guessing():
         ],
         "totalCount": 2,
     }
+    wells = {
+        "results": [{"id": "opendes:master-data--Well:1", "data": {}}],
+        "totalCount": 1,
+    }
 
-    with MockSearch(countries) as search:
+    with MockSearch(countries, wells) as search:
         result = await query_wells(country="Norway")
 
-    assert len(search.requests) == 1
+    # Both ids in one clause, and the wells actually came back.
+    assert len(search.requests) == 2
+    assert search.requests[1]["query"] == (
+        "nested(data.GeoContexts, (GeoPoliticalEntityID:"
+        '("opendes:master-data--GeoPoliticalEntity:Norway" OR '
+        '"opendes:master-data--GeoPoliticalEntity:duplicate")))'
+    )
+    assert result["totalCount"] == 1
+    assert len(result["wells"]) == 1
+
     resolved = result["resolved_country"]
     assert resolved["status"] == "ambiguous"
     assert resolved["input"] == "Norway"
@@ -754,6 +875,31 @@ async def test_query_wells_reports_an_ambiguous_country_instead_of_guessing():
         "opendes:master-data--GeoPoliticalEntity:Norway",
         "opendes:master-data--GeoPoliticalEntity:duplicate",
     ]
+
+
+@pytest.mark.asyncio
+async def test_a_long_candidate_list_is_still_handed_back_unsearched():
+    """Past the merge threshold the union is no longer a search anyone meant."""
+    countries = {
+        "results": [
+            {
+                "data": {"GeoPoliticalEntityName": f"Norway {index}"},
+                "id": f"opendes:master-data--GeoPoliticalEntity:{index}",
+            }
+            for index in range(6)
+        ],
+        "totalCount": 6,
+    }
+
+    with MockSearch(countries) as search:
+        result = await query_wells(country="Norway")
+
+    # The lookup was the only request - no wells were searched for.
+    assert len(search.requests) == 1
+    assert result["wells"] == []
+    assert result["totalCount"] == 0
+    assert result["resolved_country"]["status"] == "ambiguous"
+    assert result["resolved_country"]["candidate_count"] == 6
 
 
 @pytest.mark.asyncio
@@ -1003,16 +1149,128 @@ FIELDS = {
 )
 async def test_query_wells_resolves_field_name_to_id(given: str, expected_id: str):
     """A field name resolves through the same matchers a country or basin does."""
-    with MockSearch(FIELDS, NO_WELLS) as search:
+    found = wellbores("opendes:master-data--Well:1")
+    with MockSearch(FIELDS, found, NO_WELLS) as search:
         await query_wells(field=given)
 
-    assert len(search.requests) == 2
+    # Lookup, then the wellbores in the field, then the wells they hang off.
+    assert len(search.requests) == 3
     assert search.requests[0]["kind"] == FIELD.kind
     assert search.requests[0]["query"] == ""
     assert search.requests[0]["returnedFields"] == ["id", "data.FieldName"]
+    assert search.requests[1]["kind"] == WELLBORE_KIND
     assert search.requests[1]["query"] == (
         f'nested(data.GeoContexts, (FieldID:"{expected_id}"))'
     )
+
+
+@pytest.mark.asyncio
+async def test_query_wells_filters_wells_by_the_wellbores_in_the_field():
+    """FieldID is recorded on the wellbore, so the Well query cannot carry it.
+
+    The regression this guards: a `nested(data.GeoContexts, (FieldID:...))`
+    clause on master-data--Well matches nothing and returns zero wells with
+    nothing to explain them.
+    """
+    found = wellbores(
+        "opendes:master-data--Well:1",
+        "opendes:master-data--Well:2",
+    )
+
+    with MockSearch(FIELDS, found, NO_WELLS) as search:
+        await query_wells(
+            field="D15a-A",
+            country="opendes:master-data--GeoPoliticalEntity:Norway",
+        )
+
+    wellbore_search, well_search = search.requests[1], search.requests[2]
+
+    # The field is applied to the wellbores...
+    assert wellbore_search["kind"] == WELLBORE_KIND
+    assert wellbore_search["query"] == (
+        'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+    )
+    # ...and only their WellID is read back, not a whole wellbore.
+    assert wellbore_search["returnedFields"] == WellboreRefFields.returned_fields()
+    assert wellbore_search["returnedFields"] == ["id", "data.WellID"]
+
+    # ...and reaches the wells as an id filter, ANDed with the well-level country.
+    assert "master-data--Well" in well_search["kind"]
+    assert well_search["query"] == (
+        'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
+        '--GeoPoliticalEntity:Norway")) AND '
+        'id: ("opendes:master-data--Well:1" OR "opendes:master-data--Well:2")'
+    )
+    assert "FieldID" not in well_search["query"]
+
+
+@pytest.mark.asyncio
+async def test_wells_named_by_more_than_one_wellbore_are_filtered_on_once():
+    """A well with several wellbores in the field is still one id in the clause."""
+    same_well = wellbores(
+        "opendes:master-data--Well:1",
+        # OSDU writes the reference with an empty trailing version segment, so
+        # the two spellings have to normalise to one id before deduplication.
+        "opendes:master-data--Well:1:",
+        "opendes:master-data--Well:2",
+    )
+
+    with MockSearch(FIELDS, same_well, NO_WELLS) as search:
+        await query_wells(field="D15a-A")
+
+    assert search.requests[2]["query"] == (
+        'id: ("opendes:master-data--Well:1" OR "opendes:master-data--Well:2")'
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_field_with_no_wellbores_returns_no_wells_rather_than_all_of_them():
+    """An empty id filter would match everything, so the wells are never queried."""
+    with MockSearch(FIELDS, {"results": [], "totalCount": 0}) as search:
+        result = await query_wells(field="D15a-A")
+
+    assert result == {"wells": [], "totalCount": 0}
+    assert len(search.requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_the_wellbores_in_a_field_are_read_past_the_first_page():
+    """A full page means there may be more, so the wellbore search keeps reading."""
+    first_page = wellbores(
+        # Many wellbores, far fewer wells - a well can have several in a field.
+        *[f"opendes:master-data--Well:{index % 500:04d}" for index in range(1000)],
+        total=1002,
+    )
+    second_page = wellbores(
+        "opendes:master-data--Well:0500",
+        "opendes:master-data--Well:0501",
+        total=1002,
+    )
+
+    with MockSearch(FIELDS, first_page, second_page, NO_WELLS) as search:
+        await query_wells(field="D15a-A")
+
+    assert len(search.requests) == 4
+    assert search.requests[1]["offset"] == 0
+    assert search.requests[2]["offset"] == 1000
+    assert "opendes:master-data--Well:0501" in search.requests[3]["query"]
+
+
+@pytest.mark.asyncio
+async def test_a_field_with_more_wellbores_than_can_be_read_is_refused():
+    """Answering from an arbitrary prefix of the wellbores is not an answer."""
+    page = wellbores(
+        *[f"opendes:master-data--Well:{index:05d}" for index in range(1000)],
+        total=9000,
+    )
+
+    with MockSearch(FIELDS, page, page, page, page, page) as search:
+        with pytest.raises(McpError):
+            await query_wells(field="D15a-A")
+
+    # Five pages read, then the refusal - the wells were never queried.
+    assert len(search.requests) == 6
+    assert all(request["kind"] == WELLBORE_KIND for request in search.requests[1:])
 
 
 @pytest.mark.asyncio
@@ -1029,7 +1287,8 @@ async def test_query_wells_reports_an_unknown_field_under_its_own_key():
 @pytest.mark.asyncio
 async def test_query_wells_combines_every_reference_filter():
     """Country, basin and field each resolve, then AND together with source."""
-    with MockSearch(COUNTRIES, BASINS, FIELDS, NO_WELLS) as search:
+    found = wellbores("opendes:master-data--Well:1")
+    with MockSearch(COUNTRIES, BASINS, FIELDS, found, NO_WELLS) as search:
         await query_wells(
             country="Netherlands",
             basin="Illinois",
@@ -1037,12 +1296,13 @@ async def test_query_wells_combines_every_reference_filter():
             source="Public",
         )
 
-    assert len(search.requests) == 4
-    assert search.requests[3]["query"] == (
+    # Three lookups, the wellbores in the field, then the wells.
+    assert len(search.requests) == 5
+    assert search.requests[4]["query"] == (
         'nested(data.GeoContexts, (GeoPoliticalEntityID:"opendes:master-data'
         '--GeoPoliticalEntity:Netherlands_Country")) AND '
         'nested(data.GeoContexts, (BasinID:"opendes:master-data--Basin:Illinois_Basin"))'
-        ' AND nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
+        ' AND id: ("opendes:master-data--Well:1")'
         ' AND data.Source:"Public"'
     )
 
@@ -1050,13 +1310,17 @@ async def test_query_wells_combines_every_reference_filter():
 @pytest.mark.asyncio
 async def test_query_wells_takes_a_field_record_id_as_given():
     """An id the caller already holds skips the lookup, as for the other filters."""
-    with MockSearch(NO_WELLS) as search:
+    found = wellbores("opendes:master-data--Well:1")
+    with MockSearch(found, NO_WELLS) as search:
         await query_wells(field="opendes:master-data--Field:D15a-A")
 
-    assert len(search.requests) == 1
+    # No lookup - straight to the wellbores in the field, then the wells.
+    assert len(search.requests) == 2
+    assert search.requests[0]["kind"] == WELLBORE_KIND
     assert search.requests[0]["query"] == (
         'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:D15a-A"))'
     )
+    assert search.requests[1]["query"] == 'id: ("opendes:master-data--Well:1")'
 
 
 SLEIPNER_FIELDS = {
@@ -1083,15 +1347,25 @@ SLEIPNER_FIELDS = {
 
 
 @pytest.mark.asyncio
-async def test_query_wells_offers_the_records_containing_an_unmatched_name():
-    """A name matching no record exactly comes back as the records containing it."""
-    with MockSearch(SLEIPNER_FIELDS) as search:
+async def test_query_wells_searches_the_records_containing_an_unmatched_name():
+    """A name matching no record exactly searches the records containing it."""
+    found = wellbores("opendes:master-data--Well:1")
+
+    with MockSearch(SLEIPNER_FIELDS, found, NO_WELLS) as search:
         result = await query_wells(field="SLEIPNER")
 
-    assert len(search.requests) == 1
+    # The three near misses go to the wellbore search as one clause.
+    assert len(search.requests) == 3
+    assert search.requests[1]["kind"] == WELLBORE_KIND
+    assert search.requests[1]["query"] == (
+        'nested(data.GeoContexts, (FieldID:("opendes:master-data--Field:Sleipner_Ost"'
+        ' OR "opendes:master-data--Field:Sleipner_Vest"'
+        ' OR "opendes:master-data--Field:Sleipner_Alpha_North")))'
+    )
+
     resolved = result["resolved_field"]
     assert resolved["status"] == "ambiguous"
-    # The near misses, with the ids needed to pick one - not every field held.
+    # The near misses, with the ids needed to narrow - not every field held.
     assert [candidate["name"] for candidate in resolved["candidates"]] == [
         "Sleipner Ost",
         "Sleipner Vest",
@@ -1106,6 +1380,8 @@ async def test_query_wells_resolves_a_name_only_one_record_contains():
     with MockSearch(SLEIPNER_FIELDS, NO_WELLS) as search:
         await query_wells(field="Alpha North")
 
+    # The resolved id reaches the wellbore search, which is where a field lives.
+    assert search.requests[1]["kind"] == WELLBORE_KIND
     assert search.requests[1]["query"] == (
         'nested(data.GeoContexts, (FieldID:"opendes:master-data'
         '--Field:Sleipner_Alpha_North"))'
@@ -1132,6 +1408,7 @@ async def test_query_wells_prefers_a_whole_name_over_the_records_containing_it()
     with MockSearch(fields, NO_WELLS) as search:
         await query_wells(field="sleipner")
 
+    assert search.requests[1]["kind"] == WELLBORE_KIND
     assert search.requests[1]["query"] == (
         'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:Sleipner"))'
     )
@@ -1279,6 +1556,7 @@ async def test_a_reference_set_larger_than_one_page_is_read_through():
     assert len(search.requests) == 3
     assert search.requests[0]["offset"] == 0
     assert search.requests[1]["offset"] == 1000
+    assert search.requests[2]["kind"] == WELLBORE_KIND
     assert search.requests[2]["query"] == (
         'nested(data.GeoContexts, (FieldID:"opendes:master-data--Field:Ekofisk"))'
     )
