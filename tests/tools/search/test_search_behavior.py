@@ -16,6 +16,7 @@ from osdu_wireline.tools.search import (
     query_seismic_datasets,
     query_seismic_trace_data,
     query_well_logs,
+    query_well_marker_sets,
     query_wells,
 )
 from osdu_wireline.tools.search._reference import (
@@ -28,7 +29,11 @@ from osdu_wireline.tools.search.query_seismic import (
     SeismicDatasetFields,
     SeismicTraceDataFields,
 )
-from osdu_wireline.tools.search.query_wells import WellboreChildFields, WellFields
+from osdu_wireline.tools.search.query_wells import (
+    MarkerSetFields,
+    WellboreChildFields,
+    WellFields,
+)
 from tests.conftest import AZURE_CREDENTIAL
 
 GULF_OF_MEXICO = BoundingBox(
@@ -164,6 +169,120 @@ async def test_query_well_logs_resolves_wellbores_first():
     assert "data.WellID" in search.requests[0]["query"]
     assert "opendes:master-data--Wellbore:w1" in search.requests[1]["query"]
     assert search.requests[1]["returnedFields"] == WellboreChildFields.returned_fields()
+
+
+@pytest.mark.asyncio
+async def test_query_well_marker_sets_returns_the_picks_themselves():
+    """A marker set comes back with its markers, not just a record id."""
+    wellbores = {
+        "results": [{"id": "opendes:master-data--Wellbore:490250953400", "data": {}}],
+        "totalCount": 1,
+    }
+    marker_sets = {
+        "results": [
+            {
+                "id": "opendes:work-product-component--WellboreMarkerSet:490250953400",
+                "data": {
+                    "WellboreID": "opendes:master-data--Wellbore:490250953400:",
+                    "Markers": [
+                        {
+                            "MarkerMeasuredDepth": 822.9630480000001,
+                            "MarkerName": "F2WC",
+                        },
+                        {"MarkerMeasuredDepth": 693.35904, "MarkerName": "F1WC"},
+                    ],
+                },
+            }
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(wellbores, marker_sets) as search:
+        result = await query_well_marker_sets(
+            well_ids=["opendes:master-data--Well:490250953400"]
+        )
+
+    marker_set = result["results"][0]
+    assert marker_set["wellbore_id"] == "opendes:master-data--Wellbore:490250953400:"
+    assert marker_set["markers"] == [
+        {
+            "marker_name": "F2WC",
+            "marker_measured_depth": 822.9630480000001,
+            "marker_type_id": None,
+            "observation_number": None,
+            "interpreter_name": None,
+        },
+        {
+            "marker_name": "F1WC",
+            "marker_measured_depth": 693.35904,
+            "marker_type_id": None,
+            "observation_number": None,
+            "interpreter_name": None,
+        },
+    ]
+
+    # The marker set asks for its own fields - the shared child projection would
+    # not have requested the picks at all.
+    assert search.requests[1]["returnedFields"] == MarkerSetFields.returned_fields()
+    assert "data.Markers" in search.requests[1]["returnedFields"]
+
+
+@pytest.mark.asyncio
+async def test_marker_fields_the_model_does_not_declare_are_dropped():
+    """A pick carries only the fields MarkerSetFields declares."""
+    wellbores = {
+        "results": [{"id": "opendes:master-data--Wellbore:w1", "data": {}}],
+        "totalCount": 1,
+    }
+    marker_sets = {
+        "results": [
+            {
+                "id": "opendes:work-product-component--WellboreMarkerSet:m1",
+                "data": {
+                    "Markers": [
+                        {
+                            "MarkerName": "B1",
+                            "MarkerMeasuredDepth": 767.4711599999999,
+                            "MarkerTypeID": "opendes:reference-data--MarkerType:Fault:",
+                            "ObservationNumber": 1,
+                            "InterpreterName": "A. Geologist",
+                            "SurfaceDipAngle": 3.5,
+                        }
+                    ]
+                },
+            }
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(wellbores, marker_sets):
+        result = await query_well_marker_sets(well_ids=["opendes:master-data--Well:1"])
+
+    marker = result["results"][0]["markers"][0]
+    assert marker == {
+        "marker_name": "B1",
+        "marker_measured_depth": 767.4711599999999,
+        "marker_type_id": "opendes:reference-data--MarkerType:Fault:",
+        "observation_number": 1,
+        "interpreter_name": "A. Geologist",
+    }
+    assert "SurfaceDipAngle" not in marker
+    assert "surface_dip_angle" not in marker
+
+
+@pytest.mark.asyncio
+async def test_the_other_wellbore_child_tools_keep_the_shared_projection():
+    """Only marker sets ask for markers - logs and trajectories are unchanged."""
+    assert WellboreChildFields.returned_fields() == [
+        "id",
+        "data.Name",
+        "data.WellboreID",
+        "data.TechnicalAssurances",
+    ]
+    assert MarkerSetFields.returned_fields() == [
+        *WellboreChildFields.returned_fields(),
+        "data.Markers",
+    ]
 
 
 @pytest.mark.asyncio
@@ -387,6 +506,7 @@ def test_spatial_field_is_derived_per_kind():
     assert SeismicTraceDataFields.spatial_field() == "data.SpatialArea.Wgs84Coordinates"
     assert SeismicDatasetFields.spatial_field() is None
     assert WellboreChildFields.spatial_field() is None
+    assert MarkerSetFields.spatial_field() is None
 
 
 @pytest.mark.asyncio

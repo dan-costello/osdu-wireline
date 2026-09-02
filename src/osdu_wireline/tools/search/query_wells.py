@@ -2,7 +2,7 @@
 
 from typing import Any, ClassVar
 
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...shared.clients import BoundingBox, SearchClient
 from ...shared.exceptions import handle_osdu_exceptions
@@ -45,6 +45,30 @@ class WellboreChildFields(OsduData):
     name: str | None = Field(default=None, alias="Name")
     wellbore_id: str | None = Field(default=None, alias="WellboreID")
     technical_assurances: Any = Field(default=None, alias="TechnicalAssurances")
+
+
+class Marker(BaseModel):
+    """One pick inside a WellboreMarkerSet's Markers list."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    marker_name: str | None = Field(default=None, alias="MarkerName")
+    marker_measured_depth: float | None = Field(
+        default=None, alias="MarkerMeasuredDepth"
+    )
+    marker_type_id: str | None = Field(default=None, alias="MarkerTypeID")
+    observation_number: int | None = Field(default=None, alias="ObservationNumber")
+    interpreter_name: str | None = Field(default=None, alias="InterpreterName")
+
+
+class MarkerSetFields(WellboreChildFields):
+    """The fields query_well_marker_sets reads off a WellboreMarkerSet record.
+
+    The whole `Markers` array is asked for and trimmed to the declared pick
+    fields here, rather than requesting each sub-field as its own dotted path.
+    """
+
+    markers: list[Marker] = Field(default_factory=list, alias="Markers")
 
 
 def _project(response: dict[str, Any], model: type[OsduData]) -> list[dict[str, Any]]:
@@ -145,6 +169,7 @@ async def _query_wellbore_children(
     well_ids: list[str],
     kind: str,
     limit: int = 250,
+    model: type[OsduData] = WellboreChildFields,
 ) -> dict[str, Any]:
     """Search for work-product-components attached to the wellbores of the given wells.
 
@@ -159,11 +184,11 @@ async def _query_wellbore_children(
             query=f"data.WellboreID: ({' OR '.join(quoted(i) for i in wellbore_ids)})",
             kind=kind,
             limit=limit,
-            returned_fields=WellboreChildFields.returned_fields(),
+            returned_fields=model.returned_fields(),
         )
 
     return {
-        "results": _project(response, WellboreChildFields),
+        "results": _project(response, model),
         "totalCount": response.get("totalCount", 0),
     }
 
@@ -194,8 +219,15 @@ async def query_well_logs(
 async def query_well_marker_sets(
     well_ids: list[str],
 ) -> dict[str, Any]:
-    """Search the OSDU instance for marker sets (well top picks), based on a list of well IDs."""
+    """Search the OSDU instance for marker sets (well top picks), based on a list of well IDs.
+
+    Each marker set comes back with its `markers` list - the picks themselves,
+    with name, measured depth, type, observation number and interpreter - so no
+    follow-up record read is needed to see the tops.
+    """
 
     return await _query_wellbore_children(
-        well_ids, kind="osdu:wks:work-product-component--WellboreMarkerSet:*"
+        well_ids,
+        kind="osdu:wks:work-product-component--WellboreMarkerSet:*",
+        model=MarkerSetFields,
     )
