@@ -12,7 +12,7 @@ from ._reference import (
     FIELD,
     geo_context_clause,
     resolve_geo_context_filters,
-    resolve_reference_ids,
+    resolve_reference_filter,
     unresolved_result,
 )
 
@@ -206,13 +206,12 @@ async def query_wells(
     clauses, reports = filters.clauses, filters.reports
 
     if field:
-        field_ids, report = await resolve_reference_ids(FIELD, field)
-        if not field_ids:
-            return unresolved_result("wells", FIELD, report)
-        if report:
-            reports["resolved_field"] = report.model_dump()
+        resolved = await resolve_reference_filter(FIELD, field)
+        if resolved.unresolved:
+            return unresolved_result("wells", *resolved.unresolved)
+        reports.update(resolved.reports)
 
-        wellbores = await _search_wellbores(field_ids=field_ids)
+        wellbores = await _search_wellbores(field_ids=resolved.ids)
         well_ids = list(
             dict.fromkeys(
                 normalize_record_id(well_id) for _, well_id in wellbores if well_id
@@ -266,15 +265,16 @@ async def _query_wellbore_children(
     field_ids: list[str] = []
     reports: dict[str, Any] = {}
     if field:
-        field_ids, report = await resolve_reference_ids(FIELD, field)
-        if not field_ids:
-            return unresolved_result("results", FIELD, report)
-        if report:
-            reports["resolved_field"] = report.model_dump()
+        resolved = await resolve_reference_filter(FIELD, field)
+        if resolved.unresolved:
+            return unresolved_result("results", *resolved.unresolved)
+        field_ids, reports = resolved.ids, resolved.reports
 
     wellbores = await _search_wellbores(well_ids=well_ids, field_ids=field_ids)
+    # Filters that select no wellbores select no components either. That is an
+    # empty result, not a failure - and `reports` is what says why it is empty.
     if not wellbores:
-        raise ValueError("No wellbores found for the given filters.")
+        return {"results": [], "totalCount": 0, **reports}
 
     query = _id_filter(
         "data.WellboreID", [wellbore_id for wellbore_id, _ in wellbores], "wellbores"

@@ -305,11 +305,27 @@ async def test_the_other_wellbore_child_tools_keep_the_shared_projection():
 
 
 @pytest.mark.asyncio
-async def test_query_well_logs_errors_when_no_wellbores():
-    """A well with no wellbores is an error, not a silent empty result."""
-    with MockSearch({"results": [], "totalCount": 0}):
-        with pytest.raises(McpError):
-            await query_well_logs(well_ids=["opendes:master-data--Well:123"])
+async def test_query_well_logs_is_empty_when_there_are_no_wellbores():
+    """Filters selecting no wellbores select no logs - an empty result, not an error."""
+    with MockSearch({"results": [], "totalCount": 0}) as search:
+        result = await query_well_logs(well_ids=["opendes:master-data--Well:123"])
+
+    # The wellbore search was the only request - nothing to look up logs against.
+    assert len(search.requests) == 1
+    assert result == {"results": [], "totalCount": 0}
+
+
+@pytest.mark.asyncio
+async def test_an_empty_child_result_still_reports_what_the_field_resolved_to():
+    """The report is what explains an empty result - it survives having no wellbores."""
+    with MockSearch(SLEIPNER_FIELDS, {"results": [], "totalCount": 0}) as search:
+        result = await query_well_logs(field="SLEIPNER")
+
+    # The lookup and the wellbore search; no components to look for after that.
+    assert len(search.requests) == 2
+    assert result["results"] == []
+    assert result["totalCount"] == 0
+    assert result["resolved_field"]["status"] == "ambiguous"
 
 
 @pytest.mark.asyncio
@@ -691,8 +707,7 @@ async def test_query_terms_cannot_break_out_of_their_quotes():
 async def test_id_lists_are_quoted_per_id():
     """ID lists are built by quoting each ID, not by splicing a delimiter."""
     with MockSearch({"results": [], "totalCount": 0}) as search:
-        with pytest.raises(McpError):
-            await query_well_logs(well_ids=["opendes:well:1", "opendes:well:2"])
+        await query_well_logs(well_ids=["opendes:well:1", "opendes:well:2"])
 
     assert (
         search.requests[0]["query"]

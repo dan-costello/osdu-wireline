@@ -427,6 +427,36 @@ async def resolve_reference_ids(
 
 
 @dataclass
+class ReferenceFilter:
+    """One resolved reference name: the ids to filter on, and what to report."""
+
+    #: The ids to filter on. Empty when the name could not be used.
+    ids: list[str] = field(default_factory=list)
+    #: The `resolved_<label>` entry to report alongside the results, if any.
+    reports: dict[str, Any] = field(default_factory=dict)
+    #: The lookup and report to hand back in place of results, if unusable.
+    unresolved: tuple[ReferenceLookup, Ambiguous | NotFound | None] | None = None
+
+
+async def resolve_reference_filter(
+    lookup: ReferenceLookup, name: str
+) -> ReferenceFilter:
+    """Resolve one name into the ids to filter on and what to say about it.
+
+    Every tool taking a reference name does the same three things with the
+    result - refuse, report, or both - so they do it through here rather than
+    each spelling it out.
+    """
+    ids, report = await resolve_reference_ids(lookup, name)
+    if not ids:
+        return ReferenceFilter(unresolved=(lookup, report))
+    return ReferenceFilter(
+        ids=ids,
+        reports={f"resolved_{lookup.label}": report.model_dump()} if report else {},
+    )
+
+
+@dataclass
 class GeoContextFilters:
     """What a set of reference names resolved to, for the tool that asked."""
 
@@ -454,13 +484,12 @@ async def resolve_geo_context_filters(
     for lookup, given in ((COUNTRY, country), (BASIN, basin), (FIELD, field)):
         if not given:
             continue
-        ids, report = await resolve_reference_ids(lookup, given)
-        if not ids:
-            filters.unresolved = (lookup, report)
+        resolved = await resolve_reference_filter(lookup, given)
+        if resolved.unresolved:
+            filters.unresolved = resolved.unresolved
             return filters
-        filters.clauses.append(geo_context_clause(lookup, ids))
-        if report:
-            filters.reports[f"resolved_{lookup.label}"] = report.model_dump()
+        filters.clauses.append(geo_context_clause(lookup, resolved.ids))
+        filters.reports.update(resolved.reports)
     return filters
 
 
