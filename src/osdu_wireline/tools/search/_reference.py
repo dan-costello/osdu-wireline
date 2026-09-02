@@ -12,6 +12,12 @@ matcher is deliberately loose, so a name that matches nothing exactly usually
 comes back as a handful of records that contain it rather than as a sample of
 every record the instance holds.
 
+A short list of candidates is searched as one rather than handed back, because
+that is what a caller does with it anyway: `Sleipner` matching three Sleipner
+fields is a broader search, not a failed one. The candidates are still reported
+alongside the results, so the caller can see which records the numbers came
+from and narrow if that was not what they meant.
+
 Countries, basins and fields differ only in which kind holds them, which field
 carries their name, whether they carry aliases, and how a record points at them
 - so each is a `ReferenceLookup` value over one set of helpers rather than an
@@ -49,6 +55,10 @@ _MAX_CANDIDATES = 25
 #: Below this an input is too short for containment to mean anything: two
 #: characters are a substring of half the instance.
 _MIN_SUBSTRING_LENGTH = 3
+
+#: Candidates merged into one query instead of being handed back to choose
+#: between. Past this the union stops being a search anyone meant to run.
+_MAX_MERGED_CANDIDATES = 5
 
 #: Aliases hang off any master-data record under the same nested field.
 _ALIAS_FIELD = "data.NameAliases.AliasName"
@@ -135,6 +145,11 @@ class Resolved(BaseModel):
     matched: str
     input: str
 
+    @property
+    def ids(self) -> list[str]:
+        """The ids to filter on - one, for a name that resolved outright."""
+        return [self.id]
+
 
 class NotFound(BaseModel):
     status: Literal["not_found"] = "not_found"
@@ -149,6 +164,24 @@ class Ambiguous(BaseModel):
     input: str
     candidates: list[Candidate]
     candidate_count: int = 0
+
+    @property
+    def ids(self) -> list[str]:
+        """The ids to filter on, when there are few enough to search as one."""
+        return [candidate.id for candidate in self.candidates]
+
+    @property
+    def searchable(self) -> bool:
+        """Whether these candidates can be searched together instead of returned.
+
+        `candidates` is a sample capped at `_MAX_CANDIDATES`, so a list that was
+        truncated is never merged: searching part of the matches and reporting
+        it as all of them is worse than asking the caller to choose.
+        """
+        return (
+            0 < self.candidate_count <= _MAX_MERGED_CANDIDATES
+            and len(self.candidates) == self.candidate_count
+        )
 
 
 #: Records per (data partition, lookup), memoised for the life of the process.
@@ -199,6 +232,7 @@ async def available_records(lookup: ReferenceLookup) -> list[ReferenceRecord]:
 
     records: list[ReferenceRecord] = []
     read = 0
+    total = 0
     async with SearchClient() as client:
         while read < _LOOKUP_MAX_RECORDS:
             response = await client.search_query(
@@ -363,39 +397,107 @@ async def resolve_field_id(field_name: str) -> Ambiguous | NotFound | Resolved:
     return await resolve_reference_id(FIELD, field_name)
 
 
-def geo_context_clause(lookup: ReferenceLookup, record_id: str) -> str:
-    """Build the nested GeoContexts clause matching records against `record_id`."""
-    return f"nested(data.GeoContexts, ({lookup.context_field}:{quoted(record_id)}))"
+def geo_context_clause(lookup: ReferenceLookup, record_ids: list[str]) -> str:
+    """Build the nested GeoContexts clause matching records against `record_ids`.
+
+    A single id is matched bare, so the common query keeps its simplest form.
+    """
+    if len(record_ids) == 1:
+        value = quoted(record_ids[0])
+    else:
+        value = "(" + " OR ".join(quoted(i) for i in record_ids) + ")"
+    return f"nested(data.GeoContexts, ({lookup.context_field}:{value}))"
+
+
+async def resolve_reference_ids(
+    lookup: ReferenceLookup, name: str
+) -> tuple[list[str], Ambiguous | NotFound | None]:
+    """Resolve a name to the ids to filter on, and what to report about it.
+
+    Empty ids mean the name is unusable and the report is what to hand back in
+    place of results. Ids with a report alongside them are a merged search: it
+    ran, and the caller is told which records it covered.
+    """
+    resolved = await resolve_reference_id(lookup, name)
+    if isinstance(resolved, Resolved):
+        return resolved.ids, None
+    if isinstance(resolved, Ambiguous) and resolved.searchable:
+        return resolved.ids, resolved
+    return [], resolved
+
+
+@dataclass
+class ReferenceFilter:
+    """One resolved reference name: the ids to filter on, and what to report."""
+
+    #: The ids to filter on. Empty when the name could not be used.
+    ids: list[str] = field(default_factory=list)
+    #: The `resolved_<label>` entry to report alongside the results, if any.
+    reports: dict[str, Any] = field(default_factory=dict)
+    #: The lookup and report to hand back in place of results, if unusable.
+    unresolved: tuple[ReferenceLookup, Ambiguous | NotFound | None] | None = None
+
+
+async def resolve_reference_filter(
+    lookup: ReferenceLookup, name: str
+) -> ReferenceFilter:
+    """Resolve one name into the ids to filter on and what to say about it.
+
+    Every tool taking a reference name does the same three things with the
+    result - refuse, report, or both - so they do it through here rather than
+    each spelling it out.
+    """
+    ids, report = await resolve_reference_ids(lookup, name)
+    if not ids:
+        return ReferenceFilter(unresolved=(lookup, report))
+    return ReferenceFilter(
+        ids=ids,
+        reports={f"resolved_{lookup.label}": report.model_dump()} if report else {},
+    )
+
+
+@dataclass
+class GeoContextFilters:
+    """What a set of reference names resolved to, for the tool that asked."""
+
+    #: The clauses to AND onto the query.
+    clauses: list[str] = field(default_factory=list)
+    #: `resolved_<label>` entries to report alongside the results.
+    reports: dict[str, Any] = field(default_factory=dict)
+    #: The first name that could not be used at all, if there was one.
+    unresolved: tuple[ReferenceLookup, Ambiguous | NotFound | None] | None = None
 
 
 async def resolve_geo_context_filters(
     country: str | None = None,
     basin: str | None = None,
     field: str | None = None,
-) -> tuple[list[str], tuple[ReferenceLookup, Ambiguous | NotFound] | None]:
+) -> GeoContextFilters:
     """Turn the names a caller gave into GeoContexts clauses.
 
-    Returns the clauses, and the first name that did not resolve - a tool has
-    nothing to search for once one filter is unusable, so it reports that name
-    back instead of returning wells or traces the caller did not ask for.
+    A name matching a short list of records is searched across all of them, and
+    reported. A name matching nothing, or too many, stops the resolution: a tool
+    has nothing to search for once one filter is unusable, so it reports that
+    name back instead of returning wells or traces the caller did not ask for.
     """
-    clauses: list[str] = []
+    filters = GeoContextFilters()
     for lookup, given in ((COUNTRY, country), (BASIN, basin), (FIELD, field)):
         if not given:
             continue
-        resolved = await resolve_reference_id(lookup, given)
-        if not isinstance(resolved, Resolved):
-            return clauses, (lookup, resolved)
-        clauses.append(geo_context_clause(lookup, resolved.id))
-    return clauses, None
+        resolved = await resolve_reference_filter(lookup, given)
+        if resolved.unresolved:
+            filters.unresolved = resolved.unresolved
+            return filters
+        filters.clauses.append(geo_context_clause(lookup, resolved.ids))
+        filters.reports.update(resolved.reports)
+    return filters
 
 
 def unresolved_result(
-    results_key: str, lookup: ReferenceLookup, resolved: Ambiguous | NotFound
+    results_key: str, lookup: ReferenceLookup, resolved: Ambiguous | NotFound | None
 ) -> dict[str, Any]:
     """Report a name the caller has to disambiguate, in place of search results."""
-    return {
-        results_key: [],
-        "totalCount": 0,
-        f"resolved_{lookup.label}": resolved.model_dump(),
-    }
+    result: dict[str, Any] = {results_key: [], "totalCount": 0}
+    if resolved is not None:
+        result[f"resolved_{lookup.label}"] = resolved.model_dump()
+    return result
