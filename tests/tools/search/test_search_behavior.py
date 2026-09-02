@@ -35,6 +35,7 @@ from osdu_wireline.tools.search.query_wells import (
     WellboreChildFields,
     WellboreRefFields,
     WellFields,
+    WellLogFields,
 )
 from tests.conftest import AZURE_CREDENTIAL
 
@@ -187,7 +188,7 @@ async def test_query_well_logs_resolves_wellbores_first():
     assert len(search.requests) == 2
     assert "data.WellID" in search.requests[0]["query"]
     assert "opendes:master-data--Wellbore:w1" in search.requests[1]["query"]
-    assert search.requests[1]["returnedFields"] == WellboreChildFields.returned_fields()
+    assert search.requests[1]["returnedFields"] == WellLogFields.returned_fields()
 
 
 @pytest.mark.asyncio
@@ -290,8 +291,125 @@ async def test_marker_fields_the_model_does_not_declare_are_dropped():
 
 
 @pytest.mark.asyncio
-async def test_the_other_wellbore_child_tools_keep_the_shared_projection():
-    """Only marker sets ask for markers - logs and trajectories are unchanged."""
+async def test_query_well_logs_returns_the_curves_themselves():
+    """A well log comes back with its curves, not just a record id."""
+    wellbores = {
+        "results": [{"id": "opendes:master-data--Wellbore:490250953400", "data": {}}],
+        "totalCount": 1,
+    }
+    logs = {
+        "results": [
+            {
+                "id": "opendes:work-product-component--WellLog:l1",
+                "data": {
+                    "Name": "490250953400_log",
+                    "WellboreID": "opendes:master-data--Wellbore:490250953400:",
+                    "Curves": [
+                        {
+                            "CurveID": "md",
+                            "TopDepth": 29.0,
+                            "DepthUnit": "opendes:reference-data--UnitOfMeasure:ft:",
+                            "Mnemonic": "DEPT",
+                            "BaseDepth": 462.0,
+                            "LogCurveTypeID": None,
+                        },
+                        {
+                            "CurveID": "ILD",
+                            "TopDepth": 42.0,
+                            "DepthUnit": "opendes:reference-data--UnitOfMeasure:ft:",
+                            "Mnemonic": "ILD",
+                            "BaseDepth": 457.0,
+                            "LogCurveTypeID": None,
+                        },
+                    ],
+                },
+            }
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(wellbores, logs) as search:
+        result = await query_well_logs(
+            well_ids=["opendes:master-data--Well:490250953400"]
+        )
+
+    log = result["results"][0]
+    assert log["wellbore_id"] == "opendes:master-data--Wellbore:490250953400:"
+    assert log["curves"] == [
+        {
+            "curve_id": "md",
+            "mnemonic": "DEPT",
+            "top_depth": 29.0,
+            "base_depth": 462.0,
+            "depth_unit": "opendes:reference-data--UnitOfMeasure:ft:",
+            "log_curve_type_id": None,
+        },
+        {
+            "curve_id": "ILD",
+            "mnemonic": "ILD",
+            "top_depth": 42.0,
+            "base_depth": 457.0,
+            "depth_unit": "opendes:reference-data--UnitOfMeasure:ft:",
+            "log_curve_type_id": None,
+        },
+    ]
+
+    # The log asks for its own fields - the shared child projection would not
+    # have requested the curves at all.
+    assert search.requests[1]["returnedFields"] == WellLogFields.returned_fields()
+    assert "data.Curves" in search.requests[1]["returnedFields"]
+
+
+@pytest.mark.asyncio
+async def test_curve_fields_the_model_does_not_declare_are_dropped():
+    """A curve carries only the fields WellLogFields declares."""
+    wellbores = {
+        "results": [{"id": "opendes:master-data--Wellbore:w1", "data": {}}],
+        "totalCount": 1,
+    }
+    logs = {
+        "results": [
+            {
+                "id": "opendes:work-product-component--WellLog:l1",
+                "data": {
+                    "Curves": [
+                        {
+                            "CurveID": "SPR",
+                            "Mnemonic": "SPR",
+                            "TopDepth": 42.0,
+                            "BaseDepth": 462.0,
+                            "DepthUnit": "opendes:reference-data--UnitOfMeasure:ft:",
+                            "LogCurveTypeID": (
+                                "opendes:reference-data--LogCurveType:SP:"
+                            ),
+                            "NullValue": -999.25,
+                        }
+                    ]
+                },
+            }
+        ],
+        "totalCount": 1,
+    }
+
+    with MockSearch(wellbores, logs):
+        result = await query_well_logs(well_ids=["opendes:master-data--Well:1"])
+
+    curve = result["results"][0]["curves"][0]
+    assert curve == {
+        "curve_id": "SPR",
+        "mnemonic": "SPR",
+        "top_depth": 42.0,
+        "base_depth": 462.0,
+        "depth_unit": "opendes:reference-data--UnitOfMeasure:ft:",
+        "log_curve_type_id": "opendes:reference-data--LogCurveType:SP:",
+    }
+    assert "NullValue" not in curve
+    assert "null_value" not in curve
+
+
+@pytest.mark.asyncio
+async def test_trajectories_keep_the_shared_projection():
+    """Only logs and marker sets extend it - trajectories are unchanged."""
     assert WellboreChildFields.returned_fields() == [
         "id",
         "data.Name",
@@ -301,6 +419,10 @@ async def test_the_other_wellbore_child_tools_keep_the_shared_projection():
     assert MarkerSetFields.returned_fields() == [
         *WellboreChildFields.returned_fields(),
         "data.Markers",
+    ]
+    assert WellLogFields.returned_fields() == [
+        *WellboreChildFields.returned_fields(),
+        "data.Curves",
     ]
 
 

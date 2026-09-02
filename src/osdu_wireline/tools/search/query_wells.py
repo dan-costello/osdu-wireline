@@ -75,6 +75,29 @@ class Marker(BaseModel):
     interpreter_name: str | None = Field(default=None, alias="InterpreterName")
 
 
+class Curve(BaseModel):
+    """One curve inside a WellLog's Curves list."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    curve_id: str | None = Field(default=None, alias="CurveID")
+    mnemonic: str | None = Field(default=None, alias="Mnemonic")
+    top_depth: float | None = Field(default=None, alias="TopDepth")
+    base_depth: float | None = Field(default=None, alias="BaseDepth")
+    depth_unit: str | None = Field(default=None, alias="DepthUnit")
+    log_curve_type_id: str | None = Field(default=None, alias="LogCurveTypeID")
+
+
+class WellLogFields(WellboreChildFields):
+    """The fields query_well_logs reads off a WellLog record.
+
+    The whole `Curves` array is asked for and trimmed to the declared curve
+    fields here, rather than requesting each sub-field as its own dotted path.
+    """
+
+    curves: list[Curve] = Field(default_factory=list, alias="Curves")
+
+
 class MarkerSetFields(WellboreChildFields):
     """The fields query_well_marker_sets reads off a WellboreMarkerSet record.
 
@@ -332,12 +355,19 @@ async def query_well_logs(
             wellbores that are both.
 
     At least one of `well_ids` and `field` is required.
+
+    Each log comes back with its `curves` list - the curves it holds, with id,
+    mnemonic, top and base depth, depth unit and curve type - so no follow-up
+    record read is needed to see what was logged. Curves are not filtered on:
+    mnemonics vary too much between sources for that to be reliable, so the
+    tool returns what is there and leaves the choosing to the caller.
     """
 
     return await _query_wellbore_children(
         kind="osdu:wks:work-product-component--WellLog:*",
         well_ids=well_ids,
         field=field,
+        model=WellLogFields,
     )
 
 

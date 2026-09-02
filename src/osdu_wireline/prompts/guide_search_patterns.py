@@ -20,7 +20,7 @@ query tool, so you do not compose Elasticsearch syntax by hand.
 ### Wells
 - **query_wells**: Find wells by bounding box, country, basin, field or source
 - **query_well_trajectories**: Trajectories for a list of well IDs, a field, or both
-- **query_well_logs**: Well logs for a list of well IDs, a field, or both
+- **query_well_logs**: Well logs for a list of well IDs, a field, or both, with the curves each log holds
 - **query_well_marker_sets**: Marker sets for a list of well IDs, a field, or both, with the top picks themselves
 
 ### Seismic
@@ -132,7 +132,10 @@ Every tool returns a `totalCount` plus a named list of projected records. Each
 record carries its `id` alongside the snake_case fields that tool declares:
 
 - `query_wells` -> `{"wells": [...], "totalCount": int}`
-- `query_well_logs` / `query_well_trajectories` -> `{"results": [...], "totalCount": int}`
+- `query_well_trajectories` -> `{"results": [...], "totalCount": int}`
+- `query_well_logs` -> `{"results": [...], "totalCount": int}`, where each result
+  also carries `curves`: a list of `{curve_id, mnemonic, top_depth, base_depth,
+  depth_unit, log_curve_type_id}`
 - `query_well_marker_sets` -> `{"results": [...], "totalCount": int}`, where each
   result also carries `markers`: a list of `{marker_name, marker_measured_depth,
   marker_type_id, observation_number, interpreter_name}`
@@ -157,6 +160,8 @@ Fields a tool does not declare are not requested from OSDU and will not appear.
 - `geo_contexts` - Basin and geopolitical references (`data.GeoContexts`)
 - `spatial_location` / `spatial_area` - WGS84 geometry
 - `markers` - The picks on a marker set (`data.Markers`), depths in metres
+- `curves` - The curves on a well log (`data.Curves`); depths are in each
+  curve's own `depth_unit`, not normalised
 """
 
     return [{"role": "user", "content": content}]
