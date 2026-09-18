@@ -13,6 +13,7 @@ class OSMCPService(Enum):
     ENTITLEMENTS = "/api/entitlements/v2"
     DATASET = "/api/dataset/v1"
     PARTITION = "/api/partition/v1"
+    RESERVOIRDDMS = "/api/reservoir-ddms/v2"
 
 
 def get_service_info_endpoint(service: OSMCPService) -> str:
