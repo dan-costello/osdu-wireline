@@ -105,7 +105,7 @@ class MockSearch:
             self._mocked.post(SEARCH_URL, payload=payload)
         return self
 
-    def __exit__(self, *exc: object) -> bool:
+    def __exit__(self, *exc: object):
         try:
             for (_method, url), calls in (self._mocked.requests or {}).items():
                 if str(url).endswith("/query"):
@@ -118,7 +118,6 @@ class MockSearch:
             self._mocked.stop()
             self._cred.stop()
             self._env.stop()
-        return False
 
 
 @pytest.mark.asyncio

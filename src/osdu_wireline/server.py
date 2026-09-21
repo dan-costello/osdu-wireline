@@ -61,7 +61,7 @@ def verify_startup() -> None:
 
 SERVER_INSTRUCTIONS = """
 OSDU Wireline bridges AI assistants to OSDU platform services: partitions, entitlements,
-legal tags, schemas, search, storage, and Reservior DDMS.
+legal tags, schemas, search, storage, and Reservoir DDMS.
 
 Start with `health_check` to confirm connectivity and authentication before other operations.
 

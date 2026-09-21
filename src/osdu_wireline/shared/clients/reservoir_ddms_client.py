@@ -63,7 +63,7 @@ class ReservoirDDMSClient(OsduClient):
             if substring_lower in i["uri"].lower()
             or substring_lower in i["name"].lower()
         ]
-        return {"items": filtered_items, "totalCount": len(formatted_items)}
+        return {"items": filtered_items, "totalCount": len(filtered_items)}
 
     async def list_dataspaces(
         self, *, search_substring: str | None = None
@@ -109,13 +109,14 @@ class ReservoirDDMSClient(OsduClient):
     ) -> None:
         """Turn a 404 into a validation error when the dataspace truly is absent."""
         try:
-            available = await self.list_dataspaces()
+            listing = await self.list_dataspaces()
         except OSMCPAPIError:
             logger.warning(
                 "Could not list dataspaces to check whether %r exists", dataspace
             )
             return
 
+        available = listing["dataspaces"]
         if dataspace not in available:
             raise OSMCPValidationError(
                 f"Dataspace {dataspace!r} not available in this partition. "

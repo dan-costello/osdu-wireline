@@ -22,7 +22,7 @@ async def query_available_dataspaces(name_pattern: str | None = None) -> dict[st
 async def query_dataspace_files(
     dataspace_name: str, item_pattern: str | None = None
 ) -> dict[str, Any]:
-    """Serach a specific dataspace for an object whose name or uid matches a pattern.
+    """Search a specific dataspace for an object whose name or uid matches a pattern.
 
     Args:
         dataspace_name (str): Which dataspace to search. Use query_available_dataspaces to get list of available dataspaces.
