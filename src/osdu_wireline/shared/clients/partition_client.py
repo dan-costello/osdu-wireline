@@ -1,7 +1,7 @@
 """Client for OSDU Partition Service operations."""
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from ..env import get_env_bool
 from ..exceptions import OSMCPAPIError, OSMCPValidationError
@@ -34,7 +34,7 @@ class PartitionClient(OsduClient):
             # The partition service returns a list of strings
             if isinstance(response, list):
                 logger.info(f"Retrieved {len(response)} partitions")
-                return response
+                return cast("list[str]", response)
             logger.warning(f"Unexpected response format: {type(response)}")
             return []
 

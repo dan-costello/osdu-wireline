@@ -94,8 +94,11 @@ class OsduClient:
         method: str,
         path: str,
         **kwargs: Any,
-    ) -> dict[str, Any]:
+    ) -> Any:
         """Make HTTP request with retry logic.
+
+        Returns the decoded JSON body, which is a dict for most endpoints but
+        a list for collection endpoints such as Reservoir DDMS /dataspaces.
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -155,7 +158,7 @@ class OsduClient:
         # If all retries failed but we didn't explicitly raise an exception
         raise OSMCPConnectionError("Maximum retry attempts reached without success")
 
-    async def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
+    async def get(self, path: str, **kwargs: Any) -> Any:
         """GET request with retry logic.
 
         Args:
@@ -163,7 +166,7 @@ class OsduClient:
             **kwargs: Additional request parameters
 
         Returns:
-            Response data as dictionary
+            Decoded JSON response (a dict, or a list for collection endpoints)
         """
         return await self._make_request("GET", path, **kwargs)
 
