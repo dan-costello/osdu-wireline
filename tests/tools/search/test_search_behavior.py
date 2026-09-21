@@ -106,13 +106,14 @@ class MockSearch:
         return self
 
     def __exit__(self, *exc: object) -> bool:
-        for (_method, url), calls in self._mocked.requests.items():
-            if str(url).endswith("/query"):
-                for call in calls:
-                    body = call.kwargs.get("json")
-                    if body is None and isinstance(call.kwargs.get("data"), str):
-                        body = json.loads(call.kwargs["data"])
-                    self.requests.append(body or {})
+        if self._mocked.requests:
+            for (_method, url), calls in self._mocked.requests.items():
+                if str(url).endswith("/query"):
+                    for call in calls:
+                        body = call.kwargs.get("json")
+                        if body is None and isinstance(call.kwargs.get("data"), str):
+                            body = json.loads(call.kwargs["data"])
+                        self.requests.append(body or {})
         self._mocked.stop()
         self._cred.stop()
         self._env.stop()
