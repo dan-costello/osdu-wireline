@@ -19,7 +19,7 @@ class ReservoirDDMSClient(OsduClient):
 
     async def search_dataspace(
         self, dataspace: str, *, search_substring: str | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         """Retrieve the resources held in a single dataspace.
 
         Args:
@@ -46,7 +46,7 @@ class ReservoirDDMSClient(OsduClient):
 
         if not isinstance(resp, list):
             logger.warning("Unexpected response format: %s", type(resp))
-            return []
+            return {"items": [], "totalCount": 0, "error": "Internal error"}
 
         formatted_items = [
             {"uri": item.get("uri") or "", "name": item.get("name") or ""}
@@ -54,19 +54,20 @@ class ReservoirDDMSClient(OsduClient):
         ]
 
         if not search_substring:
-            return formatted_items
+            return {"items": formatted_items, "totalCount": len(formatted_items)}
 
         substring_lower = search_substring.lower()
-        return [
+        filtered_items = [
             i
             for i in formatted_items
             if substring_lower in i["uri"].lower()
             or substring_lower in i["name"].lower()
         ]
+        return {"items": filtered_items, "totalCount": len(formatted_items)}
 
     async def list_dataspaces(
         self, *, search_substring: str | None = None
-    ) -> list[str]:
+    ) -> dict[str, Any]:
         """Retrieve a list of dataspaces available under the Reservoir DDMS on this OSDU instance.
 
         Args:
@@ -87,7 +88,7 @@ class ReservoirDDMSClient(OsduClient):
 
         if not isinstance(resp, list):
             logger.warning("Unexpected response format: %s", type(resp))
-            return []
+            return {"dataspaces": [], "totalCount": 0, "error": "Internal error"}
 
         ids: list[str] = []
         for item in resp:
@@ -101,7 +102,7 @@ class ReservoirDDMSClient(OsduClient):
                     ids.append(dataspace_id)
 
         logger.info(f"Retrieved {len(ids)} dataspaces")
-        return ids
+        return {"dataspaces": ids, "totalCount": len(ids)}
 
     async def _raise_if_unknown_dataspace(
         self, dataspace: str, cause: OSMCPAPIError

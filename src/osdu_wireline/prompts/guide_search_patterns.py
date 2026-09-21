@@ -27,6 +27,10 @@ query tool, so you do not compose Elasticsearch syntax by hand.
 - **query_seismic_trace_data**: Find seismic trace data by bounding box, country, basin, field, source or name
 - **query_seismic_datasets**: Resolve dataset IDs to their file locations
 
+
+## Reservoir (3D/2D Grids)
+- **query_available_dataspaces**: List dataspaces in a partition's Reservoir DDMS. Takes optional arg to match a dataspace name pattern.
+- **query_dataspace_files**: List specific files within a datapace. Takes optional arg to match a file name pattern.
 ## Quick Start Examples
 
 ### Find Wells by Area

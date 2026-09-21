@@ -11,6 +11,8 @@ from .shared.auth import reset_auth_provider
 from .shared.env import require_setting
 from .tools.health_check import health_check
 from .tools.search import (
+    query_available_dataspaces,
+    query_dataspace_files,
     query_seismic_datasets,
     query_seismic_trace_data,
     query_well_logs,
@@ -59,7 +61,7 @@ def verify_startup() -> None:
 
 SERVER_INSTRUCTIONS = """
 OSDU Wireline bridges AI assistants to OSDU platform services: partitions, entitlements,
-legal tags, schemas, search, and storage.
+legal tags, schemas, search, storage, and Reservior DDMS.
 
 Start with `health_check` to confirm connectivity and authentication before other operations.
 
@@ -93,3 +95,5 @@ mcp.tool()(query_well_logs)
 mcp.tool()(query_well_marker_sets)
 mcp.tool()(query_seismic_trace_data)
 mcp.tool()(query_seismic_datasets)
+mcp.tool()(query_available_dataspaces)
+mcp.tool()(query_dataspace_files)
