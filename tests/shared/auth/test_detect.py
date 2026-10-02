@@ -38,22 +38,6 @@ def test_azure_detected_from_tenant_id_alone():
             assert detect_provider().mode is AuthenticationMode.AZURE
 
 
-def test_legacy_user_token_name_still_selects_user_token():
-    """The pre-rename OSDU_MCP_USER_TOKEN spelling keeps working."""
-    with patch.dict(os.environ, {"OSDU_MCP_USER_TOKEN": make_jwt()}, clear=True):
-        assert detect_provider().mode is AuthenticationMode.USER_TOKEN
-
-
-def test_canonical_user_token_name_wins_over_the_legacy_one():
-    """With both spellings set, the canonical name is authoritative."""
-    canonical = make_jwt()
-    env = {"OSDU_USER_TOKEN": canonical, "OSDU_MCP_USER_TOKEN": make_jwt()}
-
-    with patch.dict(os.environ, env, clear=True):
-        assert os.environ["OSDU_USER_TOKEN"] == canonical
-        assert detect_provider().mode is AuthenticationMode.USER_TOKEN
-
-
 def test_aws_and_gcp_variables_no_longer_select_a_provider():
     """Cloud variables for the removed providers must not resolve.
 

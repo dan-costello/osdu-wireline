@@ -57,9 +57,9 @@ async def test_health_check_auth_failure(monkeypatch):
         "test-secret",
         algorithm="HS256",
     )
-    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_URL", SERVER_URL)
-    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_DATA_PARTITION", "opendes")
-    monkeypatch.setitem(os.environ, "OSDU_MCP_USER_TOKEN", expired_token)
+    monkeypatch.setitem(os.environ, "OSDU_SERVER_URL", SERVER_URL)
+    monkeypatch.setitem(os.environ, "OSDU_DATA_PARTITION", "opendes")
+    monkeypatch.setitem(os.environ, "OSDU_USER_TOKEN", expired_token)
 
     with aioresponses() as mocked:
         _mock_all_services(mocked)

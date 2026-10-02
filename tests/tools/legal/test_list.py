@@ -49,8 +49,8 @@ async def test_legaltag_list_success():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -104,8 +104,8 @@ async def test_legaltag_list_invalid_only():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -142,8 +142,8 @@ async def test_legaltag_list_empty():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",

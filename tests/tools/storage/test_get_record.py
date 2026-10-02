@@ -37,8 +37,8 @@ async def test_storage_get_record_success():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -80,8 +80,8 @@ async def test_storage_get_record_with_attributes():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -126,8 +126,8 @@ async def test_storage_get_record_version_success():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -165,8 +165,8 @@ async def test_storage_list_record_versions_success():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "opendes",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",

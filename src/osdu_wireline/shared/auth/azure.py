@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
 
-from ..env import get_env, get_setting
+from ..env import get_env
 from ..exceptions import OSMCPAuthError
 from .base import AuthenticationMode
 
@@ -75,7 +75,7 @@ class AzureProvider:
                 "AZURE_CLIENT_ID environment variable is required for Azure authentication"
             )
 
-        scope = get_setting("OSDU_AUTH_SCOPE") or f"{client_id}/.default"
+        scope = get_env("OSDU_AUTH_SCOPE") or f"{client_id}/.default"
         try:
             self._cached_token = self._credential.get_token(scope)
         except ClientAuthenticationError as e:

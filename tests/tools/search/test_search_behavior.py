@@ -11,7 +11,6 @@ from azure.core.credentials import AccessToken
 from mcp.shared.exceptions import McpError
 
 from osdu_wireline.shared.clients import BoundingBox, SearchClient
-from osdu_wireline.shared.env import setting_names
 from osdu_wireline.tools.search import (
     query_seismic_datasets,
     query_seismic_trace_data,
@@ -66,8 +65,8 @@ def wellbores(*well_ids: str, total: int | None = None) -> dict:
 
 
 TEST_ENV = {
-    "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-    "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
+    "OSDU_SERVER_URL": "https://test.osdu.com",
+    "OSDU_DATA_PARTITION": "opendes",
     "AZURE_CLIENT_ID": "test-client-id",
     "AZURE_TENANT_ID": "test-tenant-id",
     "AZURE_CLIENT_SECRET": "test-secret",
@@ -1084,8 +1083,7 @@ async def test_query_wells_requires_a_data_partition_to_resolve_a_country():
     """Without a partition there is no country type to look up, so the tool errors."""
     with MockSearch(COUNTRIES):
         with patch.dict(os.environ):
-            for name in setting_names("OSDU_DATA_PARTITION"):
-                os.environ.pop(name, None)
+            os.environ.pop("OSDU_DATA_PARTITION", None)
             with pytest.raises(McpError):
                 await query_wells(country="Norway")
 
