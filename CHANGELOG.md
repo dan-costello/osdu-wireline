@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+* **Azure user sign-in**, for deployments that no longer allow the client credentials
+  grant. Set `OSDU_AUTH_CLIENT_ID`, `OSDU_AUTH_SCOPE` (the OSDU resource, e.g.
+  `<osdu-app-id>/.default`), and `OSDU_AUTH_DISCOVERY_URL` (the authority URL,
+  `https://login.microsoftonline.com/<tenant-id>`, which also covers sovereign clouds). The
+  first time a tool needs a token, the server opens the system browser to sign in as a
+  public client (no secret). MSAL keeps and rotates the tokens in an OS-encrypted cache at
+  `~/.osdu-wireline/msal_token_cache.bin` (DPAPI, Keychain, or libsecret), so later calls
+  and restarts are silent. No token passes through configuration. This mode takes priority
+  over `DefaultAzureCredential` and sits below `OSDU_USER_TOKEN`.
+
 ### Removed
 
 * **AWS and GCP authentication.** The AWS provider returned an STS session token from

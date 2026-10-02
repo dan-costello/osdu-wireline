@@ -38,7 +38,7 @@ _INVALID_SCOPE_MESSAGE = (
 class AzureProvider:
     """Uses the Azure identity chain, caching tokens for their lifetime."""
 
-    mode: ClassVar[AuthenticationMode] = AuthenticationMode.AZURE
+    mode: ClassVar[AuthenticationMode] = AuthenticationMode.CLIENT_CREDENTIALS
 
     def __init__(self) -> None:
         """Build a DefaultAzureCredential scoped to the available credentials."""
@@ -55,7 +55,7 @@ class AzureProvider:
         )
         self._cached_token: AccessToken | None = None
 
-        logger.info("Authentication mode: AZURE (DefaultAzureCredential)")
+        logger.info("Authentication mode: CLIENT_CREDENTIALS (DefaultAzureCredential)")
 
     async def get_token(self) -> str:
         """Return a cached token, or acquire a fresh one.

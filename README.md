@@ -62,12 +62,17 @@ a token or point it at another host.
 The server detects your authentication provider in this priority order:
 
 1. **Manual Token** (highest priority) - `OSDU_USER_TOKEN`
-2. **Azure** - `AZURE_CLIENT_ID` or `AZURE_TENANT_ID`
+2. **Azure User Sign-in** - `OSDU_AUTH_CLIENT_ID`, with `OSDU_AUTH_DISCOVERY_URL`
+3. **Azure** - `AZURE_CLIENT_ID` or `AZURE_TENANT_ID`
 
 Azure uses `DefaultAzureCredential`, which covers `az login`, service principal environment
-variables, and managed identity. Interactive browser sign-in is excluded: this server speaks
-JSON-RPC over stdio, so a credential that wants to print to the console or open a browser cannot
-run here.
+variables, and managed identity. Its interactive browser credential is excluded from that chain.
+
+Where the client credentials grant is not allowed, set `OSDU_AUTH_CLIENT_ID`,
+`OSDU_AUTH_DISCOVERY_URL`, and `OSDU_AUTH_SCOPE` instead. The first time a tool needs a token, the server opens your
+browser to sign in. MSAL keeps the tokens in a cache encrypted by the OS, so later calls and
+restarts sign in silently. No token is ever put in configuration. See the
+[Azure guide](./docs/authentication/azure.md#method-3-user-sign-in).
 
 **AWS and GCP are not supported.** Both providers were removed rather than left in place: the AWS
 one returned an STS session token and sent it as an `Authorization: Bearer` header, which OSDU on
@@ -171,7 +176,9 @@ resolves its own credentials. Settings that configure *this server* rather than 
 | `AZURE_CLIENT_ID` | No | — | Azure app registration client ID; required once Azure mode is selected |
 | `AZURE_TENANT_ID` | No | — | Azure tenant ID; setting either Azure variable selects Azure mode |
 | `AZURE_CLIENT_SECRET` | No | — | Azure client secret, for service principal authentication |
-| `OSDU_AUTH_SCOPE` | No | `{AZURE_CLIENT_ID}/.default` | Overrides the OAuth scope requested from Azure |
+| `OSDU_AUTH_CLIENT_ID` | No | — | Public client app registration ID; selects user sign-in mode, which takes priority over `DefaultAzureCredential` |
+| `OSDU_AUTH_DISCOVERY_URL` | No | — | Authority URL, e.g. `https://login.microsoftonline.com/<tenant-id>`; required in user sign-in mode |
+| `OSDU_AUTH_SCOPE` | No | `{AZURE_CLIENT_ID}/.default` | OAuth scope requested from Azure, e.g. `<osdu-app-id>/.default`; required in user sign-in mode, optional override otherwise |
 
 **Write and delete protection** — the tools marked write-protected and delete-protected above are
 disabled by default and must be enabled explicitly. The two gates are separate, so you can allow

@@ -8,6 +8,7 @@ import threading
 
 from ..env import get_env, get_setting
 from ..exceptions import OSMCPAuthError
+from .authorization_code import AuthorizationCodeProvider
 from .azure import AzureProvider
 from .base import CredentialProvider
 from .user_token import UserTokenProvider
@@ -16,6 +17,9 @@ _NO_CREDENTIALS_MESSAGE = (
     "No authentication credentials configured. Set up one of:\n\n"
     "  Manual Token (Highest Priority):\n"
     "    export OSDU_USER_TOKEN=your-bearer-token\n\n"
+    "  Azure User Sign-in (a browser opens on first use):\n"
+    "    export OSDU_AUTH_CLIENT_ID=... OSDU_AUTH_DISCOVERY_URL=... "
+    "OSDU_AUTH_SCOPE=...\n\n"
     "  Azure:\n"
     "    az login\n"
     "    OR export AZURE_CLIENT_ID=... AZURE_TENANT_ID=...\n\n"
@@ -28,6 +32,9 @@ def detect_provider() -> CredentialProvider:
 
     A manually supplied token wins over the Azure credential chain, so an
     operator can override whatever `az login` would resolve without logging out.
+    User sign-in comes next, ahead of the AZURE_* variables that select
+    DefaultAzureCredential, since an operator who sets OSDU_AUTH_CLIENT_ID
+    wants this mode.
 
     Returns:
         Provider for the detected authentication mode
@@ -37,6 +44,9 @@ def detect_provider() -> CredentialProvider:
     """
     if get_setting("OSDU_USER_TOKEN"):
         return UserTokenProvider()
+
+    if get_env("OSDU_AUTH_CLIENT_ID"):
+        return AuthorizationCodeProvider()
 
     if get_env("AZURE_CLIENT_ID") or get_env("AZURE_TENANT_ID"):
         return AzureProvider()

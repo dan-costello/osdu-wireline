@@ -37,6 +37,31 @@ claude mcp add osdu-wireline uvx "git+https://github.com/dan-costello/osdu-wirel
   -e "AZURE_TENANT_ID=your-tenant-id"
 ```
 
+## Method 3: User Sign-in
+
+For deployments that don't allow the client credentials grant. You sign in as yourself in the browser, and no token ever goes into configuration.
+
+- **Setup**: On the OSDU app registration (or a client registration authorized for it):
+  - Under **Authentication**, add the **Mobile and desktop applications** platform with the redirect URI `http://localhost`. Entra ignores the port when matching localhost redirects, so an existing `http://localhost:8080` entry works too. The server listens on a free port it picks for each sign-in.
+  - Set **Allow public client flows** to **Yes**
+- **Environment Variables**:
+  - `OSDU_AUTH_CLIENT_ID`: The app registration's client ID
+  - `OSDU_AUTH_DISCOVERY_URL`: Your tenant's authority URL, `https://login.microsoftonline.com/<tenant-id>`. For a sovereign cloud, use that cloud's host, e.g. `https://login.microsoftonline.us/<tenant-id>`.
+  - `OSDU_AUTH_SCOPE`: The OSDU resource scope, e.g. `<osdu-app-id>/.default`. Required, because the signing-in client (for example the Azure CLI, `04b07795-8ddb-461a-bbee-02f9e1bf7b46`) is often not the OSDU app. If it isn't, that client must be authorized on the OSDU app; see [Authorization Setup](#authorization-setup).
+
+**Example:**
+```bash
+claude mcp add osdu-wireline uvx --from /path/to/osdu_wireline.whl osdu-wireline   -e "OSDU_SERVER_URL=https://your-osdu.com"   -e "OSDU_DATA_PARTITION=your-partition"   -e "OSDU_AUTH_CLIENT_ID=your-osdu-app-id"   -e "OSDU_AUTH_DISCOVERY_URL=https://login.microsoftonline.com/your-tenant-id"   -e "OSDU_AUTH_SCOPE=your-osdu-app-id/.default"
+```
+
+**How it works:**
+- The first time a tool needs a token, the server opens your default browser to sign in. Finish within 5 minutes. If your MCP client times out that first call while you sign in, retry it.
+- MSAL saves the tokens to `~/.osdu-wireline/msal_token_cache.bin`, encrypted by the OS: DPAPI on Windows, Keychain on macOS, libsecret on Linux. Every server instance shares this cache, and MSAL refreshes tokens silently, so later calls and restarts need no browser.
+- The browser opens again only when your Entra session ends, for example after a password reset, a revoked session, or a Conditional Access policy asking you to sign in again.
+- To switch users, delete the cache file. The next tool call opens the browser.
+
+**Requirements:** The machine running the MCP client needs a browser and an OS keyring. If no encrypted storage is available (for example, Linux without libsecret), the server refuses rather than writing tokens unencrypted. Use a service principal (Method 2) there instead.
+
 ## Authorization Setup
 
 **When you need additional setup:**

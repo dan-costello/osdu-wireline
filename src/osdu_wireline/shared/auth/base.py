@@ -1,7 +1,8 @@
 """Credential provider protocol shared by every authentication mode.
 
-Each supported cloud gets its own provider module implementing this protocol,
-so a mode's initialization, token retrieval, and cleanup all live together.
+Each authentication mode gets its own provider module implementing this
+protocol, so a mode's initialization, token retrieval, and cleanup all live
+together.
 """
 
 from enum import Enum
@@ -14,14 +15,15 @@ class AuthenticationMode(Enum):
     """Supported authentication modes."""
 
     USER_TOKEN = "user_token"  # noqa: S105 - enum value, not a credential
-    AZURE = "azure"  # Azure DefaultAzureCredential
+    CLIENT_CREDENTIALS = "client_credentials"  # Azure DefaultAzureCredential
+    AUTHORIZATION_CODE = "authorization_code"  # Azure user sign-in through MSAL
 
 
 @runtime_checkable
 class CredentialProvider(Protocol):
     """Supplies OSDU bearer tokens for one authentication mode.
 
-    Implementations acquire their credential in ``__init__`` and raise
+    Implementations acquire their credential lazily in ``get_token`` and raise
     OSMCPAuthError with mode-specific setup instructions when it is missing.
     """
 
@@ -45,8 +47,8 @@ async def check_credentials(provider: CredentialProvider) -> dict[str, str]:
     """Exercise a provider and describe the outcome.
 
     The provider's own message is carried through on failure: each mode raises
-    guidance naming the fix ("run 'az login'", "gcloud auth application-default
-    login"), and that guidance is only useful if it reaches the caller.
+    guidance naming the fix ("run 'az login'", "verify OSDU_AUTH_DISCOVERY_URL"),
+    and that guidance is only useful if it reaches the caller.
 
     Args:
         provider: Provider to exercise

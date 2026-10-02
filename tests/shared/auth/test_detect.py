@@ -28,14 +28,14 @@ def test_azure_detected_from_client_id():
     """AZURE_CLIENT_ID selects Azure."""
     with patch.dict(os.environ, {"AZURE_CLIENT_ID": "azure-id"}, clear=True):
         with patch(AZURE_CREDENTIAL):
-            assert detect_provider().mode is AuthenticationMode.AZURE
+            assert detect_provider().mode is AuthenticationMode.CLIENT_CREDENTIALS
 
 
 def test_azure_detected_from_tenant_id_alone():
     """AZURE_TENANT_ID on its own is enough to select Azure."""
     with patch.dict(os.environ, {"AZURE_TENANT_ID": "test-tenant"}, clear=True):
         with patch(AZURE_CREDENTIAL):
-            assert detect_provider().mode is AuthenticationMode.AZURE
+            assert detect_provider().mode is AuthenticationMode.CLIENT_CREDENTIALS
 
 
 def test_legacy_user_token_name_still_selects_user_token():
@@ -51,6 +51,27 @@ def test_canonical_user_token_name_wins_over_the_legacy_one():
 
     with patch.dict(os.environ, env, clear=True):
         assert os.environ["OSDU_USER_TOKEN"] == canonical
+        assert detect_provider().mode is AuthenticationMode.USER_TOKEN
+
+
+def test_user_sign_in_beats_default_azure_credential():
+    """OSDU_AUTH_CLIENT_ID selects user sign-in even with the Azure IDs set."""
+    env = {
+        "OSDU_AUTH_CLIENT_ID": "osdu-app-id",
+        "OSDU_AUTH_DISCOVERY_URL": "https://login.microsoftonline.com/test-tenant",
+        "AZURE_CLIENT_ID": "azure-id",
+        "AZURE_TENANT_ID": "test-tenant",
+    }
+
+    with patch.dict(os.environ, env, clear=True):
+        assert detect_provider().mode is AuthenticationMode.AUTHORIZATION_CODE
+
+
+def test_user_token_beats_user_sign_in():
+    """The manual token stays the highest-priority override."""
+    env = {"OSDU_USER_TOKEN": make_jwt(), "OSDU_AUTH_CLIENT_ID": "osdu-app-id"}
+
+    with patch.dict(os.environ, env, clear=True):
         assert detect_provider().mode is AuthenticationMode.USER_TOKEN
 
 
@@ -83,5 +104,10 @@ def test_no_credentials_lists_every_setup_option():
             detect_provider()
 
     message = str(exc_info.value)
-    for hint in ("OSDU_USER_TOKEN", "az login", "AZURE_CLIENT_ID"):
+    for hint in (
+        "OSDU_USER_TOKEN",
+        "OSDU_AUTH_CLIENT_ID",
+        "az login",
+        "AZURE_CLIENT_ID",
+    ):
         assert hint in message

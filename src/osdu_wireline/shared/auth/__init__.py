@@ -3,6 +3,8 @@
 One provider module per mode, selected by `detect_provider`:
 
 - `user_token`: manual OAuth Bearer token via OSDU_USER_TOKEN
+- `authorization_code`: interactive browser sign-in with MSAL's encrypted token cache,
+  for deployments that disallow the client credentials grant
 - `azure`: DefaultAzureCredential
 
 AWS and GCP providers were removed: the AWS one returned an STS session token
