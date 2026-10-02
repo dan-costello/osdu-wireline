@@ -1,15 +1,13 @@
 """Tests for schema_get tool."""
 
 import os
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
-from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.schema.get import schema_get
-from tests.conftest import AZURE_CREDENTIAL
+from tests.conftest import static_token
 
 
 @pytest.mark.asyncio
@@ -43,25 +41,13 @@ async def test_schema_get_success():
         },
     }
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/schema-service/v1/schema/osdu:wks:wellbore:1.0.0",

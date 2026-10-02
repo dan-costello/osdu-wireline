@@ -1,9 +1,9 @@
 """Azure user sign-in, with tokens kept in MSAL's encrypted cache.
 
-The operator configures only the app registration (OSDU_AUTH_CLIENT_ID) and the
-tenant's authority URL (OSDU_AUTH_DISCOVERY_URL). The first time a token is
-needed and the cache holds no usable sign-in, the server opens the system
-browser for an interactive sign-in. MSAL listens on a localhost redirect, so
+The operator configures the app registration (OSDU_AUTH_CLIENT_ID), the
+tenant's authority URL (OSDU_AUTH_DISCOVERY_URL), and the OSDU resource
+(OSDU_AUTH_SCOPE). The first time a token is needed and the cache holds no
+usable sign-in, the server opens the system browser for an interactive sign-in. MSAL listens on a localhost redirect, so
 the MCP stdio channel is never touched.
 
 MSAL owns the refresh token from then on: it rotates it, and persists it to a
@@ -16,15 +16,14 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 import msal
 import msal_extensions
 import requests
 
-from ..env import get_env
+from ..env import require_env
 from ..exceptions import OSMCPAuthError
-from .base import AuthenticationMode
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +39,6 @@ _SIGN_IN_RETRY_SECONDS = 60
 
 _CACHE_PATH = Path.home() / ".osdu-wireline" / "msal_token_cache.bin"
 
-# MSAL adds these to every request itself, and rejects them if passed.
-_RESERVED_SCOPES = {"offline_access", "openid", "profile"}
 
 # Errors that a fresh interactive sign-in resolves.
 _SIGN_IN_ERRORS = {"invalid_grant", "interaction_required"}
@@ -61,7 +58,7 @@ _NETWORK_MESSAGE = (
 )
 _KEYRING_MESSAGE = (
     "User sign-in needs an OS keyring to store tokens encrypted (libsecret on "
-    "Linux). Install one, or use Service Principal authentication instead"
+    "Linux). Install one and retry"
 )
 _SIGN_IN_INCOMPLETE_MESSAGE = (
     "Sign-in was not completed. Retry in a minute to open the browser again"
@@ -88,8 +85,6 @@ class _UserConfig:
 class AuthorizationCodeProvider:
     """Signs the user in through the browser, caching the access token."""
 
-    mode: ClassVar[AuthenticationMode] = AuthenticationMode.AUTHORIZATION_CODE
-
     def __init__(self) -> None:
         """Initialize the provider; nothing is acquired until first use."""
         self._access_token: str | None = None
@@ -100,7 +95,7 @@ class AuthorizationCodeProvider:
         self._sign_in_failure: OSMCPAuthError | None = None
         self._sign_in_retry_at = 0.0
 
-        logger.info("Authentication mode: AUTHORIZATION_CODE (user sign-in)")
+        logger.info("Authentication: authorization code (user sign-in)")
 
     async def get_token(self) -> str:
         """Return a cached access token, or acquire one through MSAL.
@@ -215,23 +210,10 @@ def _read_config() -> _UserConfig:
     Raises:
         OSMCPAuthError: If a required setting is missing
     """
-    client_id = get_env("OSDU_AUTH_CLIENT_ID")
-    # The authority URL, e.g. https://login.microsoftonline.com/<tenant-id>.
-    # It carries both the tenant and the cloud, so sovereign clouds need no
-    # separate setting.
-    authority = get_env("OSDU_AUTH_DISCOVERY_URL")
-    # The OSDU resource, e.g. <osdu-app-id>/.default. It has no default: the
-    # signing-in client is often another app (such as the Azure CLI), so
-    # deriving the resource from OSDU_AUTH_CLIENT_ID would request a token for
-    # the wrong API.
-    scope = get_env("OSDU_AUTH_SCOPE")
-    if not client_id or not authority or not scope:
-        raise OSMCPAuthError(
-            "OSDU_AUTH_CLIENT_ID, OSDU_AUTH_DISCOVERY_URL, and OSDU_AUTH_SCOPE are "
-            "required for user sign-in"
-        )
-
-    scopes = [s for s in scope.split() if s not in _RESERVED_SCOPES]
+    client_id = require_env("OSDU_AUTH_CLIENT_ID")
+    authority = require_env("OSDU_AUTH_DISCOVERY_URL")
+    scope = require_env("OSDU_AUTH_SCOPE")
+    scopes = list(scope.split())
 
     return _UserConfig(
         client_id=client_id, authority=authority.rstrip("/"), scopes=scopes

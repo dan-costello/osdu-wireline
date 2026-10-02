@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 from .prompts import guide_record_lifecycle, guide_search_patterns
 from .resources import get_workflow_resources
 from .shared.auth import reset_auth_provider
-from .shared.env import require_setting
+from .shared.env import require_env
 from .tools.health_check import health_check
 from .tools.search import (
     query_available_dataspaces,
@@ -26,8 +26,8 @@ from .tools.search import (
 async def app_lifespan(server: FastMCP) -> AsyncGenerator[None]:
     """Release the shared credentials when the server shuts down.
 
-    The provider itself is built lazily on first use, so a process with no
-    credentials configured still starts and reports the error per tool call.
+    The provider itself is built lazily on first use, so a process with auth
+    not configured still starts and reports the error per tool call.
 
     Args:
         server: FastMCP server instance
@@ -46,17 +46,17 @@ async def app_lifespan(server: FastMCP) -> AsyncGenerator[None]:
 def verify_startup() -> None:
     """Fail before serving when required server configuration is missing.
 
-    Credentials are deliberately not checked here. The cloud providers
-    re-acquire on expiry, so a running server heals when the operator
-    re-authenticates; refusing to start would instead force an MCP client
-    restart, and would move the provider's setup guidance out of the tool
-    response and into a log file.
+    Credentials are deliberately not checked here. The provider re-acquires
+    on expiry, so a running server heals when the user signs in again;
+    refusing to start would instead force an MCP client restart, and would
+    move the provider's setup guidance out of the tool response and into a
+    log file.
 
     Raises:
         OSMCPConfigError: If required server configuration is missing
     """
-    require_setting("OSDU_SERVER_URL")
-    require_setting("OSDU_DATA_PARTITION")
+    require_env("OSDU_BASE_URL")
+    require_env("OSDU_PARTITION_ID")
 
 
 SERVER_INSTRUCTIONS = """

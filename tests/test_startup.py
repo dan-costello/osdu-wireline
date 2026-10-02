@@ -15,8 +15,8 @@ from osdu_wireline.server import verify_startup
 from osdu_wireline.shared.exceptions import OSMCPConfigError
 
 SERVER_ENV = {
-    "OSDU_SERVER_URL": "https://test.osdu.com",
-    "OSDU_DATA_PARTITION": "opendes",
+    "OSDU_BASE_URL": "https://test.osdu.com",
+    "OSDU_PARTITION_ID": "opendes",
 }
 
 
@@ -28,7 +28,7 @@ def test_verify_startup_passes_with_server_config():
 
 @pytest.mark.parametrize(
     "missing",
-    ["OSDU_SERVER_URL", "OSDU_DATA_PARTITION"],
+    ["OSDU_BASE_URL", "OSDU_PARTITION_ID"],
 )
 def test_verify_startup_names_the_missing_variable(missing):
     """A missing variable is reported by name, not as a generic failure."""
@@ -42,15 +42,15 @@ def test_verify_startup_names_the_missing_variable(missing):
 def test_startup_does_not_touch_credentials():
     """Startup must not resolve credentials, even when none are configured.
 
-    Credentials are refreshable out of band - `az login` fixes a running
-    server - so validating them here would force an MCP client restart for a
+    Credentials are refreshable - signing in again fixes a running server -
+    so validating them here would force an MCP client restart for a
     problem that heals itself.
     """
     with patch.dict(os.environ, SERVER_ENV, clear=True):
-        with patch("osdu_wireline.shared.auth.registry.detect_provider") as detect:
+        with patch("osdu_wireline.shared.auth.registry._build_provider") as build:
             verify_startup()
 
-    detect.assert_not_called()
+    build.assert_not_called()
 
 
 def test_main_runs_the_server_when_configuration_is_valid(restore_package_logger):
@@ -82,5 +82,5 @@ def test_main_writes_diagnostics_to_stderr_only(capsys, restore_package_logger):
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "OSDU_SERVER_URL" in captured.err
+    assert "OSDU_BASE_URL" in captured.err
     assert "Configuration error" in captured.err

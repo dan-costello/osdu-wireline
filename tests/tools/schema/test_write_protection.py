@@ -1,41 +1,28 @@
 """Tests for schema write protection."""
 
 import os
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
-from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.schema.create import schema_create
 from osdu_wireline.tools.schema.update import schema_update
-from tests.conftest import AZURE_CREDENTIAL
+from tests.conftest import static_token
 
 
 @pytest.mark.asyncio
 async def test_schema_create_write_protection():
     """Test write protection for schema_create."""
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
         "OSDU_MCP_ENABLE_WRITE_MODE": "false",  # Write protection enabled
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with pytest.raises(
                 Exception, match="Schema write operations are disabled"
             ) as excinfo:
@@ -56,26 +43,15 @@ async def test_schema_create_write_protection():
 @pytest.mark.asyncio
 async def test_schema_update_write_protection():
     """Test write protection for schema_update."""
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
         "OSDU_MCP_ENABLE_WRITE_MODE": "false",  # Write protection enabled
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with pytest.raises(
                 Exception, match="Schema write operations are disabled"
             ) as excinfo:
@@ -92,26 +68,14 @@ async def test_schema_create_write_enabled(sent_json):
     """Test successful schema creation with write mode enabled."""
     mock_response = {"id": "test:test:test:1.0.0", "status": "DEVELOPMENT"}
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
         "OSDU_MCP_ENABLE_WRITE_MODE": "true",  # Write protection disabled
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.post(
                     "https://test.osdu.com/api/schema-service/v1/schema",
@@ -166,26 +130,14 @@ async def test_schema_update_write_enabled(sent_json):
 
     mock_update_response = {"id": "test:test:test:1.0.0", "status": "DEVELOPMENT"}
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
         "OSDU_MCP_ENABLE_WRITE_MODE": "true",  # Write protection disabled
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 # Mock both raw URL and quoted URL to handle aioresponses URL normalization
                 test_schema_url = "https://test.osdu.com/api/schema-service/v1/schema/test:test:test:1.0.0"

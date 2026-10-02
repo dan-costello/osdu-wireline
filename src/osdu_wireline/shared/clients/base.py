@@ -13,9 +13,12 @@ import aiohttp
 from aiohttp import ClientSession, ClientTimeout
 
 from ..auth import CredentialProvider, get_auth_provider
-from ..env import get_setting_int, require_setting
+from ..env import require_env
 from ..exceptions import OSMCPAPIError, OSMCPConnectionError
 from ..service_urls import OSMCPService
+
+# Total time allowed for one HTTP request, in seconds.
+_TIMEOUT_SECONDS = 30
 
 
 class OsduClient:
@@ -45,9 +48,8 @@ class OsduClient:
         """
         self.auth = auth if auth is not None else get_auth_provider()
         self._session: ClientSession | None = None
-        self._base_url: str = require_setting("OSDU_SERVER_URL")
-        self._data_partition: str = require_setting("OSDU_DATA_PARTITION")
-        self._timeout = get_setting_int("OSDU_TIMEOUT", 30)
+        self._base_url: str = require_env("OSDU_BASE_URL")
+        self._data_partition: str = require_env("OSDU_PARTITION_ID")
         self._base_path = self.service.value if self.service else ""
 
     @property
@@ -85,7 +87,7 @@ class OsduClient:
             Active aiohttp session
         """
         if self._session is None or self._session.closed:
-            timeout = ClientTimeout(total=self._timeout)
+            timeout = ClientTimeout(total=_TIMEOUT_SECONDS)
             self._session = ClientSession(timeout=timeout)
         return self._session
 

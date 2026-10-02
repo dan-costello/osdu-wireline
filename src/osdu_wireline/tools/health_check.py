@@ -82,7 +82,7 @@ async def _check_services(
     for service in services:
         name = service.name.lower()
 
-        if "DDMS" in name:
+        if "ddms" in name:
             continue
         try:
             # Get the correct info endpoint for each service

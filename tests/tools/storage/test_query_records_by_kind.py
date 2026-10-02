@@ -1,17 +1,15 @@
 """Tests for storage query records by kind operation."""
 
 import os
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
-from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.storage.query_records_by_kind import (
     storage_query_records_by_kind,
 )
-from tests.conftest import AZURE_CREDENTIAL
+from tests.conftest import static_token
 
 
 @pytest.mark.asyncio
@@ -25,20 +23,11 @@ async def test_storage_query_records_by_kind_success():
     with patch.dict(
         os.environ,
         {
-            "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-            "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
-            "AZURE_CLIENT_ID": "test-client-id",
+            "OSDU_BASE_URL": "https://test.osdu.com",
+            "OSDU_PARTITION_ID": "test-partition",
         },
     ):
-        with patch(AZURE_CREDENTIAL) as mock_credential:
-            mock_token = AccessToken(
-                "fake_token",
-                int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
-            )
-            mock_instance = MagicMock()
-            mock_instance.get_token.return_value = mock_token
-            mock_credential.return_value = mock_instance
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/storage/v2/query/records?kind=test%3Atest%3Atest%3A1.0.0&limit=10",
@@ -64,20 +53,11 @@ async def test_storage_query_records_by_kind_with_cursor():
     with patch.dict(
         os.environ,
         {
-            "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-            "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
-            "AZURE_CLIENT_ID": "test-client-id",
+            "OSDU_BASE_URL": "https://test.osdu.com",
+            "OSDU_PARTITION_ID": "test-partition",
         },
     ):
-        with patch(AZURE_CREDENTIAL) as mock_credential:
-            mock_token = AccessToken(
-                "fake_token",
-                int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
-            )
-            mock_instance = MagicMock()
-            mock_instance.get_token.return_value = mock_token
-            mock_credential.return_value = mock_instance
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/storage/v2/query/records?kind=test%3Atest%3Atest%3A1.0.0&limit=5&cursor=previous-cursor",

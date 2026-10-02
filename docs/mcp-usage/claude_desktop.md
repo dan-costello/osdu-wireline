@@ -1,11 +1,7 @@
 # Claude Desktop
 
-> **Note:** `OSDU_SERVER_URL` and `OSDU_DATA_PARTITION` are always required.
-> The remaining environment variables depend on your cloud provider — the example below uses
-> Azure.  
-> 
-> See the auth guide for your provider:  
-> [Azure](../authentication/azure.md) · [Manual OAuth token](../authentication/manual_oauth.md)
+> **Note:** All six environment variables below are required. See the
+> [Azure authentication guide](../authentication/azure.md) for the app registration setup.
 
 Claude Desktop is configured through `claude_desktop_config.json`, which you can open from
 **Settings → Developer → Edit Config**. 
@@ -23,10 +19,12 @@ Open the .json file in the folder that opens, and add an entry to the mcpServers
         "osdu-wireline"
       ],
       "env": {
-        "OSDU_SERVER_URL": "https://your-osdu.com",
-        "OSDU_DATA_PARTITION": "your-partition",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
+        "OSDU_GRANT_TYPE": "authorization_code",
+        "OSDU_BASE_URL": "https://your-osdu.com",
+        "OSDU_PARTITION_ID": "your-partition",
+        "OSDU_AUTH_CLIENT_ID": "your-client-id",
+        "OSDU_AUTH_DISCOVERY_URL": "https://login.microsoftonline.com/your-tenant-id",
+        "OSDU_AUTH_SCOPE": "your-osdu-app-id/.default"
       }
     }
   }

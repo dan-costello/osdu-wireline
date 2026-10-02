@@ -1,4 +1,4 @@
-"""Authentication mode detection and the process-wide credential provider.
+"""The process-wide credential provider.
 
 The provider is built once and shared by every tool invocation so its token
 cache survives across calls.
@@ -6,52 +6,36 @@ cache survives across calls.
 
 import threading
 
-from ..env import get_env, get_setting
+from ..env import get_env
 from ..exceptions import OSMCPAuthError
 from .authorization_code import AuthorizationCodeProvider
-from .azure import AzureProvider
-from .base import CredentialProvider
-from .user_token import UserTokenProvider
+from .base import AuthenticationMode, CredentialProvider
 
-_NO_CREDENTIALS_MESSAGE = (
-    "No authentication credentials configured. Set up one of:\n\n"
-    "  Manual Token (Highest Priority):\n"
-    "    export OSDU_USER_TOKEN=your-bearer-token\n\n"
-    "  Azure User Sign-in (a browser opens on first use):\n"
-    "    export OSDU_AUTH_CLIENT_ID=... OSDU_AUTH_DISCOVERY_URL=... "
-    "OSDU_AUTH_SCOPE=...\n\n"
-    "  Azure:\n"
-    "    az login\n"
-    "    OR export AZURE_CLIENT_ID=... AZURE_TENANT_ID=...\n\n"
+_SETUP_MESSAGE = (
+    f"OSDU_GRANT_TYPE must be set to {AuthenticationMode.AUTHORIZATION_CODE}. Configure:\n\n"
+    f"    OSDU_GRANT_TYPE={AuthenticationMode.AUTHORIZATION_CODE}\n"
+    "    OSDU_BASE_URL=<base_url>\n"
+    "    OSDU_PARTITION_ID=<partition>\n"
+    "    OSDU_AUTH_CLIENT_ID=<azure_client_id>\n"
+    "    OSDU_AUTH_DISCOVERY_URL=https://login.microsoftonline.com/<tenant_id>\n"
+    "    OSDU_AUTH_SCOPE=<osdu_app_id>/.default\n\n"
     "  See: https://github.com/dan-costello/osdu-wireline#authentication"
 )
 
 
-def detect_provider() -> CredentialProvider:
-    """Select a credential provider by precedence.
-
-    A manually supplied token wins over the Azure credential chain, so an
-    operator can override whatever `az login` would resolve without logging out.
-    User sign-in comes next, ahead of the AZURE_* variables that select
-    DefaultAzureCredential, since an operator who sets OSDU_AUTH_CLIENT_ID
-    wants this mode.
+def _build_provider() -> CredentialProvider:
+    """Build the provider for the configured grant type.
+    Currently only accepts
 
     Returns:
-        Provider for the detected authentication mode
+        Provider for the authorization code grant
 
     Raises:
-        OSMCPAuthError: If no authentication credentials are found
+        OSMCPAuthError: If OSDU_GRANT_TYPE is missing or unsupported
     """
-    if get_setting("OSDU_USER_TOKEN"):
-        return UserTokenProvider()
-
-    if get_env("OSDU_AUTH_CLIENT_ID"):
-        return AuthorizationCodeProvider()
-
-    if get_env("AZURE_CLIENT_ID") or get_env("AZURE_TENANT_ID"):
-        return AzureProvider()
-
-    raise OSMCPAuthError(_NO_CREDENTIALS_MESSAGE)
+    if get_env("OSDU_GRANT_TYPE") != "authorization_code":
+        raise OSMCPAuthError(_SETUP_MESSAGE)
+    return AuthorizationCodeProvider()
 
 
 _provider: CredentialProvider | None = None
@@ -61,9 +45,9 @@ _lock = threading.Lock()
 def get_auth_provider() -> CredentialProvider:
     """Return the shared credential provider, building it on first use.
 
-    Construction is deferred because detection raises when no credentials are
-    configured; building it eagerly would stop the server from starting instead
-    of surfacing an authentication error from the tool that needed it.
+    Construction is deferred because it raises when auth is not configured;
+    building it eagerly would stop the server from starting instead of
+    surfacing an authentication error from the tool that needed it.
 
     Returns:
         Process-wide credential provider
@@ -74,7 +58,7 @@ def get_auth_provider() -> CredentialProvider:
 
     with _lock:
         if _provider is None:
-            _provider = detect_provider()
+            _provider = _build_provider()
         return _provider
 
 

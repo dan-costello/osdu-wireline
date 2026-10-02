@@ -1,13 +1,13 @@
 """Tests for the health check tool."""
 
-import os
-import time
+from unittest.mock import patch
 from urllib.parse import urljoin
 
-import jwt
 import pytest
 from aioresponses import aioresponses
 
+from osdu_wireline.shared.auth import get_auth_provider
+from osdu_wireline.shared.exceptions import OSMCPAuthError
 from osdu_wireline.shared.service_urls import OSMCPService, get_service_info_endpoint
 from osdu_wireline.tools.health_check import health_check
 
@@ -39,36 +39,33 @@ async def test_health_check_success(osdu_env):
         assert result["server_url"] == SERVER_URL
         assert result["data_partition"] == "opendes"
         assert result["authentication"]["status"] == "valid"
-        assert result["authentication"]["mode"] == "user_token"
+        assert result["authentication"]["grant_type"] == "authorization_code"
         assert "services" in result
         assert "timestamp" in result
 
 
 @pytest.mark.asyncio
-async def test_health_check_auth_failure(monkeypatch):
+async def test_health_check_auth_failure(osdu_env):
     """Health check reports invalid authentication *and* why.
 
     The reason is the whole value of this tool: a bare "invalid" leaves the
-    operator to guess between an expired token, a wrong client ID, and a
+    operator to guess between an abandoned sign-in, a wrong client ID, and a
     network problem.
     """
-    expired_token = jwt.encode(
-        {"sub": "test-user", "exp": int(time.time()) - 3600},
-        "test-secret",
-        algorithm="HS256",
-    )
-    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_URL", SERVER_URL)
-    monkeypatch.setitem(os.environ, "OSDU_MCP_SERVER_DATA_PARTITION", "opendes")
-    monkeypatch.setitem(os.environ, "OSDU_MCP_USER_TOKEN", expired_token)
+    guidance = "Sign-in was not completed. Retry in a minute to open the browser again"
+    provider = get_auth_provider()
 
-    with aioresponses() as mocked:
+    with (
+        aioresponses() as mocked,
+        patch.object(provider, "get_token", side_effect=OSMCPAuthError(guidance)),
+    ):
         _mock_all_services(mocked)
 
         result = await health_check(include_services=False)
 
         assert result["authentication"]["status"] == "invalid"
-        assert result["authentication"]["mode"] == "user_token"
-        assert "expired" in result["authentication"]["error"]
+        assert result["authentication"]["grant_type"] == "authorization_code"
+        assert "not completed" in result["authentication"]["error"]
 
 
 @pytest.mark.asyncio

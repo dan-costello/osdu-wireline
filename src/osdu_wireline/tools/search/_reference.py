@@ -34,7 +34,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from ...shared.clients import SearchClient
-from ...shared.env import require_setting
+from ...shared.env import require_env
 from ._query import is_record_id, normalize_record_id, quoted
 
 logger = logging.getLogger(__name__)
@@ -225,7 +225,7 @@ def _as_record(
 
 async def available_records(lookup: ReferenceLookup) -> list[ReferenceRecord]:
     """List the entities this OSDU instance knows about, fetching them once."""
-    data_partition = require_setting("OSDU_DATA_PARTITION")
+    data_partition = require_env("OSDU_PARTITION_ID")
     cached = _RECORDS.get((data_partition, lookup.label))
     if cached is not None:
         return cached

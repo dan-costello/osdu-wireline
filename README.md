@@ -36,14 +36,14 @@ Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) t
 All configuration is supplied through environment variables, set in your MCP client's `env` block.
 See [Environment Variables](#environment-variables) for the complete reference.
 
-`OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are validated at startup: if either is
-missing the server writes the missing variable name to stderr and exits with status 1, rather than
-starting and failing every tool call. Your MCP client will report the server as failed to start;
-the message is in its server log.
+`OSDU_BASE_URL` and `OSDU_PARTITION_ID` are validated at startup: if either is missing the server
+writes the missing variable name to stderr and exits with status 1, rather than starting and
+failing every tool call. Your MCP client will report the server as failed to start; the message is
+in its server log.
 
-Credentials are deliberately *not* checked at startup, so that re-authenticating (`az login`)
-fixes a running server without restarting your MCP client. Use the `health_check` tool to see the current authentication status
-and, when it fails, the reason.
+Credentials are deliberately *not* checked at startup, so that signing in again fixes a running
+server without restarting your MCP client. Use the `health_check` tool to see the current
+authentication status and, when it fails, the reason.
 
 ### Connecting to MCP Clients
 This server currently uses stdio for communication with MCP clients. Below are examples of how to configure the server for different MCP clients:
@@ -57,31 +57,26 @@ The server never accepts a token or a server URL as a tool argument. Both come f
 environment, so neither passes through the assistant's context, where prompt injection could read
 a token or point it at another host.
 
-### Authentication Priority
+### Azure Authorization Code
 
-The server detects your authentication provider in this priority order:
+The only supported authentication is the Azure OAuth authorization code grant. Configure:
 
-1. **Manual Token** (highest priority) - `OSDU_USER_TOKEN`
-2. **Azure User Sign-in** - `OSDU_AUTH_CLIENT_ID`, with `OSDU_AUTH_DISCOVERY_URL`
-3. **Azure** - `AZURE_CLIENT_ID` or `AZURE_TENANT_ID`
+```
+OSDU_GRANT_TYPE=authorization_code
+OSDU_BASE_URL=<base_url>
+OSDU_PARTITION_ID=<partition>
+OSDU_AUTH_CLIENT_ID=<azure_client_id>
+OSDU_AUTH_DISCOVERY_URL=https://login.microsoftonline.com/<tenant_id>
+OSDU_AUTH_SCOPE=<osdu_app_id>/.default
+```
 
-Azure uses `DefaultAzureCredential`, which covers `az login`, service principal environment
-variables, and managed identity. Its interactive browser credential is excluded from that chain.
+The first time a tool needs a token, the server opens your browser to sign in. MSAL keeps the
+tokens in a cache encrypted by the OS, so later calls and restarts sign in silently. No token is
+ever put in configuration. See the [Azure guide](./docs/authentication/azure.md) for the app
+registration setup.
 
-Where the client credentials grant is not allowed, set `OSDU_AUTH_CLIENT_ID`,
-`OSDU_AUTH_DISCOVERY_URL`, and `OSDU_AUTH_SCOPE` instead. The first time a tool needs a token, the server opens your
-browser to sign in. MSAL keeps the tokens in a cache encrypted by the OS, so later calls and
-restarts sign in silently. No token is ever put in configuration. See the
-[Azure guide](./docs/authentication/azure.md#method-3-user-sign-in).
-
-**AWS and GCP are not supported.** Both providers were removed rather than left in place: the AWS
-one returned an STS session token and sent it as an `Authorization: Bearer` header, which OSDU on
-AWS does not accept, and neither had ever been exercised against a live platform.
-
-### Authentication Methods
  - [Azure](./docs/authentication/azure.md)
- - [Manual OAuth Token](./docs/authentication/manual_oauth.md)  
- - [Domain Configuration (all providers)](./docs/authentication/domain.md)
+ - [Domain Configuration](./docs/authentication/domain.md)
 
 ## Usage
 
@@ -150,35 +145,25 @@ declared set of fields.
 
 ## Environment Variables
 
-**Server** — `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are required; the server
-raises a configuration error on the first tool call without them.
+**Server** — `OSDU_BASE_URL` and `OSDU_PARTITION_ID` are required; the server exits at startup
+without them.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_SERVER_URL` | Yes | — | Base URL of the OSDU platform, e.g. `https://osdu.contoso.com` |
-| `OSDU_DATA_PARTITION` | Yes | — | Data partition ID, e.g. `opendes` |
-| `OSDU_TIMEOUT` | No | `30` | HTTP request timeout in seconds |
+| `OSDU_BASE_URL` | Yes | — | Base URL of the OSDU platform, e.g. `https://osdu.contoso.com` |
+| `OSDU_PARTITION_ID` | Yes | — | Data partition ID, e.g. `opendes` |
 
-These five connection and credential variables were previously prefixed `OSDU_MCP_`
-(`OSDU_MCP_SERVER_URL`, `OSDU_MCP_SERVER_DATA_PARTITION`, `OSDU_MCP_SERVER_TIMEOUT`,
-`OSDU_MCP_USER_TOKEN`, `OSDU_MCP_AUTH_SCOPE`). Those spellings are still accepted, so an
-existing configuration keeps working; where both are set the unprefixed name wins. They are
-shared with DGI's `dgimcp` OSDU import server, which reads the same variables so that it too
-resolves its own credentials. Settings that configure *this server* rather than the connection
-(the write and delete gates, the log level) keep the `OSDU_MCP_` prefix.
-
-**Authentication** — the provider is detected from whichever of these is set; see
-[Authentication](#authentication) for the priority order and per-provider guides.
+**Authentication** — see [Authentication](#authentication).
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OSDU_USER_TOKEN` | No | — | OAuth bearer token; selects manual-token mode, which takes priority over Azure |
-| `AZURE_CLIENT_ID` | No | — | Azure app registration client ID; required once Azure mode is selected |
-| `AZURE_TENANT_ID` | No | — | Azure tenant ID; setting either Azure variable selects Azure mode |
-| `AZURE_CLIENT_SECRET` | No | — | Azure client secret, for service principal authentication |
-| `OSDU_AUTH_CLIENT_ID` | No | — | Public client app registration ID; selects user sign-in mode, which takes priority over `DefaultAzureCredential` |
-| `OSDU_AUTH_DISCOVERY_URL` | No | — | Authority URL, e.g. `https://login.microsoftonline.com/<tenant-id>`; required in user sign-in mode |
-| `OSDU_AUTH_SCOPE` | No | `{AZURE_CLIENT_ID}/.default` | OAuth scope requested from Azure, e.g. `<osdu-app-id>/.default`; required in user sign-in mode, optional override otherwise |
+| `OSDU_GRANT_TYPE` | Yes | — | Must be `authorization_code` |
+| `OSDU_AUTH_CLIENT_ID` | Yes | — | Public client app registration ID |
+| `OSDU_AUTH_DISCOVERY_URL` | Yes | — | Authority URL, e.g. `https://login.microsoftonline.com/<tenant-id>` |
+| `OSDU_AUTH_SCOPE` | Yes | — | OSDU resource scope, e.g. `<osdu-app-id>/.default` |
+
+Settings that configure *this server* rather than the connection (the write and delete gates,
+the log level) keep the `OSDU_MCP_` prefix.
 
 **Write and delete protection** — the tools marked write-protected and delete-protected above are
 disabled by default and must be enabled explicitly. The two gates are separate, so you can allow

@@ -8,31 +8,46 @@ inside tool modules.
 
 import logging
 import os
-import time
+from contextlib import contextmanager
 from unittest.mock import patch
 
-import jwt
 import pytest
 
-from osdu_wireline.shared.auth import reset_auth_provider
+from osdu_wireline.shared.auth import registry, reset_auth_provider
 
-# Patch target for Azure tests. The symbol must be patched where it is used,
-# so keep this in one place rather than spelling the path out at every site.
-AZURE_CREDENTIAL = "osdu_wireline.shared.auth.azure.DefaultAzureCredential"
+TEST_TOKEN = "test-token"
 
-# USER_TOKEN mode validates JWT structure and expiry, so use a real token
-TEST_TOKEN = jwt.encode(
-    {"sub": "test-user", "exp": int(time.time()) + 3600},
-    "test-secret",
-    algorithm="HS256",
-)
-
-# OSDU_USER_TOKEN selects USER_TOKEN auth mode, which needs no cloud SDKs
 OSDU_TEST_ENV = {
-    "OSDU_SERVER_URL": "https://test.osdu.com",
-    "OSDU_DATA_PARTITION": "opendes",
-    "OSDU_USER_TOKEN": TEST_TOKEN,
+    "OSDU_GRANT_TYPE": "authorization_code",
+    "OSDU_BASE_URL": "https://test.osdu.com",
+    "OSDU_PARTITION_ID": "opendes",
 }
+
+
+class StaticTokenProvider:
+    """Credential provider returning a fixed token, so no browser opens."""
+
+    def __init__(self, token: str = TEST_TOKEN):
+        self.token = token
+
+    async def get_token(self) -> str:
+        return self.token
+
+    def close(self) -> None:
+        pass
+
+
+def install_provider(provider) -> None:
+    """Make `provider` the shared credential provider."""
+    reset_auth_provider()
+    registry._provider = provider
+
+
+@contextmanager
+def static_token():
+    """Use a static-token provider for the duration of the block."""
+    install_provider(StaticTokenProvider())
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -70,8 +85,9 @@ def restore_package_logger():
 
 @pytest.fixture
 def osdu_env():
-    """Minimal environment for building a real credential provider."""
+    """Server environment with a static-token credential provider."""
     with patch.dict(os.environ, OSDU_TEST_ENV):
+        install_provider(StaticTokenProvider())
         yield
 
 
