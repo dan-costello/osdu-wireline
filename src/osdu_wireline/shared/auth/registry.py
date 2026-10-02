@@ -6,7 +6,7 @@ cache survives across calls.
 
 import threading
 
-from ..env import get_env, get_setting
+from ..env import get_env
 from ..exceptions import OSMCPAuthError
 from .azure import AzureProvider
 from .base import CredentialProvider
@@ -35,7 +35,7 @@ def detect_provider() -> CredentialProvider:
     Raises:
         OSMCPAuthError: If no authentication credentials are found
     """
-    if get_setting("OSDU_USER_TOKEN"):
+    if get_env("OSDU_USER_TOKEN"):
         return UserTokenProvider()
 
     if get_env("AZURE_CLIENT_ID") or get_env("AZURE_TENANT_ID"):

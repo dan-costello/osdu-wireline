@@ -36,8 +36,8 @@ async def test_entitlements_mine_success():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "test-partition",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",
@@ -81,8 +81,8 @@ async def test_entitlements_mine_empty():
     )
 
     test_env = {
-        "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-        "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
+        "OSDU_SERVER_URL": "https://test.osdu.com",
+        "OSDU_DATA_PARTITION": "test-partition",
         "AZURE_CLIENT_ID": "test-client-id",
         "AZURE_TENANT_ID": "test-tenant-id",
         "AZURE_CLIENT_SECRET": "test-secret",

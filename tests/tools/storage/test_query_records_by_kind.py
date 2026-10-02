@@ -25,8 +25,8 @@ async def test_storage_query_records_by_kind_success():
     with patch.dict(
         os.environ,
         {
-            "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-            "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
+            "OSDU_SERVER_URL": "https://test.osdu.com",
+            "OSDU_DATA_PARTITION": "test-partition",
             "AZURE_CLIENT_ID": "test-client-id",
         },
     ):
@@ -64,8 +64,8 @@ async def test_storage_query_records_by_kind_with_cursor():
     with patch.dict(
         os.environ,
         {
-            "OSDU_MCP_SERVER_URL": "https://test.osdu.com",
-            "OSDU_MCP_SERVER_DATA_PARTITION": "test-partition",
+            "OSDU_SERVER_URL": "https://test.osdu.com",
+            "OSDU_DATA_PARTITION": "test-partition",
             "AZURE_CLIENT_ID": "test-client-id",
         },
     ):

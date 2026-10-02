@@ -23,9 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Renamed the connection and credential environment variables to drop the `OSDU_MCP_`
   prefix: `OSDU_SERVER_URL`, `OSDU_DATA_PARTITION`, `OSDU_TIMEOUT`, `OSDU_USER_TOKEN`,
-  `OSDU_AUTH_SCOPE`. **The old spellings are still read as a fallback**, so existing
-  configurations keep working; where both are set the unprefixed name wins. These five are
-  now shared with DGI's `dgimcp` OSDU import server, which reads the same variables so it
+  `OSDU_AUTH_SCOPE`. **The old `OSDU_MCP_` spellings are no longer read**; update any
+  existing configuration to the new names. These five are now shared with DGI's `dgimcp` OSDU import server, which reads the same variables so it
   can resolve its own credentials instead of accepting a token as a tool argument.
   Server-only settings (`OSDU_MCP_ENABLE_WRITE_MODE`, `OSDU_MCP_ENABLE_DELETE_MODE`,
   `OSDU_MCP_LOG_LEVEL`) keep the prefix — they configure this server, not the connection.

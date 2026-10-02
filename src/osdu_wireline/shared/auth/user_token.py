@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import jwt
 
-from ..env import get_setting
+from ..env import get_env
 from ..exceptions import OSMCPAuthError
 from .base import AuthenticationMode
 
@@ -39,7 +39,7 @@ class UserTokenProvider:
         Raises:
             OSMCPAuthError: If the token is unset, malformed, or expired
         """
-        token = get_setting("OSDU_USER_TOKEN")
+        token = get_env("OSDU_USER_TOKEN")
         if not token:
             raise OSMCPAuthError("USER_TOKEN mode but OSDU_USER_TOKEN not set")
 

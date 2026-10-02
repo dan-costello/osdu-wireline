@@ -36,7 +36,7 @@ Forked from [OSDU MCP Server](https://github.com/danielscholl/osdu-mcp-server) t
 All configuration is supplied through environment variables, set in your MCP client's `env` block.
 See [Environment Variables](#environment-variables) for the complete reference.
 
-`OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are validated at startup: if either is
+`OSDU_SERVER_URL` and `OSDU_DATA_PARTITION` are validated at startup: if either is
 missing the server writes the missing variable name to stderr and exits with status 1, rather than
 starting and failing every tool call. Your MCP client will report the server as failed to start;
 the message is in its server log.
@@ -145,7 +145,7 @@ declared set of fields.
 
 ## Environment Variables
 
-**Server** — `OSDU_MCP_SERVER_URL` and `OSDU_MCP_SERVER_DATA_PARTITION` are required; the server
+**Server** — `OSDU_SERVER_URL` and `OSDU_DATA_PARTITION` are required; the server
 raises a configuration error on the first tool call without them.
 
 | Variable | Required | Default | Description |
@@ -154,13 +154,10 @@ raises a configuration error on the first tool call without them.
 | `OSDU_DATA_PARTITION` | Yes | — | Data partition ID, e.g. `opendes` |
 | `OSDU_TIMEOUT` | No | `30` | HTTP request timeout in seconds |
 
-These five connection and credential variables were previously prefixed `OSDU_MCP_`
-(`OSDU_MCP_SERVER_URL`, `OSDU_MCP_SERVER_DATA_PARTITION`, `OSDU_MCP_SERVER_TIMEOUT`,
-`OSDU_MCP_USER_TOKEN`, `OSDU_MCP_AUTH_SCOPE`). Those spellings are still accepted, so an
-existing configuration keeps working; where both are set the unprefixed name wins. They are
-shared with DGI's `dgimcp` OSDU import server, which reads the same variables so that it too
-resolves its own credentials. Settings that configure *this server* rather than the connection
-(the write and delete gates, the log level) keep the `OSDU_MCP_` prefix.
+Connection and credential variables use `OSDU_*` names shared with other apps that talk to
+the same platform, such as DGI's `dgimcp` OSDU import server, so one configuration serves all of
+them. Settings that configure *this server* rather than the connection (the write and delete
+gates, the log level) use the `OSDU_MCP_` prefix.
 
 **Authentication** — the provider is detected from whichever of these is set; see
 [Authentication](#authentication) for the priority order and per-provider guides.
