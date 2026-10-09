@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Protocol, runtime_checkable
 
 from ..exceptions import OSMCPAuthError
-from ..env import get_env
 
 
 #: The only supported OAuth grant, the required value of OSDU_GRANT_TYPE.
@@ -49,7 +48,7 @@ async def check_credentials(provider: CredentialProvider) -> dict[str, str]:
         A report naming the grant type, and on failure the guidance the
         provider produced
     """
-    report = {"grant_type": get_env("OSDU_GRANT_TYPE") or "unknown"}
+    report = {"grant_type": AuthenticationMode.AUTHORIZATION_CODE.value}
 
     try:
         await provider.get_token()

@@ -23,7 +23,7 @@ import msal_extensions
 import requests
 
 from ..env import require_env
-from ..exceptions import OSMCPAuthError
+from ..exceptions import OSMCPAuthError, OSMCPConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,9 @@ _SIGN_IN_TIMEOUT_SECONDS = 300
 _SIGN_IN_RETRY_SECONDS = 60
 
 _CACHE_PATH = Path.home() / ".osdu-wireline" / "msal_token_cache.bin"
+
+# MSAL adds these to every request itself and rejects them when passed in.
+_RESERVED_SCOPES = {"offline_access", "openid", "profile"}
 
 
 # Errors that a fresh interactive sign-in resolves.
@@ -210,10 +213,13 @@ def _read_config() -> _UserConfig:
     Raises:
         OSMCPAuthError: If a required setting is missing
     """
-    client_id = require_env("OSDU_AUTH_CLIENT_ID")
-    authority = require_env("OSDU_AUTH_DISCOVERY_URL")
-    scope = require_env("OSDU_AUTH_SCOPE")
-    scopes = list(scope.split())
+    try:
+        client_id = require_env("OSDU_AUTH_CLIENT_ID")
+        authority = require_env("OSDU_AUTH_DISCOVERY_URL")
+        scope = require_env("OSDU_AUTH_SCOPE")
+    except OSMCPConfigError as e:
+        raise OSMCPAuthError(str(e)) from e
+    scopes = [s for s in scope.split() if s not in _RESERVED_SCOPES]
 
     return _UserConfig(
         client_id=client_id, authority=authority.rstrip("/"), scopes=scopes

@@ -1,7 +1,12 @@
 # VS Code
 
-> **Note:** All six environment variables below are required. See the
+> **Note:** All six environment variables below are required. `OSDU_GRANT_TYPE` must be
+> exactly `authorization_code`, as shown; every other value is a placeholder to replace
+> with your own. See the
 > [Azure authentication guide](../authentication/azure.md) for the app registration setup.
+>
+> On the first tool call the server opens your browser to sign in; after that, tokens
+> are cached and later calls and restarts sign in silently.
 
 ## Direct Installation
 
@@ -9,7 +14,7 @@ To directly download and install this package from github without setting up a l
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "osdu-wireline": {
       "type": "stdio",
       "command": "uvx",
@@ -36,7 +41,7 @@ To directly download and install this package from github without setting up a l
 If you are developing locally and want to test your changes, you can also use the local installation method:
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "osdu-wireline": {
       "type": "stdio",
       "command": "uv",

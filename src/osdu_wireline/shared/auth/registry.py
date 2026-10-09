@@ -12,8 +12,8 @@ from .authorization_code import AuthorizationCodeProvider
 from .base import AuthenticationMode, CredentialProvider
 
 _SETUP_MESSAGE = (
-    f"OSDU_GRANT_TYPE must be set to {AuthenticationMode.AUTHORIZATION_CODE}. Configure:\n\n"
-    f"    OSDU_GRANT_TYPE={AuthenticationMode.AUTHORIZATION_CODE}\n"
+    f"OSDU_GRANT_TYPE must be set to {AuthenticationMode.AUTHORIZATION_CODE.value}. Configure:\n\n"
+    f"    OSDU_GRANT_TYPE={AuthenticationMode.AUTHORIZATION_CODE.value}\n"
     "    OSDU_BASE_URL=<base_url>\n"
     "    OSDU_PARTITION_ID=<partition>\n"
     "    OSDU_AUTH_CLIENT_ID=<azure_client_id>\n"
@@ -33,7 +33,7 @@ def _build_provider() -> CredentialProvider:
     Raises:
         OSMCPAuthError: If OSDU_GRANT_TYPE is missing or unsupported
     """
-    if get_env("OSDU_GRANT_TYPE") != "authorization_code":
+    if get_env("OSDU_GRANT_TYPE") != AuthenticationMode.AUTHORIZATION_CODE.value:
         raise OSMCPAuthError(_SETUP_MESSAGE)
     return AuthorizationCodeProvider()
 
