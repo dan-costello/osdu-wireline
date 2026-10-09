@@ -2,12 +2,10 @@
 
 import json
 import os
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
-from azure.core.credentials import AccessToken
 from mcp.shared.exceptions import McpError
 
 from osdu_wireline.shared.clients import BoundingBox, SearchClient
@@ -36,7 +34,7 @@ from osdu_wireline.tools.search.query_wells import (
     WellFields,
     WellLogFields,
 )
-from tests.conftest import AZURE_CREDENTIAL
+from tests.conftest import OSDU_TEST_ENV, StaticTokenProvider, install_provider
 
 GULF_OF_MEXICO = BoundingBox(
     min_latitude=25.0,
@@ -64,15 +62,6 @@ def wellbores(*well_ids: str, total: int | None = None) -> dict:
     }
 
 
-TEST_ENV = {
-    "OSDU_SERVER_URL": "https://test.osdu.com",
-    "OSDU_DATA_PARTITION": "opendes",
-    "AZURE_CLIENT_ID": "test-client-id",
-    "AZURE_TENANT_ID": "test-tenant-id",
-    "AZURE_CLIENT_SECRET": "test-secret",
-}
-
-
 class MockSearch:
     """Mock the search endpoint and capture the payloads sent to it."""
 
@@ -84,19 +73,9 @@ class MockSearch:
         # Reference lookups are memoised for the life of the process, so a
         # test's countries or basins must not answer an earlier test's.
         clear_reference_cache()
-        token = AccessToken(
-            token="fake-token",
-            expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-        )
-
-        self._env = patch.dict(os.environ, TEST_ENV)
+        self._env = patch.dict(os.environ, OSDU_TEST_ENV)
         self._env.start()
-
-        self._cred = patch(AZURE_CREDENTIAL)
-        credential_class = self._cred.start()
-        credential = MagicMock()
-        credential.get_token.return_value = token
-        credential_class.return_value = credential
+        install_provider(StaticTokenProvider())
 
         self._mocked = aioresponses()
         self._mocked.start()
@@ -115,7 +94,6 @@ class MockSearch:
                         self.requests.append(body or {})
         finally:
             self._mocked.stop()
-            self._cred.stop()
             self._env.stop()
 
 
@@ -1083,7 +1061,7 @@ async def test_query_wells_requires_a_data_partition_to_resolve_a_country():
     """Without a partition there is no country type to look up, so the tool errors."""
     with MockSearch(COUNTRIES):
         with patch.dict(os.environ):
-            os.environ.pop("OSDU_DATA_PARTITION", None)
+            os.environ.pop("OSDU_PARTITION_ID", None)
             with pytest.raises(McpError):
                 await query_wells(country="Norway")
 

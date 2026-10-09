@@ -2,19 +2,17 @@
 
 import os
 import re
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
-from azure.core.credentials import AccessToken
 
 from osdu_wireline.tools.storage.get_record import storage_get_record
 from osdu_wireline.tools.storage.get_record_version import storage_get_record_version
 from osdu_wireline.tools.storage.list_record_versions import (
     storage_list_record_versions,
 )
-from tests.conftest import AZURE_CREDENTIAL
+from tests.conftest import static_token
 
 
 @pytest.mark.asyncio
@@ -31,25 +29,13 @@ async def test_storage_get_record_success():
         "createUser": "test@example.com",
     }
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_SERVER_URL": "https://test.osdu.com",
-        "OSDU_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/storage/v2/records/test:record:123",
@@ -74,25 +60,13 @@ async def test_storage_get_record_with_attributes():
         "data": {"name": "Test Record"},  # Only requested attribute
     }
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_SERVER_URL": "https://test.osdu.com",
-        "OSDU_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 # Use pattern matching for URL with query parameters
                 mocked.get(
@@ -120,25 +94,13 @@ async def test_storage_get_record_version_success():
         "data": {"name": "Test Record Version"},
     }
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_SERVER_URL": "https://test.osdu.com",
-        "OSDU_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/storage/v2/records/test:record:123/1234567890",
@@ -159,25 +121,13 @@ async def test_storage_list_record_versions_success():
         "versions": [1234567890, 1234567891, 1234567892],
     }
 
-    mock_token = AccessToken(
-        token="fake-token",
-        expires_on=int((datetime.now() + timedelta(hours=1)).timestamp()),
-    )
-
     test_env = {
-        "OSDU_SERVER_URL": "https://test.osdu.com",
-        "OSDU_DATA_PARTITION": "opendes",
-        "AZURE_CLIENT_ID": "test-client-id",
-        "AZURE_TENANT_ID": "test-tenant-id",
-        "AZURE_CLIENT_SECRET": "test-secret",
+        "OSDU_BASE_URL": "https://test.osdu.com",
+        "OSDU_PARTITION_ID": "opendes",
     }
 
     with patch.dict(os.environ, test_env):
-        with patch(AZURE_CREDENTIAL) as mock_credential_class:
-            mock_credential = MagicMock()
-            mock_credential.get_token.return_value = mock_token
-            mock_credential_class.return_value = mock_credential
-
+        with static_token():
             with aioresponses() as mocked:
                 mocked.get(
                     "https://test.osdu.com/api/storage/v2/records/versions/test:record:123",

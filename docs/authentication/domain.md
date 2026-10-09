@@ -21,4 +21,4 @@ For more guidance, use the MCP resource: `ReadMcpResourceTool(server="osdu-wirel
 
 ---
 
-Authentication guides: [Azure](./azure.md) · [Manual OAuth token](./manual_oauth.md)
+Authentication guide: [Azure](./azure.md)

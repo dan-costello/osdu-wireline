@@ -17,7 +17,7 @@ from osdu_wireline.tools.search import (
     query_available_dataspaces,
     query_dataspace_files,
 )
-from tests.conftest import OSDU_TEST_ENV
+from tests.conftest import OSDU_TEST_ENV, static_token
 
 BASE = "https://test.osdu.com/api/reservoir-ddms/v2"
 DATASPACES_URL = f"{BASE}/dataspaces"
@@ -36,8 +36,12 @@ def dataspace_uris(*ids: str) -> list[dict[str, Any]]:
 
 @contextmanager
 def mock_ddms() -> Generator[aioresponses]:
-    """Serve the Reservoir DDMS endpoints with USER_TOKEN auth."""
-    with patch.dict(os.environ, OSDU_TEST_ENV), aioresponses() as mocked:
+    """Serve the Reservoir DDMS endpoints with a static-token provider."""
+    with (
+        patch.dict(os.environ, OSDU_TEST_ENV),
+        static_token(),
+        aioresponses() as mocked,
+    ):
         yield mocked
 
 

@@ -7,27 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+* **Authentication is now Azure authorization code only.** Set `OSDU_GRANT_TYPE` to
+  `authorization_code`, along with `OSDU_AUTH_CLIENT_ID`, `OSDU_AUTH_DISCOVERY_URL` (the
+  authority URL, `https://login.microsoftonline.com/<tenant-id>`, which also covers
+  sovereign clouds), and `OSDU_AUTH_SCOPE` (the OSDU resource, e.g.
+  `<osdu-app-id>/.default`). The first time a tool needs a token, the server opens the
+  system browser to sign in as a public client (no secret). MSAL keeps and rotates the
+  tokens in an OS-encrypted cache at `~/.osdu-wireline/msal_token_cache.bin` (DPAPI,
+  Keychain, or libsecret), so later calls and restarts are silent. No token passes through
+  configuration.
+* **Renamed the connection variables** to `OSDU_BASE_URL` and `OSDU_PARTITION_ID`, matching
+  other OSDU apps. Server-only settings (`OSDU_MCP_ENABLE_WRITE_MODE`,
+  `OSDU_MCP_ENABLE_DELETE_MODE`, `OSDU_MCP_LOG_LEVEL`) keep their prefix.
+
 ### Removed
 
+* **Manual token and `DefaultAzureCredential` authentication.** `OSDU_USER_TOKEN`,
+  `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` are no longer read, and
+  `azure-identity`, `azure-core`, and `PyJWT` are no longer dependencies.
+* **The `OSDU_MCP_SERVER_URL`, `OSDU_MCP_SERVER_DATA_PARTITION`, `OSDU_MCP_SERVER_TIMEOUT`,
+  `OSDU_MCP_USER_TOKEN`, and `OSDU_MCP_AUTH_SCOPE` spellings.** There are no fallback
+  aliases; existing configurations must move to the new names.
+* **The configurable HTTP timeout.** The request timeout is fixed at 30 seconds.
 * **AWS and GCP authentication.** The AWS provider returned an STS session token from
   `sts.get_session_token()` and the HTTP client sent it as an `Authorization: Bearer`
   header. An STS session token is one part of a temporary AWS key triple meant for SigV4
   request signing, not a bearer credential; OSDU on AWS issues Cognito JWTs. That path
   could not have authenticated against any deployment. The GCP provider was plausible but
   had never been exercised against a live platform. Neither had integration coverage —
-  the tests mocked the cloud SDKs end to end. Azure is now the only supported provider,
-  alongside the manual token. `boto3` and `google-auth` are no longer dependencies, and
-  `docs/authentication/aws.md` and `gcp.md` are gone.
-
-### Changed
-
-* Renamed the connection and credential environment variables to drop the `OSDU_MCP_`
-  prefix: `OSDU_SERVER_URL`, `OSDU_DATA_PARTITION`, `OSDU_TIMEOUT`, `OSDU_USER_TOKEN`,
-  `OSDU_AUTH_SCOPE`. **The old `OSDU_MCP_` spellings are no longer read**; update any
-  existing configuration to the new names. These five are now shared with DGI's `dgimcp` OSDU import server, which reads the same variables so it
-  can resolve its own credentials instead of accepting a token as a tool argument.
-  Server-only settings (`OSDU_MCP_ENABLE_WRITE_MODE`, `OSDU_MCP_ENABLE_DELETE_MODE`,
-  `OSDU_MCP_LOG_LEVEL`) keep the prefix — they configure this server, not the connection.
+  the tests mocked the cloud SDKs end to end. `boto3` and `google-auth` are no longer
+  dependencies, and `docs/authentication/aws.md` and `gcp.md` are gone.
 
 ## 0.1.0
 

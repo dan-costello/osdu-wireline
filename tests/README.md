@@ -48,7 +48,7 @@ graph TD
 
 | Component | Test File | Test Coverage | Purpose |
 |-----------|-----------|---------------|---------|
-| Authentication | `shared/auth/` | 4 files | One file per provider (`test_azure.py`, `test_user_token.py`) plus mode detection (`test_detect.py`) and the shared provider lifecycle (`test_registry.py`) |
+| Authentication | `shared/auth/` | 2 files | The authorization code provider (`test_authorization_code.py`) and grant-type selection plus the shared provider lifecycle (`test_registry.py`) |
 | Configuration | `test_env.py` | 8 tests | Tests environment variable reading, value parsing, and error scenarios |
 | HTTP Client | `shared/clients/test_base.py` | 7 tests | Verifies HTTP operations, retry logic, and error handling |
 | Exceptions | `test_exceptions.py` | 9 tests | Tests exception hierarchy and MCP error transformation |
@@ -70,10 +70,10 @@ graph TD
 
 ### Authentication Tests (`shared/auth/`)
 
-Each authentication mode has its own provider module and its own test file, so a
-mode's behavior can be read and changed in one place. `test_detect.py` covers the
-precedence between modes and asserts that the removed AWS and GCP variables no
-longer select anything; `test_registry.py` covers the process-wide provider.
+Authorization code is the only supported grant. `test_authorization_code.py` covers
+sign-in, caching, and error mapping with a fake MSAL app; `test_registry.py` covers
+`OSDU_GRANT_TYPE` selection and the process-wide provider. Tool tests install a
+`StaticTokenProvider` (`tests/conftest.py`) so no browser or MSAL is involved.
 
 ```mermaid
 graph LR
@@ -97,12 +97,11 @@ graph LR
 
 | Test Scenario | Purpose | Method |
 |---------------|---------|--------|
-| Token retrieval success | Verify successful token acquisition | Mock Azure credential response |
+| Token retrieval success | Verify silent and browser sign-in | Fake MSAL app |
 | Token caching | Ensure tokens are cached to avoid unnecessary calls | Verify single token request |
 | Token refresh on expiry | Test automatic refresh of expired tokens | Mock expired token scenario |
-| Credential exclusions | Validate configuration of allowed credentials | Check DefaultAzureCredential setup |
+| Grant type selection | Only `OSDU_GRANT_TYPE=authorization_code` builds a provider | Patch environment |
 | Authentication failure | Handle auth errors gracefully | Mock credential failure |
-| Token validation | Verify token validation behavior | Mock validation responses |
 | Resource cleanup | Ensure proper cleanup on close | Check credential cleanup |
 
 ### Configuration Tests (`test_env.py`)
@@ -114,7 +113,6 @@ the accessors in `shared/env.py`:
 |----------|---------|
 | `get_env` | String value, or a default when unset or empty |
 | `require_env` | String value, or `OSMCPConfigError` naming the variable |
-| `get_env_int` | Integer value, or a default when unset or unparseable |
 | `get_env_bool` | True for `true`, `yes`, or `1`; otherwise False |
 
 | Test Scenario | Purpose | Method |
@@ -169,7 +167,7 @@ uv run pytest
 uv run pytest --cov=osdu_wireline --cov-report=html
 
 # Run specific test file
-uv run pytest tests/shared/auth/test_azure.py
+uv run pytest tests/shared/auth/test_authorization_code.py
 
 # Run with verbose output
 uv run pytest -v

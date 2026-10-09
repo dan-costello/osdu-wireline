@@ -225,7 +225,7 @@ def _as_record(
 
 async def available_records(lookup: ReferenceLookup) -> list[ReferenceRecord]:
     """List the entities this OSDU instance knows about, fetching them once."""
-    data_partition = require_env("OSDU_DATA_PARTITION")
+    data_partition = require_env("OSDU_PARTITION_ID")
     cached = _RECORDS.get((data_partition, lookup.label))
     if cached is not None:
         return cached

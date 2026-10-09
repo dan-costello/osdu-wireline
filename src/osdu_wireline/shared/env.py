@@ -3,10 +3,10 @@
 All configuration is supplied through environment variables, read at the point
 of use.
 
-Connection and credential settings use `OSDU_*` names (`OSDU_SERVER_URL`,
-`OSDU_AUTH_CLIENT_ID`, ...) shared with other apps that talk to the same
-platform. Server-only settings (the write and delete gates, the log level) use
-the `OSDU_MCP_` prefix: they configure this server, not the connection.
+Connection and credential settings use the `OSDU_*` names shared with other
+OSDU apps (OSDU_BASE_URL, OSDU_PARTITION_ID, OSDU_GRANT_TYPE, OSDU_AUTH_*).
+Server-only settings (the write and delete gates, the log level) keep the
+`OSDU_MCP_` prefix: they configure this server, not the connection.
 """
 
 import os
@@ -48,25 +48,6 @@ def require_env(name: str) -> str:
             f"Required configuration not found. Set environment variable {name}"
         )
     return value
-
-
-def get_env_int(name: str, default: int) -> int:
-    """Read an integer environment variable.
-
-    Args:
-        name: Environment variable name
-        default: Value to return when the variable is unset or unparseable
-
-    Returns:
-        The parsed integer, or the default
-    """
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    try:
-        return int(value.strip())
-    except ValueError:
-        return default
 
 
 def get_env_bool(name: str, default: bool = False) -> bool:

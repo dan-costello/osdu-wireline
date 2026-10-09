@@ -1,11 +1,12 @@
 # VS Code
 
-> **Note:** `OSDU_SERVER_URL` and `OSDU_DATA_PARTITION` are always required.
-> The remaining environment variables depend on your cloud provider — the example below uses
-> Azure.  
-> 
-> See the auth guide for your provider:  
-> [Azure](../authentication/azure.md) · [Manual OAuth token](../authentication/manual_oauth.md)
+> **Note:** All six environment variables below are required. `OSDU_GRANT_TYPE` must be
+> exactly `authorization_code`, as shown; every other value is a placeholder to replace
+> with your own. See the
+> [Azure authentication guide](../authentication/azure.md) for the app registration setup.
+>
+> On the first tool call the server opens your browser to sign in; after that, tokens
+> are cached and later calls and restarts sign in silently.
 
 ## Direct Installation
 
@@ -13,7 +14,7 @@ To directly download and install this package from github without setting up a l
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "osdu-wireline": {
       "type": "stdio",
       "command": "uvx",
@@ -23,10 +24,12 @@ To directly download and install this package from github without setting up a l
         "osdu-wireline"
       ],
       "env": {
-        "OSDU_SERVER_URL": "https://your-osdu.com",
-        "OSDU_DATA_PARTITION": "your-partition",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
+        "OSDU_GRANT_TYPE": "authorization_code",
+        "OSDU_BASE_URL": "https://your-osdu.com",
+        "OSDU_PARTITION_ID": "your-partition",
+        "OSDU_AUTH_CLIENT_ID": "your-client-id",
+        "OSDU_AUTH_DISCOVERY_URL": "https://login.microsoftonline.com/your-tenant-id",
+        "OSDU_AUTH_SCOPE": "your-osdu-app-id/.default"
       }
     }
   }
@@ -38,16 +41,18 @@ To directly download and install this package from github without setting up a l
 If you are developing locally and want to test your changes, you can also use the local installation method:
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "osdu-wireline": {
       "type": "stdio",
       "command": "uv",
       "args": ["run", "osdu-wireline"],
       "env": {
-        "OSDU_SERVER_URL": "https://your-osdu.com",
-        "OSDU_DATA_PARTITION": "your-partition",
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant"
+        "OSDU_GRANT_TYPE": "authorization_code",
+        "OSDU_BASE_URL": "https://your-osdu.com",
+        "OSDU_PARTITION_ID": "your-partition",
+        "OSDU_AUTH_CLIENT_ID": "your-client-id",
+        "OSDU_AUTH_DISCOVERY_URL": "https://login.microsoftonline.com/your-tenant-id",
+        "OSDU_AUTH_SCOPE": "your-osdu-app-id/.default"
       }
     }
   }
